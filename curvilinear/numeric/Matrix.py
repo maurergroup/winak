@@ -1,4 +1,4 @@
-# thctk.QD initialization
+# thctk.numeric.Matrix
 #
 #
 #   thctk - python package for Theoretical Chemistry
@@ -21,5 +21,21 @@
 #   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-Quantum Dynamics
+    This Module 
 """
+
+import math
+from INTERNALS.curvilinear.numeric import *
+LA = importLinearAlgebra()
+
+SVD = LA.singular_value_decomposition
+
+def regularizedInverse(A, eps = 1e-12):
+    # V, S, WT = N.linalg.svd(A, full_matrices = 0)
+    V, S, WT = SVD(A)
+    S2 = S*S
+    S2 += eps*eps
+    S /= S2
+    Ainv = N.dot(V, S[:,NewAxis]*WT)
+    return Ainv
+

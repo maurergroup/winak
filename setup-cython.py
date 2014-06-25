@@ -10,7 +10,7 @@ if use_cython:
 # the following provides: __version__, __revision__, __all__
     execfile('__init__.py')
 
-    package_name = 'thctk'
+    package_name = 'INTERNALS'
 
     packages = [ package_name ]
     for package in __all__:
@@ -46,8 +46,8 @@ if use_cython:
 #                   extra_compile_args =['-fopenmp'], 
 #                   libraries = ['blas', 'gomp'],
 #                   ),
-        Extension("QD.cICTools", 
-                    ["QD/cICTools.pyx",], 
+        Extension("curvilinear.cICTools", 
+                    ["curvilinear/cICTools.pyx",], 
                     extra_compile_args =[], 
                     libraries = ['blas',],
                     ),

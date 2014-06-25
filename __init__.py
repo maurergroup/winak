@@ -31,7 +31,7 @@
 #__all__ = [ 'spectroscopy', 'QC', 'MD', 'QD', 'numeric', 'statistics',
 #            'visualization', 'parallel', 'extensionTypes' ]
 
-__all__=['QD','numeric']
+__all__=['curvilinear','curvilinear.numeric']
 
 __revision__ = """<<revision>>"""
 __version__ = '0.1'

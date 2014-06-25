@@ -24,14 +24,14 @@
     This Module provides functions for handling sparse matrices.
 """
 
-from thctk.numeric import *
+from INTERNALS.curvilinear.numeric import *
 import copy, pysparse
 from types import IntType
-from thctk.numeric.spmatrixIterator import spmatrixIterator
-from thctk.numeric.csrVSmsr import csrmsr, csrcsc
-from thctk.numeric._numeric import amux_CSR, amux_CSR_complex, amux_CSRd
-from thctk.numeric._numeric import bosonelements, copyArray, dp_index_dd
-from thctk.numeric.rcm import genrcm
+from INTERNALS.curvilinear.numeric.spmatrixIterator import spmatrixIterator
+from INTERNALS.curvilinear.numeric.csrVSmsr import csrmsr, csrcsc
+from INTERNALS.curvilinear.numeric._numeric import amux_CSR, amux_CSR_complex, amux_CSRd
+from INTERNALS.curvilinear.numeric._numeric import bosonelements, copyArray, dp_index_dd
+from INTERNALS.curvilinear.numeric.rcm import genrcm
 from pysparse import spmatrix
 try: # this is only built if PARDISO is available
     import thctk.numeric.pardiso

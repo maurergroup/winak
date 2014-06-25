@@ -2,7 +2,7 @@
 # thctk distutils setup
 #
 
-package_name = 'thctk'
+package_name = 'INTERNALS'
 
 
 # the following provides: __version__, __revision__, __all__
@@ -83,7 +83,7 @@ for package in __all__:
 #packages.append(package_name + '.QD.VCI')
 
 ext_modules = [
-    Extension('numeric.comm', ['numeric/comm.pyf', 'numeric/comm.f'],
+    Extension('curvilinear.numeric.comm', ['curvilinear/numeric/comm.pyf', 'curvilinear/numeric/comm.f'],
         library_dirs = lapack_dirs + fortran_dirs,
         libraries = lapack_libs + fortran_libs,
         define_macros= f2py_macros + numerix_macros),
@@ -92,12 +92,12 @@ ext_modules = [
 #        library_dirs = lapack_dirs + fortran_dirs,
 #        libraries = lapack_libs + fortran_libs,
 #        define_macros= f2py_macros + numerix_macros),
-    Extension('numeric.rcm', ['numeric/rcm.pyf', 
-        'numeric/sparsepak_rcm.f90',],
+    Extension('curvilinear.numeric.rcm', ['curvilinear/numeric/rcm.pyf', 
+        'curvilinear/numeric/sparsepak_rcm.f90',],
         library_dirs = fortran_dirs,
         libraries = fortran_libs,
         define_macros= f2py_macros + numerix_macros),
-    Extension('numeric.icfs', ['numeric/icfs.pyf', 'numeric/icfs.f'],
+    Extension('curvilinear.numeric.icfs', ['curvilinear/numeric/icfs.pyf', 'curvilinear/numeric/icfs.f'],
         library_dirs = lapack_dirs + fortran_dirs,
         libraries = lapack_libs + fortran_libs,
         define_macros= f2py_macros + numerix_macros),
@@ -105,9 +105,9 @@ ext_modules = [
 #        define_macros= f2py_macros + numerix_macros),
 #    Extension('numeric.tensorIndices', ['numeric/tensorIndices.pyf', 'numeric/tensorIndices.f'],
 #        define_macros= f2py_macros + numerix_macros),
-    Extension('numeric.csrVSmsr', ['numeric/csrVSmsr.pyf', 'numeric/csrVSmsr.f'],
+    Extension('curvilinear.numeric.csrVSmsr', ['curvilinear/numeric/csrVSmsr.pyf', 'curvilinear/numeric/csrVSmsr.f'],
         define_macros= f2py_macros + numerix_macros),
-    Extension('numeric.blassm', ['numeric/blassm.pyf', 'numeric/blassm.f'],
+    Extension('curvilinear.numeric.blassm', ['curvilinear/numeric/blassm.pyf', 'curvilinear/numeric/blassm.f'],
         define_macros= f2py_macros + numerix_macros),
 #    Extension('numeric.sparslab', ['numeric/sparslab.pyf', 'numeric/sainvsr.f', 
 #        'numeric/rifsr.f'],
@@ -117,7 +117,7 @@ ext_modules = [
 #   Extension('numeric.sainv', ['numeric/sainvmodule.c', 'numeric/sainv.f'],
 #       include_dirs=['include'],
 #       define_macros= f2py_macros + numerix_macros),
-    Extension('numeric._numeric', ['numeric/thctk_numeric.c', 'numeric/colamd.c'],
+    Extension('curvilinear.numeric._numeric', ['curvilinear/numeric/thctk_numeric.c', 'curvilinear/numeric/colamd.c'],
         extra_compile_args =['-fopenmp'], 
         libraries = ['gomp'],
         include_dirs=['include'],
@@ -131,7 +131,7 @@ ext_modules = [
 #        library_dirs = fortran_dirs,
 #        libraries = fortran_libs,
 #        define_macros= f2py_macros + numerix_macros),
-    Extension('QD._intcrd', ['QD/intcrd.c'],
+    Extension('curvilinear._intcrd', ['curvilinear/intcrd.c'],
         include_dirs=['include'],
         undef_macros=['MAIN', 'NOthctkPyChecks'],
         define_macros=[('THCTK_INTERFACE', None),] + numerix_macros),
@@ -160,7 +160,7 @@ ext_modules = [
 #               ["numeric/cOffDiagLeastSquares.c", 
 #                   "numeric/cOffDiagLeastSquaresTools.c"], 
 #               ),
-    Extension("QD.cICTools", ["QD/cICTools.c", ]
+    Extension("curvilinear.cICTools", ["curvilinear/cICTools.c", ]
                 ),
 #    Extension("numeric.cSymmetricArrayTools", ["numeric/cSymmetricArrayTools.c", ]
 #                ),

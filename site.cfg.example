@@ -5,13 +5,13 @@
 
 [DEFAULT]
 lapack_libs = mkl_lapack mkl
-lapack_dirs =  /usr/local/stow/Intel_Composer/share/intel/composer_xe_2013_sp1.1.106/mkl/lib/intel64
+lapack_dirs = /opt/lib
 fortran_libs = imf ifcore g2c
-fortran_dirs = /usr/local/lib
+fortran_dirs = /opt/lib
 
 # set the following if you want to see f2py info messages
 f2py_report_on_array_copy = 1
 
 # if you have a valid PARDISO license and want to build the interface:
-#pardiso_libs = pardiso
-#pardiso_dirs = /opt/lib
+pardiso_libs = pardiso
+pardiso_dirs = /opt/lib

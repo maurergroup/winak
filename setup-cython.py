@@ -5,7 +5,7 @@ try:
     use_cython = True
 except:
     use_cython = False
-
+    
 if use_cython:
 # the following provides: __version__, __revision__, __all__
     execfile('__init__.py')
@@ -17,21 +17,44 @@ if use_cython:
         packages.append(package_name + '.' + package)
 
     ext_modules = [
-        Extension("numeric.RJD", ["numeric/RJD.pyx"]),
-        Extension("numeric.cJacobiBandDiagonalization",
-                    ["numeric/cJacobiBandDiagonalization.pyx"],
-                    extra_compile_args =[],
-                    libraries = ['blas'],
-                    ),
-        Extension("QD.cICTools",
-                    ["QD/cICTools.pyx",],
-                    extra_compile_args =[],
+#        Extension("QD.offDiagonalElement", ["QD/offDiagonalElement.pyx"]),
+#        Extension("QD.chebyshev", ["QD/chebyshev.pyx"]),
+#        Extension("numeric.RJD", ["numeric/RJD.pyx"]),
+#        Extension("numeric.cJacobiBandDiagonalization", 
+#                    ["numeric/cJacobiBandDiagonalization.pyx"],
+#                    extra_compile_args =[], 
+#                    libraries = ['blas'],
+#                    ),
+#       Extension("numeric.cVarianceMinimization", 
+#                   ["numeric/cVarianceMinimization.pyx"],
+#                   extra_compile_args =[], 
+#                   libraries = ['blas'],
+#                   ),
+#       Extension("numeric.cBandMatrixTools", 
+#                   ["numeric/cBandMatrixTools.pyx"],
+#                   extra_compile_args =[], 
+#                   libraries = ['blas'],
+#                   ),
+#       Extension("numeric.cVariance", 
+#                   ["numeric/cVariance.pyx", "numeric/cVarianceTools.c"],
+#                   extra_compile_args =['-fopenmp'], 
+#                   libraries = ['blas', 'gomp'],
+#                   ),
+#       Extension("numeric.cOffDiagLeastSquares", 
+#                   ["numeric/cOffDiagLeastSquares.pyx", 
+#                       "numeric/cOffDiagLeastSquaresTools.c"], 
+#                   extra_compile_args =['-fopenmp'], 
+#                   libraries = ['blas', 'gomp'],
+#                   ),
+        Extension("QD.cICTools", 
+                    ["QD/cICTools.pyx",], 
+                    extra_compile_args =[], 
                     libraries = ['blas',],
                     ),
-        Extension("numeric.cSymmetricArrayTools",
-                    ["numeric/cSymmetricArrayTools.pyx",],
-                    extra_compile_args =[],
-                    ),
+#        Extension("numeric.cSymmetricArrayTools", 
+#                    ["numeric/cSymmetricArrayTools.pyx",], 
+#                    extra_compile_args =[], 
+#                    ),
     ]
 
     setup(

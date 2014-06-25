@@ -32,7 +32,6 @@ from thctk.numeric.csrVSmsr import csrmsr, csrcsc
 from thctk.numeric._numeric import amux_CSR, amux_CSR_complex, amux_CSRd
 from thctk.numeric._numeric import bosonelements, copyArray, dp_index_dd
 from thctk.numeric.rcm import genrcm
-from Scientific.IO.NetCDF import NetCDFFile
 from pysparse import spmatrix
 try: # this is only built if PARDISO is available
     import thctk.numeric.pardiso
@@ -43,628 +42,13 @@ from scipy.linalg.fblas import ddot
 from thctk.numeric import blassm
 from thctk.numeric.comm import comrr, comzz, comrz
 import itertools
-import pyx
 import re
-try:
-    import Image
-except:
-    pass
 
 arrayType = type(N.array(()))
 LLMatType = type(spmatrix.ll_mat_sym(1,1))
 SSSMatType = type(spmatrix.ll_mat_sym(1,1).to_sss())
 CSRMatType = type(spmatrix.ll_mat_sym(1,1).to_csr())
 
-class LargeLL:
-    def __init__(self, matrix=None, i_offset = 0, j_offset = 0, issym = None,
-      comment = None, offset = 0):
-      self.offset = offset
-      self.i_offset, self.j_offset = i_offset, j_offset
-      self.matrix = None
-      self.issym  = issym
-      if matrix == None:
-        self.shape=(0,0)
-        self.type=None
-      else:
-        self.shape = matrix.shape
-        self.type=type(matrix)
-        self.comment = comment
-
-        if self.type == SSSMatType:
-          self.matrix_sss = matrix
-          self.nnz = matrix.nnz
-          issym = 1
-        elif self.type == CSRMatType:
-          self.matrix_csr = matrix
-          self.nnz = matrix.nnz
-        elif self.type == LLMatType:
-          self.matrix = matrix
-          self.nnz = matrix.nnz - matrix.shape[0]
-        elif self.type == arrayType:
-          self.matrix_arr = matrix
-          self.array_to_LL(issym)
-        else:
-          raise TypeError, 'wrong matrix type'
-
-        if issym == None:
-          if self.shape[0] == self.shape[1] and self.i_offset == self.j_offset:
-            issym = 1
-            n,m = self.shape
-            self.n, self.m = n,m
-          else:
-            issym = 0
-            n,m = self.shape
-            self.n, self.m = n,m
-          self.issym = issym
-        else:
-          self.issym = issym
-          n,m = self.shape
-          self.n, self.m = n,m
-
-        self.iter()
-        if self.matrix == None:
-          self.matrix_init()
-          try:    del self.matrix_sss
-          except: del self.matrix_csr
-
-    def matrix_init(self):
-      if self.issym == 1:
-        n = self.n
-        nnz = self.nnz
-        H = spmatrix.ll_mat_sym(n, nnz)
-        for i,j,h in self:
-          try: H[i,j] = h
-          except: continue
-        self.__init__(H)
-      elif self.issym == 0:
-        n = self.n
-        m = self.m
-        nnz = self.nnz
-        H = spmatrix.ll_mat(n, m, nnz)
-        for i,j,h in self:
-          H[i,j] = h
-        self.__init__(H)
-
-    def __getitem__(self, key):
-      i, j = key
-      return self.matrix[i,j]
-
-    def __setitem__(self, key, value):
-      i, j = key
-      try:    self.matrix[i,j] = value
-      except: self.matrix[j,i] = value
-
-    def iter(self):
-      if self.type == SSSMatType:   spIt = spmatrixIterator(self.matrix_sss)
-      elif self.type == CSRMatType: spIt = spmatrixIterator(self.matrix_csr)
-      elif self.type == LLMatType:  spIt = spmatrixIterator(self.matrix)
-      self.__iter__ = spIt.__iter__
-
-    def transpose(self):
-      A = self.to_CSR()
-      return A.transpose().to_largeLL()
-
-    def array_to_LL(self, issym):
-      issym = issym
-      n,m = self.shape
-      matrix = self.matrix_arr
-      if issym:
-        hint = (n**2-n)/2 + n
-        H = spmatrix.ll_mat_sym(n, hint)
-        for i in range(n):
-          for j in range(0,i+1):
-            H[i,j] = matrix[i,j]
-      else:
-        hint = n*m
-        H = spmatrix.ll_mat(n,m,hint)
-        for i in range(n):
-          for j in range(m):
-            H[i,j] = matrix[i,j]
-      self.__init__(H, issym=issym)
-
-    def to_mtx(self, name='largeLL.mtx'):
-      f = open(name, 'w')
-      f.write('%%MatrixMarket matrix coordinate real ')
-# #   if self.issym:  f.write('symmetric\n')
-# #   else:           f.write('general\n')
-      f.write('general\n')
-      f.write('%i %i %i\n'%(self.n, self.n, self.nnz))
-      for i,j,h in self:
-        if self.offset == 0:
-          i += 1
-          j += 1
-        f.write('%i %i %20.16f\n'%(i,j,h))
-      f.close()
-
-    def LL_from_mtx(self, file='largeLL.mtx'):
-        """construct ll_mat matrix from MatrixMarket file
-
-        parameters:
-
-        f     file object, representing an opened file containing
-              MatrixMarket data.
-        """
-        f = open(file, 'r')
-        # parse header line
-        line = f.readline()
-        match = re.match('%%MatrixMarket\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)', line)
-        if match == None:
-            raise ValueError, "not a MatrixMarket file."
-        if match.group(1) <> 'matrix' or match.group(2) <> 'coordinate' or match.group(3) <> 'real':
-            raise NotImplementedError, 'matrix type not supported.'
-        if match.group(4) == 'symmetric':
-            isSymmetric = 1
-        elif match.group(4) == 'general':
-            isSymmetric = 0
-        else:
-            raise ValueError, "invalid matrix type."
-        # skip comment lines
-        line = f.readline()
-        while line[0] == '%':
-            line = f.readline()
-        # parse matrix dimension line
-        match = re.match('\s*(\d+)\s+(\d+)\s+(\d+)', line)
-        if match == None:
-            raise ValueError, "invalid matrix size information in MatrixMarket file."
-        dim = (int(match.group(1)), int(match.group(2)))
-        nnz = int(match.group(3))
-        if isSymmetric and dim[0] <> dim[1]:
-            raise ValueError, 'symmteric matrix must be square'
-
-        A = spmatrix.ll_mat(dim[0], dim[1])
-
-        # read matrix elements
-        k = 0
-        while 1:
-            lines = f.readlines(8*1024)
-            if not lines: break
-            for line in lines:
-                elems = line.split()
-                i = int(elems[0]) - 1
-                j = int(elems[1]) - 1
-                v = float(elems[2])
-                A[i,j] = v
-                if isSymmetric:
-                    A[j,i] = v
-                k += 1
-                if k == nnz:
-                    break
-        f.close()
-        self.__init__(A, issym=isSymmetric)
-        self.matrix_init()
-
-    def to_CSR(self, type=nxFloat):
-      matrix_csr = self.matrix.to_csr()
-      Mx, Mj, Mi = matrix_csr.matrices()
-      Mx = Mx.tolist()
-      Mj = Mj.tolist()
-      Mi = Mi.tolist()
-      offset = self.offset
-      n, m = self.shape
-      nnz = len(Mx)
-      issym = self.issym
-      return CSR(n=n, m=m, nnz=nnz, i=Mi, j=Mj, x=Mx, offset=offset, type=type, issym=issym)
-
-    def strictlyTriangularMatrix(self, type=nxFloat):
-        matrix_sss = self.matrix.to_sss()
-        Md, Mx, Mj, Mi = matrix_sss.matrices()
-        Mx = Mx.tolist()
-        Mj = Mj.tolist()
-        Mi = Mi.tolist()
-        offset = self.offset
-        n, m = self.shape
-        nnz = len(Mx)
-        return CSR(n=n, m=m, nnz=nnz, i=Mi, j=Mj, x=Mx, offset=offset, type=type, issym=0)
-
-    def to_CSRd(self):
-      matrix_csr = self.matrix.to_csr()
-      offset = self.offset
-      n = self.n
-      Mx, Mj, Mi = matrix_csr.matrices()
-      if not offset:
-        Mj += 1
-        Mi += 1
-      Lx, Lu = csrmsr(Mx, Mj, Mi)
-      Lu -= 1
-      offset = 0
-      i = Lu[:n+1]
-#     i -= n + 1
-      j = Lu[n+1:]
-      d = Lx[:n]
-      x = Lx[n+1:]
-      nnz = len(x)
-      return CSRd(n, nnz, i, j, x, d, offset = offset)
-
-    def to_array2D(self):
-      issym = self.issym
-      array = N.zeros(self.shape, nxFloat)
-      if issym:
-        for i,j,h in self:
-          array[i,j] = h
-          array[j,i] = h
-      else:
-        for i,j,h in self:
-          array[i,j] = h
-      return array
-
-    def append(self, other):
-      if self.matrix == None:
-        H = other.matrix
-        self.__init__(H)
-      else:
-        if self.issym and other.issym: return self.app_sym(other)
-        else: return self.app_asym(other)
-
-    def app_sym(self, other):
-      nnz = self.nnz + other.nnz
-      n1, n2 = self.shape[0], other.shape[0]
-      n = n1 + n2
-      H = spmatrix.ll_mat_sym(n, nnz)
-      for i,j,h in self:
-        H[i,j] = h
-      for i,j,h in other:
-        i += n1
-        j += n1
-        H[i,j] = h
-      self.__init__(H)
-
-    def app_asym(self, other):
-      nnz = self.nnz + other.nnz
-      n1, n2 = self.shape[0], other.shape[0]
-      n = n1 + n2
-      H = spmatrix.ll_mat(n, n, nnz)
-      for i,j,h in self:
-        H[i,j] = h
-      for i,j,h in other:
-        i += n1
-        j += n1
-        H[i,j] = h
-      self.__init__(H)
-
-    def replace(self, other):
-      H = self.matrix
-      for i,j,h in other:
-        idif = i + other.i_offset - self.i_offset
-        jdif = j + other.j_offset - self.j_offset
-        try: H[idif, jdif] = other[i,j]
-        except: continue
-      self.__init__(H)
-
-    def combine(self, other):
-      i_offset = min(self.i_offset, other.i_offset)
-      j_offset = min(self.j_offset, other.j_offset)
-      Ns = self.shape[0] + self.i_offset
-      Ms = self.shape[1] + self.j_offset
-      No = other.shape[0] + other.i_offset
-      Mo = other.shape[1] + other.j_offset
-      N = max(Ns, No)
-      M = max(Ms, Mo)
-      nnz = self.nnz + other.nnz
-      if self.issym or other.issym:
-        issym = 1
-        H = spmatrix.ll_mat_sym(N, nnz)
-        for i,j,h in self:
-          i += self.i_offset
-          j += self.j_offset
-          H[i,j] = h
-        for i,j,h in other:
-          i += other.i_offset
-          j += other.j_offset
-          if not H[i,j]:
-            try:    H[i,j] = h
-            except: H[j,i] = h
-      else:
-        issym = 0
-        H = spmatrix.ll_mat(N, M, nnz)
-        for i,j,h in self:
-          i += self.i_offset
-          j += self.j_offset
-          H[i,j] = h
-        for i,j,h in other:
-          i += other.i_offset
-          j += other.j_offset
-          if not H[i,j]: H[i,j] = h
-      self.matrix = H
-      self.i_offset = i_offset
-      self.j_offset = j_offset
-      self.shape = N, M
-      self.issym = issym
-      self.nnz = nnz
-      self.iter()
-
-    def insert_missing(self, other):
-      H = self.matrix
-      for i,j,h in other:
-        k = i + other.i_offset - self.i_offset
-        l = j + other.j_offset - self.j_offset
-        if not H[k,l]: H[k,l] = other[i,j]
-      self.__init__(H)
-
-    def compose3(self, bath, coupling):
-      nnz = self.nnz + bath.nnz + coupling.nnz
-      n = self.shape[0] + bath.shape[0]
-      H = spmatrix.ll_mat_sym(n, nnz)
-      ioff = bath.i_offset
-      joff = bath.j_offset
-      for i,j,h in self:
-        i = int(i)
-        j = int(j)
-        H[i,j] = h
-      for i,j,h in bath:
-        i = int(i)
-        j = int(j)
-        i += ioff
-        j += joff
-        H[i,j] = h
-      for i,j,h in coupling:
-        i = int(i)
-        j = int(j)
-        j += joff
-        try:
-          H[i,j] = h
-        except:
-          H[j,i] = h
-      return largeLL(H)
-
-    def compose3_old(self, other1, other2):
-      for i in [self, other1, other2]:
-        if i.i_offset == i.j_offset and i.i_offset == 0:
-          m1 = i
-        elif i.i_offset == i.j_offset and i.i_offset != 0:
-          m2 = i
-        elif i.i_offset != i.j_offset and (i.j_offset == 0 or i.i_offset == 0):
-          m3 = i
-      try: nnz = m1.nnz + m2.nnz + m3.nnz
-      except: raise 'you are trying to compose wrong matrices!'
-      n = m1.n + m2.n
-      H = spmatrix.ll_mat_sym(n, nnz)
-      for i,j,h in m1:
-        H[i,j] = h
-      for i,j,h in m2:
-        i += m2.i_offset
-        j += m2.j_offset
-        H[i,j] = h
-      if m3.j_offset == 0:
-        for i,j,h in m3:
-          i += m3.i_offset
-          H[i,j] = h
-      elif m3.i_offset == 0:
-        for i,j,h in m3:
-          j += m3.j_offset
-          H[j,i] = h
-      return largeLL(H)
-
-    def decompose(self, blocksize):
-      n = self.n
-      hint = self.nnz
-      N = blocksize
-      M = n - N
-      bl1 = spmatrix.ll_mat_sym(N, hint)
-      bl2 = spmatrix.ll_mat_sym(M, hint)
-      bl3 = spmatrix.ll_mat(M, N, hint)
-      for i,j,h in self:
-        if i < N and j < N:
-          bl1[i,j] = h
-        elif i >= N and j >= N:
-          i -= N
-          j -= N
-          bl2[i,j] = h
-        elif i >= N and j < N:
-          i -= N
-          bl3[i,j] = h
-      return largeLL(bl1, comment='1st square block'), largeLL(bl2, i_offset = N, j_offset = N, comment='2nd square block'), largeLL(bl3, i_offset = N, comment='lower outerdiagonal block')
-
-    def initNCDF(self, filename = 'LLMatrix.nc', vdim = None):
-      self.file = NetCDFFile(filename, 'w')
-      self.file.createDimension('vdim', vdim)
-      self.indexi = self.file.createVariable('indexi', ncInt, ('vdim',))
-      self.indexj = self.file.createVariable('indexj', ncInt, ('vdim',))
-      self.value  = self.file.createVariable('value', ncFloat, ('vdim',))
-      self.file.sync()
-
-    def apndElement(self, i, tuple):
-      self.indexi[i], self.indexj[i], self.value[i] = tuple
-
-    def setaNCDF(self, attr, attrVal):
-      setattr(self.file, attr, attrVal)
-
-    def symShapeOffset(self, issym=None, shape=None, i_offset=None, j_offset=None):
-      if issym is None: issym = self.issym
-      if shape is None: shape = self.shape
-      if i_offset is None: i_offset = self.i_offset
-      if j_offset is None: j_offset = self.j_offset
-      setattr(self.file, 'issym', issym)
-      setattr(self.file, 'shape', shape)
-      setattr(self.file, 'i_offset', i_offset)
-      setattr(self.file, 'j_offset', j_offset)
-
-    def closeNCDF(self):
-      self.file.close()
-
-    def syncNCDF(self):
-      self.file.sync()
-
-    def apndBlock(self, other, filename='LLMatrix.nc'):
-      self.file = NetCDFFile(filename, 'a')
-      indexi = self.file.variables['indexi']
-      indexj = self.file.variables['indexj']
-      value  = self.file.variables['value']
-      k = len(self.file.variables['value'])
-      i_offset, j_offset = other.i_offset, other.j_offset
-      for i,j,h in other:
-        i += i_offset
-        j += j_offset
-        indexi[k], indexj[k], value[k] = i, j, h
-        k += 1
-      self.file.sync()
-
-    def dumpNCDF(self, k=0):
-      i_offset, j_offset = self.i_offset, self.j_offset
-      indexi, indexj, value = self.indexi, self.indexj, self.value
-      for i,j,h in self:
-        i += i_offset
-        j += j_offset
-        indexi[k], indexj[k], value[k] = i, j, h
-        k += 1
-      self.file.sync()
-
-    def loadNCDF(self, filename='LLMatrix.nc', mode='r', issym=None, shape=None):
-      self.file = NetCDFFile(filename, mode)
-      try:
-        i_offset = int(self.file.i_offset[0])
-        j_offset = int(self.file.j_offset[0])
-      except:
-        i_offset, j_offset = 0, 0
-      if issym is None:
-          issym = self.file.issym[0]
-      else:
-          issym = issym
-      if shape is None:
-          n, m  = self.file.shape
-      else:
-          n, m = shape
-      n, m, issym = int(n), int(m), int(issym)
-      indexi = self.file.variables['indexi']
-      indexj = self.file.variables['indexj']
-      value  = self.file.variables['value']
-      nnz = len(self.file.variables['value'])
-      if issym: H = spmatrix.ll_mat_sym(n,nnz)
-      else:     H = spmatrix.ll_mat(n,m,nnz)
-      for k in range(nnz):
-        i = indexi[k]
-        j = indexj[k]
-        v =  value[k]
-        i = int(i)
-        j = int(j)
-        if issym:
-          try:    H[i,j] = v
-          except: H[j,i] = v
-        else:
-          H[i,j] = v
-      self.matrix = H
-      self.nnz      = nnz
-      self.i_offset = i_offset
-      self.j_offset = j_offset
-      self.issym    = issym
-      self.shape    = (n, m)
-      self.type     = type(H)
-      self.iter()
-
-    def saveSSS(self, filename = 'SSSMatrix.spmat'):
-      if self.issym != 1: raise typeError, 'Matrix must be symetric!'
-      matrix_sss = self.matrix.to_sss()
-      matrix_sss.tofile(open(filename, 'w'))
-
-    def loadSSS(self, filename = 'SSSMatrix.spmat', issym = 1):
-      matrix_sss = spmatrix_fromfile(open(filename))
-      self.__init__(matrix_sss, issym = issym)
-
-    def saveCSR(self, filename = 'CSRMatrix.spmat'):
-      matrix_csr = self.matrix.to_csr()
-      matrix_csr.tofile(open(filename, 'w'))
-
-    def loadCSR(self, filename = 'CSRMatrix.spmat', issym = None):
-      matrix_csr = spmatrix_fromfile(open(filename))
-      self.__init__(matrix_csr, issym = issym)
-
-    def to_picture(self, picturename = "LLmat", pdf=True, height=50, cnt=None,
-        Text=None):
-      n,m = self.shape
-      issym = self.issym
-      im = Image.new('RGB', self.shape, (377,377,377))
-      if cnt is None:
-        if issym:
-          for i,j,h in self:
-            im.putpixel((i,j), (0,0,0))
-            im.putpixel((j,i), (0,0,0))
-        else:
-          for i,j,h in self:
-            im.putpixel((i,j), (0,0,0))
-      else:
-        for i,j,h in self:
-          if i <= cnt[1]:
-            im.putpixel((i,j), (0,0,377))
-            im.putpixel((j,i), (0,0,377))
-          elif i > cnt[1] and i <= cnt[2]:
-            im.putpixel((i,j), (0,377,0))
-            im.putpixel((j,i), (0,377,0))
-          elif i > cnt[2] and i < cnt[3]:
-            im.putpixel((i,j), (377,0,0))
-            im.putpixel((j,i), (377,0,0))
-          else:
-            im.putpixel((i,j), (0,0,0))
-            im.putpixel((j,i), (0,0,0))
-      c = pyx.canvas.canvas()
-      c.insert(pyx.bitmap.bitmap(0, 0, im, height=height))
-      if Text != None:
-        c.text(0, height+1, Text, [pyx.text.size.Huge])
-      if pdf:
-        c.writePDFfile(picturename)
-      else:
-        c.writeEPSfile(picturename)
-
-    def histogramm(self, diagElte=True, factor=1., histoName='histo',
-         acceptableCoupling = 1000., division = True, confs = None,
-         writeInterestingCouplings = True):
-      a0 = self[0,0]
-      d = {}
-      interestingCoupling = {}
-      if diagElte:
-        for i in range(1,self.n):
-          h = self[i,i]
-          value = int((h-a0)*factor+0.5)
-          try: d[value] += 1
-          except: d[value] = 1
-      else:
-        for i,j,h in self:
-          if i != j:
-            val = abs(h)
-            if division:
-              val /= abs(self[i,i]-self[j,j])
-##### the factor must be different in both cases. Wtihout division
-##### you have energies in Hartree and with relativ values
-            val *= factor
-            if val > acceptableCoupling:
-              interestingCoupling[int(val)]=[(i,j),(h, self[i,i], self[j,j])]
-            value = int(val+0.5)
-            try: d[value] += 1
-            except: d[value] = 1
-      self.interestingCoupling = interestingCoupling
-      f = open(histoName+'.txt', 'w')
-      keys = d.keys()
-      keys.sort()
-      for i in keys:
-        f.write('%i\t%i\n'%(i, d[i]))
-      f.close()
-      if writeInterestingCouplings is True and confs != None:
-        g = open(histoName+'-couplings.txt', 'w')
-        keys = interestingCoupling.keys()
-        keys.sort()
-        dim=len(confs[0])
-        tmp = '%i '*dim
-        for i in keys:
-          c1, c2 = interestingCoupling[i][0]
-          st1 = ' '
-          cnt1 = 0
-          for k in range(dim):
-            if confs[c1][k] != 0:
-              cnt1 += 1
-              st1 += ' '+`k`+'/'+`confs[c1][k]`
-          st2 = ' '
-          cnt2 = 0
-          for k in range(dim):
-            if confs[c2][k] != 0:
-              cnt2 += 1
-              st2 += ' '+`k`+'/'+`confs[c2][k]`
-          if cnt1 < 4 and cnt2 < 4:
-            g.write('%i'%i)
-            g.write(' - (%i, %i), '%interestingCoupling[i][0])
-            g.write('(%6.4f, %6.4f, %6.4f)\t'%interestingCoupling[i][1])
-            g.write('['+tmp%tuple(confs[c1]) +'] ')
-            g.write('%20s   '%st1)
-            g.write('['+tmp%tuple(confs[c2]) +'] ')
-            g.write('%20s\n'%st2)
-        g.close()
 
 class PARDISOError(Exception):
 
@@ -774,34 +158,32 @@ class CSR:
     x: double precision array of length nnz, matrix entries row by row
     """
 
-    def __init__(self, n = None, m = None, nnz = None, i = (), j = (), x = (),
+    def __init__(self, n = None, m = None, nnz = None, i = (), j = (), x = (), 
         type = nxFloat, offset = 0, issym=0, filename = None, complexMatVec=False):
 
-        if filename is not None:
-            self.ReadNetCDF(filename)
-        else:
-            if n is None: # assume data in 'i' ist correct and get 'n' from 'i'.
-                n = len(i)-1
-            if nnz is None: # nnz should be the last entry in 'i' and 'len(j)'
-                nnz = i[-1]
-                assert nnz == len(j)
-            if len(i) == n+1: self.i = N.asarray(i, nxInt32)
-            else: self.i = N.zeros(n+1, nxInt32)
-            if len(j) == nnz: self.j = N.asarray(j, nxInt32)
-            else: self.j = N.zeros(nnz, nxInt32)
-            if len(x) == nnz: self.x = N.asarray(x, type)
-            else: self.x = N.zeros(nnz, type)
-            self.offset = offset
-            self.dtype = type
-            self.typecode = type
-            self.rows = n
-            self.nnz = nnz
-            self.issym = issym
-            self.n = n
-            if m == None: m = n
-            self.m = m
-            self.shape = (n,m)
-            self.setMatVec(complexMatVec)
+
+        if n is None: # assume data in 'i' ist correct and get 'n' from 'i'.
+            n = len(i)-1
+        if nnz is None: # nnz should be the last entry in 'i' and 'len(j)'
+            nnz = i[-1]
+            assert nnz == len(j)
+        if len(i) == n+1: self.i = N.asarray(i, nxInt32)
+        else: self.i = N.zeros(n+1, nxInt32)
+        if len(j) == nnz: self.j = N.asarray(j, nxInt32)
+        else: self.j = N.zeros(nnz, nxInt32)
+        if len(x) == nnz: self.x = N.asarray(x, type)
+        else: self.x = N.zeros(nnz, type)
+        self.offset = offset
+        self.dtype = type
+        self.typecode = type
+        self.rows = n
+        self.nnz = nnz
+        self.issym = issym
+        self.n = n
+        if m == None: m = n
+        self.m = m
+        self.shape = (n,m)
+        self.setMatVec(complexMatVec)
 
     def setMatVec(self, complexMatVec=False):
         self.complexMatVec = complexMatVec
@@ -812,7 +194,7 @@ class CSR:
 
     def matrices(self):
         return self.x, self.j, self.i
-
+  
     def __call__(self, x, y = None):
         n = self.n
         if y is None: y = N.zeros(self.n, nxTypecode(x))
@@ -826,14 +208,14 @@ class CSR:
         return 0
 
     def __iter__(self):
-        i = 0
+        i = 0   
         a = self.i[0]
         for b in self.i[1:]:
-            for k in range(a, b):
+            for k in range(a, b): 
                 yield i, int(self.j[k]), self.x[k]
             a = b
             i += 1
-
+  
     def to_csr(self):
         n = self.n
         nnz = self.nnz
@@ -892,34 +274,7 @@ class CSR:
         io = io[:m+1]
         self.offset = 0
         return CSR(n=self.m, m=self.n, nnz=self.nnz, i=io, j=jo, x=xo, complexMatVec=complexMatVec)
-
-    def to_largeLL(self, issym=None, perm=None):
-        n = self.n
-        m = self.m
-        nnz = self.nnz
-        if issym is None: issym = self.issym
-        if not issym:
-            H = spmatrix.ll_mat(n,m, nnz)
-            if perm is None:
-                  for i,j,h in self:
-                      H[i,j] = h
-            else:
-                  for i,j,h in self:
-                      k = perm[i]
-                      H[k,j] = h
-        else:
-              H = spmatrix.ll_mat_sym(n, nnz)
-              if perm == None:
-                  for i,j,h in self:
-                      try:    H[i,j] = h
-                      except: H[j,i] = h
-              else:
-                  for i,j,h in self:
-                      k = perm[i]
-                      try:    H[k,j] = h
-                      except: H[j,k] = h
-        return largeLL(H, issym=issym)
-
+ 
     def permuted(self, perm = None):
         if perm is None: delattr(self, 'perm')
         else: self.perm = perm
@@ -968,7 +323,7 @@ class CSR:
             I[i] = k
             a = b
         return I, J[:k]
-
+        
     def rowScaling(self):
         self.rowNorms = N.zeros(self.rows, nxFloat)
         i = 0
@@ -986,68 +341,32 @@ class CSR:
         row = self.x[self.i[i]:self.i[i+1]]
         row *= d
 
-    def WriteNetCDF (self, filename = "CSR.nc"):
-        NCfile = NetCDFFile(filename, 'w')
-        setattr(NCfile, 'format', 'CRS')
-        setattr(NCfile, 'rows', self.rows)
-        setattr(NCfile, 'offset', self.offset)
-        setattr(NCfile, 'shape', self.shape)
-        NCfile.createDimension('rowsp', self.rows +1)
-        NCfile.createDimension('nnz', self.nnz)
-        mi = NCfile.createVariable('i', ncInt, ('rowsp',))
-        mj = NCfile.createVariable('j', ncInt, ('nnz',))
-        mx = NCfile.createVariable('x', ncFloat, ('nnz',))
-        mi[:] = self.i
-        mj[:] = self.j
-        mx[:] = self.x
-        NCfile.sync()
-        NCfile.close()
-
-    def ReadNetCDF (self, filename = "CSR.nc"):
-        NCfile = NetCDFFile(filename, 'r')
-        if NCfile.format != 'CRS':
-            raise NameError, "SparseFormatError"
-        else:
-            self.rows = NCfile.rows[0]
-            self.offset = NCfile.offset
-            self.shape = NCfile.shape
-            self.i = N.asarray(NCfile.variables['i'][:], ncInt32)
-            self.j = N.asarray(NCfile.variables['j'][:], ncInt32)
-            self.x = N.asarray(NCfile.variables['x'][:], ncFloat)
-            self.nnz = len(self.x)
-            self.typecode = nxFloat
-            self.dtype = nxFloat
-        NCfile.close()
-
 class CSRd:
     """
     Symmetric matrix A in compressed sparse row format with separate diagonal:
     A.i, A.j, A.x, A.d"""
 
-    def __init__(self, n = None, nnz = None, i = (), j = (), x = (), d=(),
+    def __init__(self, n = None, nnz = None, i = (), j = (), x = (), d=(), 
         type = nxFloat, offset = 0, filename = None):
-
-        if filename is not None:
-            self.ReadNetCDF(filename)
-        else:
-            if len(i) == n+1: self.i = N.asarray(i, ncInt32)
-            else: self.i = N.zeros(n+1, nxInt32)
-            if len(j) == nnz: self.j = N.asarray(j, ncInt32)
-            else: self.j = N.zeros(nnz, nxInt32)
-            if len(x) == nnz: self.x = N.asarray(x, type)
-            else: self.x = N.zeros(nnz, type)
-            if len(d) == n: self.d = N.asarray(d, type)
-            else: self.d = N.zeros(n, type)
-            self.shape = (n,n)
-            self.offset = offset
-            self.dtype = type
-            self.typecode = type
-            self.rows = n
-            self.nnz = nnz
+        
+        if len(i) == n+1: self.i = N.asarray(i, ncInt32)
+        else: self.i = N.zeros(n+1, nxInt32)
+        if len(j) == nnz: self.j = N.asarray(j, ncInt32)
+        else: self.j = N.zeros(nnz, nxInt32)
+        if len(x) == nnz: self.x = N.asarray(x, type)
+        else: self.x = N.zeros(nnz, type)
+        if len(d) == n: self.d = N.asarray(d, type)
+        else: self.d = N.zeros(n, type)
+        self.shape = (n,n)
+        self.offset = offset
+        self.dtype = type
+        self.typecode = type
+        self.rows = n
+        self.nnz = nnz
 
     def matrices(self):
         return self.d, self.x, self.j, self.i
-
+  
     def __call__(self, x, y = None):
         if y is None: y = N.zeros(self.rows, nxTypecode(self))
         self.matvec(x, y)
@@ -1132,38 +451,6 @@ class CSRd:
                 ind[j] += 1
         return I, J
 
-    def WriteNetCDF (self, filename = "CSRd.nc"):
-        NCfile = NetCDFFile(filename, 'w')
-        setattr(NCfile, 'format', 'CRSd')
-        setattr(NCfile, 'rows', self.rows)
-        NCfile.createDimension('rowspnz', self.rows+self.nnz+1)
-        mij = NCfile.createVariable('ij', ncInt,  ('rowspnz',))
-        mdx = NCfile.createVariable('dx', ncFloat,  ('rowspnz', ))
-        mij[:self.rows+1] = self.i
-        mij[self.rows+1:] = self.j
-        mdx[0] = self.offset
-        mdx[1:self.rows+1] = self.d
-        mdx[self.rows+1:] = self.x
-        NCfile.sync()
-        NCfile.close()
-
-    def ReadNetCDF (self, filename = "CSRd.nc"):
-        NCfile = NetCDFFile(filename, 'r')
-        if NCfile.format != 'CRSd':
-            raise NameError, "SparseFormatError"
-        else:
-            self.rows = NCfile.rows[0]
-            self.shape = (self.rows, self.rows)
-            self.i = N.asarray(NCfile.variables['ij'][:self.rows+1], ncInt32)
-            self.j =  N.asarray(NCfile.variables['ij'][self.rows+1:], ncInt32)
-            self.offset = N.int(N.asarray(NCfile.variables['dx'][0], ncFloat))
-            self.d = N.asarray(NCfile.variables['dx'][1:self.rows+1], ncFloat)
-            self.x = N.asarray(NCfile.variables['dx'][self.rows+1:], ncFloat)
-            self.nnz = len(self.x)
-            self.typecode = nxFloat
-            self.dtype = nxFloat
-        NCfile.close()
-
 def CSR2pbm(A, offset = 0, pbm = 'CSR.pbm', s = None, comment = ''):
     """
     CSR2pbm(A, offset = 0, pbm = 'CSR.pbm', s = None)
@@ -1175,7 +462,7 @@ def CSR2pbm(A, offset = 0, pbm = 'CSR.pbm', s = None, comment = ''):
     G3- or G4-encoded format (see pnmtotiff, pbmtog3, and pbmtopsg3).
 
     Matrices in CSRd format can also be processed but only the upper triangle
-    will be shown. Transposing of the bitmap can be achieved using
+    will be shown. Transposing of the bitmap can be achieved using 
         pnmflip -transpose A.pbm > At.pbm
     and composing the full bitmap is done by (white = 1, black = 0)
         pnmpaste -and A.pbm 0 0 At.pbm > Afull.pbm
@@ -1227,7 +514,7 @@ def CSR2pbm(A, offset = 0, pbm = 'CSR.pbm', s = None, comment = ''):
 
 def rcm(A):
     """ p = rcm(A)
-
+        
         generate the reverse Cuthill-McKee ordering of A
     """
     i, j = A.graph()
@@ -1271,7 +558,7 @@ class Sparse:
 
     def getIndex(self):
         self.SparseIndex = Index([], [], [], [])
-
+        
     def nonzero(self):
         if self.SparseIndex == None: self.getIndex()
         return self.SparseIndex
@@ -1325,7 +612,7 @@ class Sparse:
             b.MC = self.MT
             self.MA = b
         return self.MA
-
+        
     A = Adjoint
     Dagger = Adjoint
 
@@ -1340,97 +627,6 @@ def AbsNorm(matrix):
   for i,j,h in matrix:
     el += abs(h)
   return el
-
-class LL_Mat_NC:
-
-    def __init__(self, sym = False, filename = 'll_mat.nc', clobber = False,
-            offset = 0, nsync = 1000, dtype = ncFloat, shape = (-1, -1)):
-        self.filename = filename
-        try:
-            open(filename, 'r')
-            newFile = False
-        except IOError:
-            newFile = True
-        if not newFile:
-            try:
-                self.NCfile = NetCDFFile(self.filename, 'a')
-                if self.NCfile.format != 'LL_Mat':
-                    raise TypeError('not a LL_Mat type file')
-                clobber = False
-            except:
-                if not clobber:
-                    raise IOError('file ' + filename + ' already exists')
-        if newFile or clobber:
-            self.NCfile = NetCDFFile(self.filename, 'w')
-            self.NCfile.createDimension('nnz', None)
-            self.NCfile.createDimension('nd', 2)
-            self.NCfile.createVariable('idxi', ncInt, ('nnz',))
-            self.NCfile.createVariable('idxj', ncInt, ('nnz',))
-            self.NCfile.createVariable('value', dtype, ('nnz',))
-            self.NCfile.createVariable('shape', ncInt, ('nd',))
-            self.NCfile.createVariable('minshape', ncInt, ('nd',))
-            setattr(self.NCfile, 'format', 'LL_Mat')
-            setattr(self.NCfile, 'offset', offset)
-            setattr(self.NCfile, 'symmetric', sym)
-            setattr(self.NCfile, 'nsync', nsync)
-            self.NCfile.sync()
-            self.NCfile.variables['shape'][:] = shape
-            self.NCfile.variables['minshape'][:] = 0, 0
-        self.variables = self.NCfile.variables
-        self.i = self.variables['idxi']
-        self.j = self.variables['idxj']
-        self.d = self.variables['value']
-        self.shape = self.variables['shape'][:]
-        self.M, self.N = self.variables['minshape'][:]
-        if self.NCfile.symmetric:
-            self.sym = True
-        else:
-            self.sym = False
-        self.nsync = self.NCfile.nsync
-        self._nsync = 0
-        self.nnz = len(self.d)
-
-    def sync(self):
-        self.NCfile.sync()
-
-    def close(self):
-        self.NCfile.close()
-
-    def __getindex__(self, n):
-        return self.i[n], self.j[n], self.d[n]
-
-    def __setitem__(self, key, value):
-        n = self.nnz
-        self.i[n], self.j[n] = key
-        self.d[n] = value
-        self.nnz += 1
-
-    def append(self, ijval):
-        n = self.nnz
-        i, j, d = ijval
-        self.i[n], self.j[n], self.d[n] = ijval
-        self.M = max(self.M, i)
-        self.N = max(self.N, j)
-        self.nnz += 1
-        self._nsync += 1
-        if self._nsync > self.nsync:
-            self.variables['minshape'][:] = M, N
-            self.sync()
-            self._nsync = 0
-
-    def spmatrix(self):
-        m, n = self.shape
-        if self.sym:
-            H = spmatrix.ll_mat_sym(n, self.nnz)
-        else:
-            H = spmatrix.ll_mat(m, n, self.nnz)
-        for i, j, d in itertools.izip(self.i, self.j, self.d):
-            H[i,j] = d
-        if self.sym:
-            H = H.to_sss()
-        else:
-            H = H.to_csr()
-        return H
 
 class Index(Sparse):
 
@@ -1513,7 +709,7 @@ class DiagonalSymmetric(Diagonal):
 
     def __len__(self):
         n = 0
-        for k in self.index:
+        for k in self.index: 
             if k == 0: n += self.shape[0] - abs(k)
             else: n += 2*(self.shape[0] - abs(k))
         return n
@@ -1592,7 +788,7 @@ class Boson(Diagonal):
 class TensorProduct(Sparse):
 
     def __init__(self, r, l, a, typecode = None):
-        if typecode is None:
+        if typecode is None: 
             typecode = nxTypecode(a)
         Sparse.__init__(self, typecode)
         self.shape = []
@@ -1662,7 +858,7 @@ def AmuB(A, B, Cnnz=None, job=1, offset=0):
 def AplsB(A, B, s=1, Cnnz=None, offset=0):
     """
     performs the matrix by matrix addition C = A + s * B
-
+    
     in csr format
     both matrices should have the sane offset
     """
@@ -1685,15 +881,15 @@ def AplsB(A, B, s=1, Cnnz=None, offset=0):
     cx = cx[:ci[-1]]
     cj = cj[:ci[-1]]
     return CSR(n=(len(ci)-1), m=None, nnz=len(cx), x=cx, j=cj, i=ci, offset=0)
-
+  
 def AmS(A, s):
     for i, j, h in A:
       h *= s
-    return A
-
+    return A 
+  
 def Bp(L):
     """ b = Bp(L)
-
+        
         returns a matrix for the operator B^dagger for an L-level system
     """
     b = N.zeros((L,L),nxFloat)
@@ -1703,7 +899,7 @@ def Bp(L):
 
 def Bm(L):
     """ b = Bm(L)
-
+        
         returns a matrix for the operator B for an L-level system
     """
     b = N.zeros((L,L),nxFloat)
@@ -1728,8 +924,8 @@ def lsqr(A, b, niter = 0, x = None, damp = 0, condlim = 0, atol = 0, btol = 0,
     Kr (Kl) can be a right (left) pre-conditioner K which has to
     implement the call K.precon(x, y) for y = Kx
 
-    Reference: C. C. Paige & M. A. Saunders, "LSQR: an algorithm for
-    sparse linear equations and sparse least squares", ACM Trans.
+    Reference: C. C. Paige & M. A. Saunders, "LSQR: an algorithm for 
+    sparse linear equations and sparse least squares", ACM Trans. 
     Math. Software 8 (1982), 43-71.
 
     see also the Matlab implementation at:
@@ -2082,7 +1278,6 @@ def spmatrix_fromfile(file, shape = None):
     A.fromfile(file)
     return A
 
-largeLL = LargeLL # old name, classes should begin with a capital letter.
 
 if __name__ == '__main__':
     a = DiagonalSymmetric(5, (0,(1,2,3,4,5)), (-1,(1,2,3,4)))

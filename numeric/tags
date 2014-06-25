@@ -1,0 +1,501 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.6	//
+AbsNorm	SparseMatrix.py	/^def AbsNorm(matrix):$/;"	f
+Adjoint	SparseMatrix.py	/^    def Adjoint(self):$/;"	m	class:Sparse
+AmS	SparseMatrix.py	/^def AmS(A, s):$/;"	f
+AmuB	SparseMatrix.py	/^def AmuB(A, B, Cnnz=None, job=1, offset=0):$/;"	f
+AplsB	SparseMatrix.py	/^def AplsB(A, B, s=1, Cnnz=None, offset=0):$/;"	f
+BasisVectors	vectors.py	/^class BasisVectors:$/;"	c
+Bisect	Roots.py	/^    def Bisect(self, a, b, xacc = None, nmax = 40):$/;"	m	class:Roots
+Bm	SparseMatrix.py	/^def Bm(L):$/;"	f
+Bmatrix	IMLS.py	/^class Bmatrix:$/;"	c
+BmatrixBasisFunctions	IMLS.py	/^class BmatrixBasisFunctions(Bmatrix):$/;"	c
+BmatrixPolynomial2	IMLS.py	/^class BmatrixPolynomial2(Bmatrix):$/;"	c
+Boson	SparseMatrix.py	/^class Boson(Diagonal):$/;"	c
+Bp	SparseMatrix.py	/^def Bp(L):$/;"	f
+BracketInterior	Roots.py	/^    def BracketInterior(self, a, b, n):$/;"	m	class:Roots
+BracketOut	Roots.py	/^    def BracketOut(self, a, b, fa = None, fb = None, fac = 1.6, ntry = 50):$/;"	m	class:Roots
+Brent	Roots.py	/^    def Brent(self, a, b, tol, fa = None, fb = None, nmax=100, eps=3.0e-8):$/;"	m	class:Roots
+CMDVR	EigenSolver.py	/^class CMDVR(Eigensolver):$/;"	c
+CSR	SparseMatrix.py	/^class CSR:$/;"	c
+CSR2MSR	Preconditioner.py	/^  def CSR2MSR(self):$/;"	m	class:LU
+CSR2pbm	SparseMatrix.py	/^def CSR2pbm(A, offset = 0, pbm = 'CSR.pbm', s = None, comment = ''):$/;"	f
+CSRd	SparseMatrix.py	/^class CSRd:$/;"	c
+Cholesky	Preconditioner.py	/^class Cholesky (Preconditioner):$/;"	c
+ComplexConjugate	SparseMatrix.py	/^    def ComplexConjugate(self):$/;"	m	class:Sparse
+D	Birkhoff.py	/^    def D(self, *d):$/;"	m	class:Interpolate
+D	IMLS.py	/^    def D(self, d):$/;"	m	class:GaussWeight
+D	Polynomial.py	/^    def D(self, *d):$/;"	m	class:Polynom
+D	Spline.py	/^    def D(self, i, j, k, x, y, z):$/;"	m	class:Spline3D
+D	Spline.py	/^    def D(self, i, j, x, y):$/;"	m	class:Spline2D
+D	Spline.py	/^    def D(self, i, x):$/;"	m	class:Spline1D
+Derivative	Derivative.py	/^class Derivative:$/;"	c
+Diagonal	SparseMatrix.py	/^class Diagonal(Sparse):$/;"	c
+DiagonalSymmetric	SparseMatrix.py	/^class DiagonalSymmetric(Diagonal):$/;"	c
+E	EigenSolver.py	/^    def E(self, i):$/;"	m	class:Eigensolver
+Eigensolver	EigenSolver.py	/^class Eigensolver:$/;"	c
+Element	Algebra.py	/^class Element:$/;"	c
+EulerAngle	Rotation.py	/^def EulerAngle(u, v, x, y, z, eps = 1.0e-7):$/;"	f
+EulerParameter	Rotation.py	/^def EulerParameter(u, v, x, y, z):$/;"	f
+FrobeniusNorm	SparseMatrix.py	/^def FrobeniusNorm(matrix):$/;"	f
+GM	CGO.py	/^class GM:$/;"	c
+GaussWeight	IMLS.py	/^class GaussWeight:$/;"	c
+GaussianCollocation1D	EigenSolver.py	/^class GaussianCollocation1D(Eigensolver):$/;"	c
+ILU0	Preconditioner.py	/^  def ILU0(self):$/;"	m	class:LU
+ILUD	Preconditioner.py	/^  def ILUD(self):$/;"	m	class:LU
+ILUDP	Preconditioner.py	/^  def ILUDP(self):$/;"	m	class:LU
+ILUK	Preconditioner.py	/^  def ILUK(self):$/;"	m	class:LU
+ILUT	Preconditioner.py	/^  def ILUT(self):$/;"	m	class:LU
+ILUTP	Preconditioner.py	/^  def ILUTP(self):$/;"	m	class:LU
+Index	SparseMatrix.py	/^class Index(Sparse):$/;"	c
+Interpolate	Birkhoff.py	/^class Interpolate:$/;"	c
+Inverse	Preconditioner.py	/^class Inverse(Preconditioner):$/;"	c
+Jacobi	Preconditioner.py	/^class Jacobi (Preconditioner):$/;"	c
+LL_Mat_NC	SparseMatrix.py	/^class LL_Mat_NC:$/;"	c
+LL_Preconditioner	Preconditioner.py	/^class LL_Preconditioner(largeLL):$/;"	c
+LL_from_mtx	SparseMatrix.py	/^  def LL_from_mtx(self, file='largeLL.mtx'): $/;"	m	class:largeLL
+LU	Preconditioner.py	/^class LU(Preconditioner):$/;"	c
+LU2L_U	Preconditioner.py	/^  def LU2L_U(self):$/;"	m	class:LU
+LUSOL	Preconditioner.py	/^  def LUSOL(self, y, x, alu, jlu, ju):$/;"	m	class:LU
+LUTSOL	Preconditioner.py	/^  def LUTSOL(self, y, x, alu, jlu, ju):$/;"	m	class:LU
+LU_python	Preconditioner.py	/^class LU_python(Preconditioner):$/;"	c
+LxU	Preconditioner.py	/^  def LxU(self):$/;"	m	class:LU
+LxU	Preconditioner.py	/^  def LxU(self):$/;"	m	class:LU_python
+MILU0	Preconditioner.py	/^  def MILU0(self):$/;"	m	class:LU
+MSPAI	Preconditioner.py	/^class MSPAI(Preconditioner):$/;"	c
+MSR2CSR	Preconditioner.py	/^  def MSR2CSR(self):$/;"	m	class:LU
+Matrix	IMLS.py	/^    def Matrix(self, B = None):$/;"	m	class:Bmatrix
+Matrix	IMLS.py	/^    def Matrix(self, B = None):$/;"	m	class:BmatrixBasisFunctions
+Matrix	IMLS.py	/^    def Matrix(self, B = None):$/;"	m	class:BmatrixPolynomial2
+MatrixGenerator	vectors.py	/^class MatrixGenerator:$/;"	c
+Morse	EigenSolver.py	/^    def Morse(r, D = 5.716, a = 0.1519399, re = 0):$/;"	f
+Mv	IMLS.py	/^    def Mv(self, v, res = None):$/;"	m	class:Bmatrix
+Mv	IMLS.py	/^    def Mv(self, v, res = None):$/;"	m	class:BmatrixPolynomial2
+NSOLD	nsold.py	/^class NSOLD:$/;"	c
+Newton	Roots.py	/^    def Newton(self, a, b, xacc = None, fa = None, fb = None, h = 1.0e-5, nmax=100):$/;"	m	class:Roots
+One_ll	Preconditioner.py	/^def One_ll (m):$/;"	f
+Operation	Algebra.py	/^class Operation(Element):$/;"	c
+PARDISO	SparseMatrix.py	/^class PARDISO:$/;"	c
+PARDISOError	SparseMatrix.py	/^class PARDISOError(Exception):$/;"	c
+Polynom	Polynomial.py	/^class Polynom:$/;"	c
+PolynomialPreconditioner	Preconditioner.py	/^class PolynomialPreconditioner:$/;"	c
+Preconditioner	Preconditioner.py	/^class Preconditioner:$/;"	c
+Preconditioner	SparseMatrix.py	/^class Preconditioner:$/;"	c
+Product	Algebra.py	/^class Product(Operation):$/;"	c
+Psi	EigenSolver.py	/^    def Psi(self, i):$/;"	m	class:Eigensolver
+ReadNetCDF	SparseMatrix.py	/^    def ReadNetCDF (self, filename = "CSR.nc"):$/;"	m	class:CSR
+ReadNetCDF	SparseMatrix.py	/^    def ReadNetCDF (self, filename = "CSRd.nc"):$/;"	m	class:CSRd
+Roots	Roots.py	/^class Roots:$/;"	c
+SAINV	Preconditioner.py	/^class SAINV(Preconditioner):$/;"	c
+SSOR	Preconditioner.py	/^class SSOR (Preconditioner):$/;"	c
+Sparse	SparseMatrix.py	/^class Sparse:$/;"	c
+Spline	Spline.py	/^class Spline:$/;"	c
+Spline1D	Spline.py	/^class Spline1D(Spline):$/;"	c
+Spline2D	Spline.py	/^class Spline2D(Spline):$/;"	c
+Spline3D	Spline.py	/^class Spline3D(Spline):$/;"	c
+Sum	Algebra.py	/^class Sum(Operation):$/;"	c
+TensorProduct	SparseMatrix.py	/^class TensorProduct(Sparse):$/;"	c
+Transpose	SparseMatrix.py	/^    def Transpose(self):$/;"	m	class:Sparse
+Tv	IMLS.py	/^    def Tv(self, v, res = None):$/;"	m	class:Bmatrix
+Tv	IMLS.py	/^    def Tv(self, v, res = None):$/;"	m	class:BmatrixPolynomial2
+WriteNetCDF	SparseMatrix.py	/^    def WriteNetCDF (self, filename = "CSR.nc"):$/;"	m	class:CSR
+WriteNetCDF	SparseMatrix.py	/^    def WriteNetCDF (self, filename = "CSRd.nc"):$/;"	m	class:CSRd
+_Cauchy	rv.py	/^   def _Cauchy(self, median=0.0, scale=1.0, buffer=None):$/;"	m	class:_pranv
+_Fisher_F	rv.py	/^   def _Fisher_F(self, numdf=2.0, denomdf=10.0, buffer=None):$/;"	m	class:_pranv
+_Gumbel	rv.py	/^   def _Gumbel(self, mode=0.0, scale=1.0, buffer=None):$/;"	m	class:_pranv
+_Laplace	rv.py	/^   def _Laplace(self, mu=0.0, scale=1.0, buffer=None):$/;"	m	class:_pranv
+_Pareto	rv.py	/^   def _Pareto(self, mode=1.0, shape=4.0, buffer=None):$/;"	m	class:_pranv
+_Poisson	rv.py	/^   def _Poisson(self, rate=1.0, buffer=None):$/;"	m	class:_pranv
+_Rayleigh	rv.py	/^   def _Rayleigh(self, mode=1.0, buffer=None):$/;"	m	class:_pranv
+_Student_t	rv.py	/^   def _Student_t(self, df=100.0, buffer=None):$/;"	m	class:_pranv
+_Wald	rv.py	/^   def _Wald(self, mean=1.0, scale=1.0, buffer=None):$/;"	m	class:_pranv
+_Weibull	rv.py	/^   def _Weibull(self, scale=1.0, shape=0.5, buffer=None):$/;"	m	class:_pranv
+_Zipf	rv.py	/^   def _Zipf(self, a=4.0, buffer=None):$/;"	m	class:_pranv
+__add__	Algebra.py	/^    def __add__(self, other):$/;"	m	class:Element	file:
+__call__	Birkhoff.py	/^    def __call__(self, *x):$/;"	m	class:Interpolate	file:
+__call__	CGO.py	/^    def __call__(self):$/;"	m	class:GM	file:
+__call__	Derivative.py	/^    def __call__(self, x):$/;"	m	class:Derivative	file:
+__call__	EigenSolver.py	/^    def __call__(self, V, clear = False):$/;"	m	class:GaussianCollocation1D	file:
+__call__	EigenSolver.py	/^    def __call__(self, V, clear=True):$/;"	m	class:CMDVR	file:
+__call__	EigenSolver.py	/^    def __call__(self, sym = False, overwrite = False):$/;"	m	class:Eigensolver	file:
+__call__	IMLS.py	/^    def __call__(self, d):$/;"	m	class:GaussWeight	file:
+__call__	IMLS.py	/^    def __call__(self, d):$/;"	m	class:cutoffWeight	file:
+__call__	IMLS.py	/^    def __call__(self, x):$/;"	m	class:Bmatrix	file:
+__call__	IMLS.py	/^    def __call__(self, x):$/;"	m	class:cutoffInterpolation	file:
+__call__	IMLS.py	/^    def __call__(self, x):$/;"	m	class:interpolate	file:
+__call__	IMLS.py	/^    def __call__(self, x, res = None):$/;"	m	class:BmatrixBasisFunctions	file:
+__call__	IMLS.py	/^    def __call__(self, x, res = None):$/;"	m	class:BmatrixPolynomial2	file:
+__call__	IMLS.py	/^    def __call__(self, x, x0):$/;"	m	class:cartesianMetric2	file:
+__call__	Polynomial.py	/^    def __call__(self, *x):$/;"	m	class:Polynom	file:
+__call__	SparseMatrix.py	/^    def __call__(self, b):$/;"	m	class:PARDISO	file:
+__call__	SparseMatrix.py	/^    def __call__(self, v): return v$/;"	m	class:Sparse	file:
+__call__	SparseMatrix.py	/^    def __call__(self, x, y = None):$/;"	m	class:CSR	file:
+__call__	SparseMatrix.py	/^    def __call__(self, x, y = None):$/;"	m	class:CSRd	file:
+__call__	SparseMatrix.py	/^    def __call__(self, x, y = None):$/;"	m	class:Preconditioner	file:
+__call__	SparseMatrix.py	/^    def __call__(self, x, y = None, c = 1.):$/;"	m	class:TensorProduct	file:
+__call__	Spline.py	/^    def __call__(self, x):$/;"	m	class:Spline1D	file:
+__call__	Spline.py	/^    def __call__(self, x, y):$/;"	m	class:Spline2D	file:
+__call__	Spline.py	/^    def __call__(self, x, y, z):$/;"	m	class:Spline3D	file:
+__call__	nsold.py	/^  def __call__(self, key):$/;"	m	class:simpleFunction	file:
+__call__	nsold.py	/^  def __call__(self, x):$/;"	m	class:NSOLD	file:
+__copy__	Birkhoff.py	/^    def __copy__(self):$/;"	m	class:Interpolate	file:
+__copy__	Polynomial.py	/^    def __copy__(self):$/;"	m	class:Polynom	file:
+__div__	Algebra.py	/^    def __div__(self, other):$/;"	m	class:Element	file:
+__getindex__	SparseMatrix.py	/^    def __getindex__(self, n):$/;"	m	class:LL_Mat_NC	file:
+__getitem__	Algebra.py	/^    def __getitem__(self, key):$/;"	m	class:Element	file:
+__getitem__	EigenSolver.py	/^    def __getitem__(self, i):$/;"	m	class:Eigensolver	file:
+__getitem__	Polynomial.py	/^    def __getitem__(self, index): return  self.c[index], self.t[index]$/;"	m	class:Polynom	file:
+__getitem__	SparseMatrix.py	/^    def __getitem__(self, key): return 0$/;"	m	class:Sparse	file:
+__getitem__	SparseMatrix.py	/^    def __getitem__(self, key):$/;"	m	class:CSR	file:
+__getitem__	SparseMatrix.py	/^    def __getitem__(self, key):$/;"	m	class:CSRd	file:
+__getitem__	SparseMatrix.py	/^    def __getitem__(self, key):$/;"	m	class:Diagonal	file:
+__getitem__	SparseMatrix.py	/^    def __getitem__(self, key):$/;"	m	class:DiagonalSymmetric	file:
+__getitem__	SparseMatrix.py	/^    def __getitem__(self, key):$/;"	m	class:Index	file:
+__getitem__	SparseMatrix.py	/^    def __getitem__(self, key):$/;"	m	class:TensorProduct	file:
+__getitem__	SparseMatrix.py	/^  def __getitem__(self, key):$/;"	m	class:largeLL	file:
+__iadd__	Algebra.py	/^    def __iadd__(self, other):$/;"	m	class:Element	file:
+__imul__	Algebra.py	/^    def __imul__(self, other):$/;"	m	class:Element	file:
+__init__	Algebra.py	/^    def __init__(self, a, b, commutative = 0):$/;"	m	class:Product
+__init__	Algebra.py	/^    def __init__(self, a, b, commutative = 1):$/;"	m	class:Sum
+__init__	Algebra.py	/^    def __init__(self, a, b,$/;"	m	class:Operation
+__init__	Algebra.py	/^    def __init__(self, name = 'Element', scalar = 1):$/;"	m	class:Element
+__init__	Birkhoff.py	/^    def __init__(self, dim, typecode = nxFloat):$/;"	m	class:Interpolate
+__init__	CGO.py	/^    def __init__(self, x0 = None, f = None, schedule = None,$/;"	m	class:GM
+__init__	Derivative.py	/^    def __init__(self, f = zero, order = (1,)):$/;"	m	class:Derivative
+__init__	EigenSolver.py	/^    def __init__(self, H, nstates = None):$/;"	m	class:Eigensolver
+__init__	EigenSolver.py	/^    def __init__(self, x, w = None,  nstates = None, mass = 1):$/;"	m	class:CMDVR
+__init__	EigenSolver.py	/^    def __init__(self, x, w = None, c = 0.7, nstates = None, mass = 1,$/;"	m	class:GaussianCollocation1D
+__init__	IMLS.py	/^    def __init__(self):$/;"	m	class:cartesianMetric2
+__init__	IMLS.py	/^    def __init__(self, Z):$/;"	m	class:Bmatrix
+__init__	IMLS.py	/^    def __init__(self, Z):$/;"	m	class:BmatrixPolynomial2
+__init__	IMLS.py	/^    def __init__(self, Z, functions):$/;"	m	class:BmatrixBasisFunctions
+__init__	IMLS.py	/^    def __init__(self, alpha = 1.0, eps = 0.0, np = 2, inverseDist = False):$/;"	m	class:GaussWeight
+__init__	IMLS.py	/^    def __init__(self, nodes = [], values = [], weight = None, B = None,$/;"	m	class:cutoffInterpolation
+__init__	IMLS.py	/^    def __init__(self, nodes = [], values = [], weight = None, B = None,$/;"	m	class:interpolate
+__init__	IMLS.py	/^    def __init__(self, weight, nfrac = 0.1, nmin = 5, cutoffType = 'cos'):$/;"	m	class:cutoffWeight
+__init__	Polynomial.py	/^    def __init__(self, dim, ncoeff = 0, typecode = nxFloat):$/;"	m	class:Polynom
+__init__	Preconditioner.py	/^    def __init__ (self, block1, block2, odBlock, coef, order=1, ld = True):$/;"	m	class:combinedPreconditioner
+__init__	Preconditioner.py	/^    def __init__ (self, matrix):$/;"	m	class:Preconditioner
+__init__	Preconditioner.py	/^    def __init__ (self, matrix, omega=1.0, steps=1):$/;"	m	class:Jacobi
+__init__	Preconditioner.py	/^    def __init__ (self, matrix, omega=1.0, steps=1):$/;"	m	class:SSOR
+__init__	Preconditioner.py	/^    def __init__ (self, matrix, p = 10, eps = 1.0e-6, fout = 1, lambd = 0, offset = 0):$/;"	m	class:Cholesky
+__init__	Preconditioner.py	/^    def __init__(self, A, polynomialDegree = 4, alpha = 1., beta = 0., norm = True):$/;"	m	class:PolynomialPreconditioner
+__init__	Preconditioner.py	/^    def __init__(self, d1, d2, ld = None, ud = None, coef = None, order = 1):$/;"	m	class:outerDiagonalPrec
+__init__	Preconditioner.py	/^    def __init__(self, matrix, issym = None):$/;"	m	class:Inverse
+__init__	Preconditioner.py	/^  def __init__(self, matrix = None, fill = 20, w=1.0e-6, permtol=0.05,$/;"	m	class:LU
+__init__	Preconditioner.py	/^  def __init__(self, matrix = None, name='default.mtx', mname='precond.mtx',$/;"	m	class:MSPAI
+__init__	Preconditioner.py	/^  def __init__(self, matrix = None, p = 100, w = 1.0e-6, offset=1):$/;"	m	class:SAINV
+__init__	Preconditioner.py	/^  def __init__(self, matrix = None, p = 20, w = 1.0e-6, offset=0, $/;"	m	class:LU_python
+__init__	Roots.py	/^    def __init__(self, f, df = None):$/;"	m	class:Roots
+__init__	SparseMatrix.py	/^    def __init__(self, A, mtype, perm = None, np = 1, msglevel = 0,$/;"	m	class:PARDISO
+__init__	SparseMatrix.py	/^    def __init__(self, mapping = None):$/;"	m	class:Preconditioner
+__init__	SparseMatrix.py	/^    def __init__(self, n = None, m = None, nnz = None, i = (), j = (), x = (), type = nxFloat,$/;"	m	class:CSR
+__init__	SparseMatrix.py	/^    def __init__(self, n = None, nnz = None, i = (), j = (), x = (), d=(), $/;"	m	class:CSRd
+__init__	SparseMatrix.py	/^    def __init__(self, n, *diagonals):$/;"	m	class:Diagonal
+__init__	SparseMatrix.py	/^    def __init__(self, n, *pm):$/;"	m	class:Boson
+__init__	SparseMatrix.py	/^    def __init__(self, r, l, a, typecode = None):$/;"	m	class:TensorProduct
+__init__	SparseMatrix.py	/^    def __init__(self, shape, i, j, a):$/;"	m	class:Index
+__init__	SparseMatrix.py	/^    def __init__(self, sym = False, filename = 'll_mat.nc', clobber = False,$/;"	m	class:LL_Mat_NC
+__init__	SparseMatrix.py	/^    def __init__(self, typecode = nxFloat):$/;"	m	class:Sparse
+__init__	SparseMatrix.py	/^    def __init__(self, value):$/;"	m	class:PARDISOError
+__init__	SparseMatrix.py	/^  def __init__(self, matrix=None, i_offset = 0, j_offset = 0, issym = None, $/;"	m	class:largeLL
+__init__	Spline.py	/^    def __init__(self):$/;"	m	class:Spline
+__init__	Spline.py	/^    def __init__(self, x, data, kx = 3):$/;"	m	class:Spline1D
+__init__	Spline.py	/^    def __init__(self, x, y, data, kx = 3, ky = 3):$/;"	m	class:Spline2D
+__init__	Spline.py	/^    def __init__(self, x, y, z, data, kx = 3, ky = 3, kz = 3):$/;"	m	class:Spline3D
+__init__	nsold.py	/^  def __init__(self): pass$/;"	m	class:simpleFunction
+__init__	nsold.py	/^  def __init__(self, function, atol=0.01, rtol=0.01, rsham=0.5, maxarm=20, $/;"	m	class:NSOLD
+__init__	rv.py	/^   def __init__(self):$/;"	m	class:_gen_timer
+__init__	rv.py	/^   def __init__(self):$/;"	m	class:_pranv
+__init__	spmatrixIterator.py	/^  def __init__(self, matrix):$/;"	m	class:spmatrixIterator
+__init__	vectors.py	/^  def __init__(self, a={}, factor=100.):$/;"	m	class:BasisVectors
+__init__	vectors.py	/^  def __init__(self, n, hint, bandwidth, sym=0):$/;"	m	class:MatrixGenerator
+__isub__	Algebra.py	/^    def __isub__(self, other):$/;"	m	class:Element	file:
+__iter__	SparseMatrix.py	/^    def __iter__(self):$/;"	m	class:CSR	file:
+__len__	Algebra.py	/^    def __len__(self):$/;"	m	class:Element	file:
+__len__	CGO.py	/^    def __len__(self): return len(self.x0)$/;"	m	class:GM	file:
+__len__	EigenSolver.py	/^    def __len__(self):$/;"	m	class:Eigensolver	file:
+__len__	IMLS.py	/^    def __len__(self):$/;"	m	class:interpolate	file:
+__len__	Polynomial.py	/^    def __len__(self): return self.t.shape[0]$/;"	m	class:Polynom	file:
+__len__	SparseMatrix.py	/^    def __len__(self): return 0$/;"	m	class:Sparse	file:
+__len__	SparseMatrix.py	/^    def __len__(self):$/;"	m	class:Boson	file:
+__len__	SparseMatrix.py	/^    def __len__(self):$/;"	m	class:Diagonal	file:
+__len__	SparseMatrix.py	/^    def __len__(self):$/;"	m	class:DiagonalSymmetric	file:
+__len__	SparseMatrix.py	/^    def __len__(self):$/;"	m	class:TensorProduct	file:
+__mul__	Algebra.py	/^    def __mul__(self, other):$/;"	m	class:Element	file:
+__neg__	Algebra.py	/^    def __neg__(self):$/;"	m	class:Element	file:
+__nonzero__	Algebra.py	/^    def __nonzero__(self):$/;"	m	class:Element	file:
+__pos__	Algebra.py	/^    def __pos__(self):$/;"	m	class:Element	file:
+__radd__	Algebra.py	/^    def __radd__(self, other):$/;"	m	class:Element	file:
+__repr__	Algebra.py	/^    def __repr__(self):$/;"	m	class:Element	file:
+__repr__	Algebra.py	/^    def __repr__(self):$/;"	m	class:Operation	file:
+__repr__	Polynomial.py	/^    def __repr__(self): return `self.t`$/;"	m	class:Polynom	file:
+__rmul__	Algebra.py	/^    def __rmul__(self, other):$/;"	m	class:Element	file:
+__rsub__	Algebra.py	/^    def __rsub__(self, other):$/;"	m	class:Element	file:
+__setitem__	SparseMatrix.py	/^    def __setitem__(self, key, value):$/;"	m	class:LL_Mat_NC	file:
+__setitem__	SparseMatrix.py	/^  def __setitem__(self, key, value):$/;"	m	class:largeLL	file:
+__str__	SparseMatrix.py	/^    def __str__(self):$/;"	m	class:PARDISOError	file:
+__sub__	Algebra.py	/^    def __sub__(self, other):$/;"	m	class:Element	file:
+_bench	rv.py	/^   def _bench(self, generator, expected, var, buf=None):$/;"	m	class:_gen_timer
+_beta	rv.py	/^   def _beta(self, mu=4.0, nu=2.0, buffer=None):$/;"	m	class:_pranv
+_binomial	rv.py	/^   def _binomial(self, trials=25, pr_success=0.5, buffer=None):$/;"	m	class:_pranv
+_build_iterator	rv.py	/^   def _build_iterator(self):$/;"	m	class:_pranv
+_chi_square	rv.py	/^   def _chi_square(self, df=10.0, buffer=None):$/;"	m	class:_pranv
+_choice	rv.py	/^   def _choice(self, seq=(0,1), buffer=None):$/;"	m	class:_pranv
+_cmrg	rv.py	/^   def _cmrg(self):$/;"	m	class:_pranv
+_exponential	rv.py	/^   def _exponential(self, scale=1.0, buffer=None):$/;"	m	class:_pranv
+_fill_ln_fac	rv.py	/^   def _fill_ln_fac(self):$/;"	m	class:_pranv
+_flip	rv.py	/^   def _flip(self):$/;"	m	class:_pranv
+_gamma	rv.py	/^   def _gamma(self, mu=2.0, buffer=None):$/;"	m	class:_pranv
+_gen_timer	rv.py	/^class _gen_timer:$/;"	c
+_geometric	rv.py	/^   def _geometric(self, pr_failure=0.5, buffer=None):$/;"	m	class:_pranv
+_hypergeometric	rv.py	/^   def _hypergeometric(self, bad=10, good=25, sample=10, buffer=None):$/;"	m	class:_pranv
+_in_simplex	rv.py	/^   def _in_simplex(self, mseq=5*[0.0], bound=1.0):$/;"	m	class:_pranv
+_in_sphere	rv.py	/^   def _in_sphere(self, center=5*[0.0], radius=1.0):$/;"	m	class:_pranv
+_initial_seed	rv.py	/^   def _initial_seed(self):$/;"	m	class:_pranv
+_initialize	rv.py	/^   def _initialize(self, file_string=None, algorithm='CMRG', seed=0L):$/;"	m	class:_pranv
+_ln_factorial	rv.py	/^   def _ln_factorial(self, n=0.0):$/;"	m	class:_pranv
+_logarithmic	rv.py	/^   def _logarithmic(self, p=0.5, buffer=None):$/;"	m	class:_pranv
+_logistic	rv.py	/^   def _logistic(self, mu=0.0, scale=1.0, buffer=None):$/;"	m	class:_pranv
+_lognormal	rv.py	/^   def _lognormal(self, mean=0.0, sigma=1.0, buffer=None):$/;"	m	class:_pranv
+_negative_binomial	rv.py	/^   def _negative_binomial(self, r=1.0, pr_failure=0.5, buffer=None):$/;"	m	class:_pranv
+_normal	rv.py	/^   def _normal(self, mu=0.0, sigma=1.0, buffer=None):$/;"	m	class:_pranv
+_on_simplex	rv.py	/^   def _on_simplex(self, mseq=5*[0.0], bound=1.0):$/;"	m	class:_pranv
+_on_sphere	rv.py	/^   def _on_sphere(self, center=5*[0.0], radius=1.0):$/;"	m	class:_pranv
+_permutation	rv.py	/^   def _permutation(self, elements=[0, 1, 2, 3, 4]):$/;"	m	class:_pranv
+_pranv	rv.py	/^class _pranv:$/;"	c
+_randint	rv.py	/^   def _randint(self, lowint=0, upint=1, buffer=None):$/;"	m	class:_pranv
+_random	rv.py	/^   def _random(self, buffer=None):$/;"	m	class:_pranv
+_random_algorithm	rv.py	/^   def _random_algorithm(self):$/;"	m	class:_pranv
+_random_count	rv.py	/^   def _random_count(self):$/;"	m	class:_pranv
+_rvtest	rv.py	/^def _rvtest():$/;"	f
+_sample	rv.py	/^   def _sample(self, inlist=[0,1,2], sample_size=2):$/;"	m	class:_pranv
+_save_state	rv.py	/^   def _save_state(self, file_string='prvstate.dat'):$/;"	m	class:_pranv
+_smart_sample	rv.py	/^   def _smart_sample(self, inlist=[0,1,2], sample_size=2):$/;"	m	class:_pranv
+_smrg	rv.py	/^   def _smrg(self):$/;"	m	class:_pranv
+_triangular	rv.py	/^   def _triangular(self, left=0.0, mode=0.5, right=1.0, buffer=None):$/;"	m	class:_pranv
+_twister	rv.py	/^   def _twister(self):$/;"	m	class:_pranv
+_uniform	rv.py	/^   def _uniform(self, lower=-0.5, upper=+0.5, buffer=None):$/;"	m	class:_pranv
+_vergen	rv.py	/^def _vergen(gen_abbr, seed, u100):$/;"	f
+_versave	rv.py	/^def _versave(gen_abbr):$/;"	f
+_von_Mises	rv.py	/^   def _von_Mises(self, mean=0.0, shape=1.0, buffer=None):$/;"	m	class:_pranv
+a2_ll_sym	Preconditioner.py	/^def a2_ll_sym (vec):$/;"	f
+a2ma	Preconditioner.py	/^def a2ma (vec):$/;"	f
+apndBlock	SparseMatrix.py	/^  def apndBlock(self, other, filename='LLMatrix.nc'):$/;"	m	class:largeLL
+apndElement	SparseMatrix.py	/^  def apndElement(self, i, tuple):$/;"	m	class:largeLL
+app_asym	SparseMatrix.py	/^  def app_asym(self, other):$/;"	m	class:largeLL
+app_sym	SparseMatrix.py	/^  def app_sym(self, other):$/;"	m	class:largeLL
+append	SparseMatrix.py	/^    def append(self, ijval):$/;"	m	class:LL_Mat_NC
+append	SparseMatrix.py	/^  def append(self, other):$/;"	m	class:largeLL
+armijo	nsold.py	/^  def armijo(self, direction, x, f0, alpha=1.e-4, sigma1=.5, lambd=1., lamm=1.): $/;"	m	class:NSOLD
+array2_ll	Preconditioner.py	/^def array2_ll (mat):$/;"	f
+array_to_LL	SparseMatrix.py	/^  def array_to_LL(self, issym):$/;"	m	class:largeLL
+associativity	Algebra.py	/^    def associativity(self, a, b):$/;"	m	class:Operation
+asym	vectors.py	/^  def asym(self):$/;"	m	class:MatrixGenerator
+binom	Polynomial.py	/^def binom(n, k):$/;"	f
+calc	vectors.py	/^  def calc(self, modes=[], gw=0.001):$/;"	m	class:BasisVectors
+cartesianMetric2	IMLS.py	/^class cartesianMetric2:$/;"	c
+cartesianProductIterator	Combinatorics.py	/^def cartesianProductIterator(*sets):$/;"	f
+cgls	SparseMatrix.py	/^def cgls(A, b, niter = 0, x = None, condlim = 0, atol = 0, btol = 0,$/;"	f
+cheb1stKind	Preconditioner.py	/^    def cheb1stKind(self):$/;"	m	class:chebyshevPolynomial
+chebyshevPolynomial	Preconditioner.py	/^class chebyshevPolynomial(PolynomialPreconditioner):$/;"	c
+cholesky	Preconditioner.py	/^    def cholesky(self, p = 10, eps = 1.0e-6, fout = 1, lambd = 0):$/;"	m	class:Cholesky
+choosePrecond	Preconditioner.py	/^  def choosePrecond(self, A, w, fi, pt, pe, all, la, al, be, prec, pDeg, DI):$/;"	m	class:LL_Preconditioner
+close	SparseMatrix.py	/^    def close(self):$/;"	m	class:LL_Mat_NC
+closeNCDF	SparseMatrix.py	/^  def closeNCDF(self):$/;"	m	class:largeLL
+coefficients	Polynomial.py	/^    def coefficients(self, c):$/;"	m	class:Polynom
+coefficients	Preconditioner.py	/^    def coefficients(self):$/;"	m	class:PolynomialPreconditioner
+cols	SparseMatrix.py	/^    def cols(self):$/;"	m	class:CSRd
+cols	SparseMatrix.py	/^    def cols(self, cols = None):$/;"	m	class:CSR
+combine	SparseMatrix.py	/^  def combine(self, other):$/;"	m	class:largeLL
+combinedPreconditioner	Preconditioner.py	/^class combinedPreconditioner:$/;"	c
+compose3	SparseMatrix.py	/^  def compose3(self, bath, coupling):$/;"	m	class:largeLL
+compose3_old	SparseMatrix.py	/^  def compose3_old(self, other1, other2):$/;"	m	class:largeLL
+copy	Algebra.py	/^    def copy(self, name = ''):$/;"	m	class:Element
+cp	SparseMatrix.py	/^    def cp(self):$/;"	m	class:Sparse
+cut	Preconditioner.py	/^  def cut(self):$/;"	m	class:LU
+cutoffInterpolation	IMLS.py	/^class cutoffInterpolation:$/;"	c
+cutoffWeight	IMLS.py	/^class cutoffWeight:$/;"	c
+decompose	SparseMatrix.py	/^  def decompose(self, blocksize):$/;"	m	class:largeLL
+deriv	Birkhoff.py	/^    def deriv(self, i):$/;"	m	class:Interpolate
+deriv	Polynomial.py	/^    def deriv(self, i):$/;"	m	class:Polynom
+derivative	Derivative.py	/^def derivative(w, f, d):$/;"	f
+diffjac1	nsold.py	/^  def diffjac1(self, x, f0):$/;"	m	class:NSOLD
+diffjacN	nsold.py	/^  def diffjacN(self, x, f0):$/;"	m	class:NSOLD
+diophantine_0_1_1x2	Birkhoff.py	/^def diophantine_0_1_1x2(d, maxn, maxp):$/;"	f
+dirder	nsold.py	/^  def dirder(self, x, w, f0):$/;"	m	class:NSOLD
+directProduct	Matrix.py	/^def directProduct(*matrices):$/;"	f
+directionCosines	Rotation.py	/^def directionCosines(u, v, x, y, z):$/;"	f
+dist	IMLS.py	/^    def dist(self, a, b):$/;"	m	class:interpolate
+distance	IMLS.py	/^    def distance(self, x):$/;"	m	class:cutoffInterpolation
+dumpNCDF	SparseMatrix.py	/^  def dumpNCDF(self, k=0):$/;"	m	class:largeLL
+dx	IMLS.py	/^    def dx(self, x, s):$/;"	m	class:Bmatrix
+dx	IMLS.py	/^    def dx(self, x, s, res = None):$/;"	m	class:BmatrixPolynomial2
+dx2	IMLS.py	/^    def dx2(self, x, s, t):$/;"	m	class:Bmatrix
+dx2	IMLS.py	/^    def dx2(self, x, s, t, res = None):$/;"	m	class:BmatrixPolynomial2
+factor	SparseMatrix.py	/^    def factor(self):$/;"	m	class:PARDISO
+fgrid	Derivative.py	/^def fgrid(fn, xi, typx = 0.01, eta = 0):$/;"	f
+firstOrder	Preconditioner.py	/^    def firstOrder(self, x, y):$/;"	m	class:outerDiagonalPrec
+firstOrderI	Preconditioner.py	/^    def firstOrderI(self, x, y):$/;"	m	class:outerDiagonalPrec
+firstOrderII	Preconditioner.py	/^    def firstOrderII(self, x, y):$/;"	m	class:outerDiagonalPrec
+firstOrderIII	Preconditioner.py	/^    def firstOrderIII(self, x, y):$/;"	m	class:outerDiagonalPrec
+firstOrderIV	Preconditioner.py	/^    def firstOrderIV(self, x, y):$/;"	m	class:outerDiagonalPrec
+fourthOrderI	Preconditioner.py	/^    def fourthOrderI(self, x, y):$/;"	m	class:outerDiagonalPrec
+fourthOrderII	Preconditioner.py	/^    def fourthOrderII(self, x, y):$/;"	m	class:outerDiagonalPrec
+fourthOrderIII	Preconditioner.py	/^    def fourthOrderIII(self, x, y):$/;"	m	class:outerDiagonalPrec
+fourthOrderIV	Preconditioner.py	/^    def fourthOrderIV(self, x, y):$/;"	m	class:outerDiagonalPrec
+full	SparseMatrix.py	/^    def full(self, cols = None):$/;"	m	class:CSR
+full	SparseMatrix.py	/^    def full(self, lower = 1):$/;"	m	class:CSRd
+gaussFunction	vectors.py	/^  def gaussFunction(self, x, x0, amp, w, eps=1e-8):$/;"	m	class:BasisVectors
+gaussVectorGen	vectors.py	/^  def gaussVectorGen(self, mode, gw=0.001, amp=1):$/;"	m	class:BasisVectors
+getIndex	SparseMatrix.py	/^    def getIndex(self):$/;"	m	class:Diagonal
+getIndex	SparseMatrix.py	/^    def getIndex(self):$/;"	m	class:DiagonalSymmetric
+getIndex	SparseMatrix.py	/^    def getIndex(self):$/;"	m	class:Sparse
+getIndex	SparseMatrix.py	/^    def getIndex(self, typecode = None):$/;"	m	class:Boson
+get_x	Derivative.py	/^def get_x(xi, typx = 0, eta = 0, n = 4):$/;"	f
+grad	IMLS.py	/^    def grad(self, x = None, grad = None, maxsize = None):$/;"	m	class:interpolate
+grad	IMLS.py	/^    def grad(self, x, x0):$/;"	m	class:cartesianMetric2
+gradNode	IMLS.py	/^    def gradNode(self, n, grad = None):$/;"	m	class:interpolate
+gradW	IMLS.py	/^    def gradW(self, rhs):$/;"	m	class:interpolate
+graph	SparseMatrix.py	/^    def graph(self):$/;"	m	class:CSR
+graph	SparseMatrix.py	/^    def graph(self):$/;"	m	class:CSRd
+grid	Spline.py	/^    def grid(self, x):$/;"	m	class:Spline1D
+grid	Spline.py	/^    def grid(self, x, y):$/;"	m	class:Spline2D
+grid	Spline.py	/^    def grid(self, x, y, z):$/;"	m	class:Spline3D
+histogramm	SparseMatrix.py	/^  def histogramm(self, diagElte=True, factor=1., histoName='histo',$/;"	m	class:largeLL
+idx	EigenSolver.py	/^    def idx(self, i):$/;"	m	class:Eigensolver
+ilu0	Preconditioner.py	/^  def ilu0(self):$/;"	m	class:LU_python
+ilut	Preconditioner.py	/^  def ilut(self, p, w):$/;"	m	class:LU_python
+importLinearAlgebra	__init__.py	/^def importLinearAlgebra():$/;"	f
+init	CGO.py	/^    def init(self):$/;"	m	class:GM
+initNCDF	SparseMatrix.py	/^  def initNCDF(self, filename = 'LLMatrix.nc', vdim = None):$/;"	m	class:largeLL
+initPrec	Preconditioner.py	/^  def initPrec(self, fillin = 20, w = 1.0e-5, $/;"	m	class:LL_Preconditioner
+insert_missing	SparseMatrix.py	/^  def insert_missing(self, other):$/;"	m	class:largeLL
+interpolate	IMLS.py	/^    def interpolate(self):$/;"	m	class:interpolate
+interpolate	IMLS.py	/^class interpolate:$/;"	c
+inverse	Preconditioner.py	/^  def inverse(self, r):$/;"	m	class:LU
+inverse	Preconditioner.py	/^  def inverse(self, r):$/;"	m	class:LU_python
+inverseA	Preconditioner.py	/^    def inverseA(self, r):$/;"	m	class:Cholesky
+inverseL	Preconditioner.py	/^    def inverseL(self, r):$/;"	m	class:Cholesky
+inverseLt	Preconditioner.py	/^    def inverseLt(self, r):$/;"	m	class:Cholesky
+iter	SparseMatrix.py	/^  def iter(self):$/;"	m	class:largeLL
+iterCSR	spmatrixIterator.py	/^  def iterCSR(self):$/;"	m	class:spmatrixIterator
+iterLL	spmatrixIterator.py	/^  def iterLL(self):$/;"	m	class:spmatrixIterator
+iterSSS	spmatrixIterator.py	/^  def iterSSS(self):$/;"	m	class:spmatrixIterator
+jacobi	nsold.py	/^  def jacobi(self, x):$/;"	m	class:simpleFunction
+justPrecon	Preconditioner.py	/^    def justPrecon(self, x, y):$/;"	m	class:outerDiagonalPrec
+largeLL	SparseMatrix.py	/^class largeLL:$/;"	c
+leastSquaresPolynomial	Preconditioner.py	/^class leastSquaresPolynomial(PolynomialPreconditioner):$/;"	c
+loadCSR	SparseMatrix.py	/^  def loadCSR(self, filename = 'CSRMatrix.spmat', issym = None): $/;"	m	class:largeLL
+loadNCDF	SparseMatrix.py	/^  def loadNCDF(self, filename='LLMatrix.nc', mode='r'):$/;"	m	class:largeLL
+loadNetCDF	Derivative.py	/^def loadNetCDF(file='grid.nc'):$/;"	f
+loadSSS	SparseMatrix.py	/^  def loadSSS(self, filename = 'SSSMatrix.spmat', issym = 1): $/;"	m	class:largeLL
+lsqr	SparseMatrix.py	/^def lsqr(A, b, niter = 0, x = None, damp = 0, condlim = 0, atol = 0, btol = 0,$/;"	f
+lu	Preconditioner.py	/^  def lu(self):$/;"	m	class:LU_python
+ma2_ll_sym	Preconditioner.py	/^def ma2_ll_sym (mat):$/;"	f
+ma2a	Preconditioner.py	/^def ma2a (mat):$/;"	f
+macheps	constants.py	/^def macheps():$/;"	f
+makeList	EigenSolver.py	/^    def makeList(self, nstates = None):$/;"	m	class:Eigensolver
+matrices	SparseMatrix.py	/^    def matrices(self):$/;"	m	class:CSR
+matrix	SparseMatrix.py	/^    def matrix(self):$/;"	m	class:Sparse
+matrix_init	SparseMatrix.py	/^  def matrix_init(self):$/;"	m	class:largeLL
+matvec	SparseMatrix.py	/^    def matvec(self, x, y):$/;"	m	class:CSR
+matvec	SparseMatrix.py	/^    def matvec(self, x, y):$/;"	m	class:CSRd
+neville	Polynomial.py	/^def neville(x, y, x0):$/;"	f
+nonzero	Polynomial.py	/^    def nonzero(self, list = None):$/;"	m	class:Polynom
+nonzero	SparseMatrix.py	/^    def nonzero(self):$/;"	m	class:Sparse
+normalization	Preconditioner.py	/^    def normalization(self):$/;"	m	class:PolynomialPreconditioner
+normalize	EigenSolver.py	/^    def normalize(self):$/;"	m	class:CMDVR
+normalize	EigenSolver.py	/^    def normalize(self):$/;"	m	class:GaussianCollocation1D
+numericType	Algebra.py	/^def numericType(a):$/;"	f
+orthonormalVectors	vectors.py	/^  def orthonormalVectors(self, sq, v):$/;"	m	class:BasisVectors
+outerDiagonalPrec	Preconditioner.py	/^class outerDiagonalPrec:$/;"	c
+overlapMatrix	vectors.py	/^  def overlapMatrix(self, V):$/;"	m	class:BasisVectors
+parab3p	nsold.py	/^  def parab3p(self, lambdac, lambdam, ff0, ffc, ffm, sigma0=.1, sigma1=.5):$/;"	m	class:NSOLD
+permuted	SparseMatrix.py	/^    def permuted(self, perm = None):$/;"	m	class:CSR
+permuted	SparseMatrix.py	/^    def permuted(self, perm = None):$/;"	m	class:CSRd
+polcoe	Polynomial.py	/^def polcoe(x, y):$/;"	f
+polynomial	Preconditioner.py	/^    def polynomial(self):$/;"	m	class:chebyshevPolynomial
+polynomial	Preconditioner.py	/^    def polynomial(self):$/;"	m	class:leastSquaresPolynomial
+precon	Preconditioner.py	/^    def precon (self, x, y = None):$/;"	m	class:Cholesky
+precon	Preconditioner.py	/^    def precon (self, x, y):$/;"	m	class:SSOR
+precon	Preconditioner.py	/^    def precon (self, x,y):$/;"	m	class:Jacobi
+precon	Preconditioner.py	/^    def precon (self, x,y):$/;"	m	class:Preconditioner
+precon	Preconditioner.py	/^    def precon(self, x, y):$/;"	m	class:Inverse
+precon	Preconditioner.py	/^    def precon(self, x, y):$/;"	m	class:PolynomialPreconditioner
+precon	Preconditioner.py	/^    def precon(self, x, y):$/;"	m	class:combinedPreconditioner
+precon	Preconditioner.py	/^  def precon (self, x, y = None):$/;"	m	class:LU_python
+precon	Preconditioner.py	/^  def precon(self, x, y=None):$/;"	m	class:LU
+precon	SparseMatrix.py	/^    def precon(self, x, y):     # pysparse convention$/;"	m	class:Preconditioner
+precon1st	Preconditioner.py	/^    def precon1st(self, x, y):$/;"	m	class:outerDiagonalPrec
+precon2nd	Preconditioner.py	/^    def precon2nd(self, x, y):$/;"	m	class:outerDiagonalPrec
+precon3rd	Preconditioner.py	/^    def precon3rd(self, x, y):$/;"	m	class:outerDiagonalPrec
+precon4th	Preconditioner.py	/^    def precon4th(self, x, y):$/;"	m	class:outerDiagonalPrec
+preconC	Preconditioner.py	/^  def preconC(self, x, y = None):$/;"	m	class:LU
+pythag	SparseMatrix.py	/^def pythag(x, y):$/;"	f
+randomVectorGen	vectors.py	/^  def randomVectorGen(self, vec, mode):$/;"	m	class:BasisVectors
+rcm	SparseMatrix.py	/^def rcm(A):$/;"	f
+reduce	Polynomial.py	/^    def reduce(self, n = None):$/;"	m	class:Polynom
+regularizedInverse	Matrix.py	/^def regularizedInverse(A, eps = 1e-12):$/;"	f
+reorder	SparseMatrix.py	/^    def reorder(self):$/;"	m	class:PARDISO
+replace	SparseMatrix.py	/^  def replace(self, other):$/;"	m	class:largeLL
+reprScalar	Algebra.py	/^    def reprScalar(self,s):$/;"	m	class:Element
+rotationFromQuaternion	Rotation.py	/^def rotationFromQuaternion(e):$/;"	f
+rowScaling	SparseMatrix.py	/^    def rowScaling(self):$/;"	m	class:CSR
+sainv	Preconditioner.py	/^  def sainv(self, w = 1.0e-6, fillmax = 65):$/;"	m	class:SAINV
+saveCSR	SparseMatrix.py	/^  def saveCSR(self, filename = 'CSRMatrix.spmat'):$/;"	m	class:largeLL
+saveNetCDF	Derivative.py	/^def saveNetCDF(xi, g, w, f, file='grid.nc'):$/;"	f
+saveSSS	SparseMatrix.py	/^  def saveSSS(self, filename = 'SSSMatrix.spmat'):$/;"	m	class:largeLL
+secondOrderI	Preconditioner.py	/^    def secondOrderI(self, x, y):$/;"	m	class:outerDiagonalPrec
+secondOrderII	Preconditioner.py	/^    def secondOrderII(self, x, y):$/;"	m	class:outerDiagonalPrec
+secondOrderIII	Preconditioner.py	/^    def secondOrderIII(self, x, y):$/;"	m	class:outerDiagonalPrec
+secondOrderIV	Preconditioner.py	/^    def secondOrderIV(self, x, y):$/;"	m	class:outerDiagonalPrec
+setChoose	CGO.py	/^    def setChoose(self, choose):$/;"	m	class:GM
+setF	CGO.py	/^    def setF(self, f):$/;"	m	class:GM
+setSchedule	CGO.py	/^    def setSchedule(self, schedule):$/;"	m	class:GM
+setX0	CGO.py	/^    def setX0(self, x0):$/;"	m	class:GM
+setaNCDF	SparseMatrix.py	/^  def setaNCDF(self, attr, attrVal):$/;"	m	class:largeLL
+setf	Derivative.py	/^    def setf(self, f, dimension):$/;"	m	class:Derivative
+setupDenseInterpolation	IMLS.py	/^    def setupDenseInterpolation(self):$/;"	m	class:interpolate
+setupW	IMLS.py	/^    def setupW(self, x = None, distances = None):$/;"	m	class:interpolate
+setupWorkspace	IMLS.py	/^    def setupWorkspace(self, nrhs = 1, maxsize = None):$/;"	m	class:interpolate
+simpleFunction	nsold.py	/^class simpleFunction:$/;"	c
+small	vectors.py	/^  def small(self):$/;"	m	class:MatrixGenerator
+solve	SparseMatrix.py	/^    def solve(self, b):$/;"	m	class:PARDISO
+spmatrix	SparseMatrix.py	/^    def spmatrix(self):$/;"	m	class:LL_Mat_NC
+spmatrixIterator	spmatrixIterator.py	/^class spmatrixIterator:$/;"	c
+spmatrix_fromfile	SparseMatrix.py	/^def spmatrix_fromfile(file, shape = None):$/;"	f
+squareOverlapMatrix	vectors.py	/^  def squareOverlapMatrix(self, sma):$/;"	m	class:BasisVectors
+stepsize	Derivative.py	/^def stepsize(xc, eta = 1.e-8, pow = 1.\/3):$/;"	f
+subgrid	Derivative.py	/^def subgrid(fn, grid, f, x = [], i = []):$/;"	f
+sym	vectors.py	/^  def sym(self):$/;"	m	class:MatrixGenerator
+symShapeOffset	SparseMatrix.py	/^  def symShapeOffset(self, issym=None, shape=None, i_offset=None, j_offset=None):$/;"	m	class:largeLL
+sync	SparseMatrix.py	/^    def sync(self):$/;"	m	class:LL_Mat_NC
+syncNCDF	SparseMatrix.py	/^  def syncNCDF(self):$/;"	m	class:largeLL
+terms	Polynomial.py	/^    def terms(self, x, list = None, res = None):$/;"	m	class:Polynom
+thirdOrderI	Preconditioner.py	/^    def thirdOrderI(self, x, y):$/;"	m	class:outerDiagonalPrec
+thirdOrderII	Preconditioner.py	/^    def thirdOrderII(self, x, y):$/;"	m	class:outerDiagonalPrec
+thirdOrderIII	Preconditioner.py	/^    def thirdOrderIII(self, x, y):$/;"	m	class:outerDiagonalPrec
+thirdOrderIV	Preconditioner.py	/^    def thirdOrderIV(self, x, y):$/;"	m	class:outerDiagonalPrec
+toCSR	SparseMatrix.py	/^    def toCSR(self):$/;"	m	class:CSRd
+to_CSR	SparseMatrix.py	/^  def to_CSR(self):$/;"	m	class:largeLL
+to_CSRd	SparseMatrix.py	/^  def to_CSRd(self):$/;"	m	class:largeLL
+to_array2D	SparseMatrix.py	/^  def to_array2D(self):$/;"	m	class:largeLL
+to_csr	SparseMatrix.py	/^    def to_csr(self):$/;"	m	class:CSR
+to_largeLL	SparseMatrix.py	/^    def to_largeLL(self, issym = 0, perm=None):$/;"	m	class:CSR
+to_mtx	SparseMatrix.py	/^  def to_mtx(self, name='largeLL.mtx'):$/;"	m	class:largeLL
+to_picture	SparseMatrix.py	/^  def to_picture(self, picturename = "LLmat", pdf=True, height=50, cnt=None,$/;"	m	class:largeLL
+totalDegree	Polynomial.py	/^    def totalDegree(self, n):$/;"	m	class:Polynom
+totdeg	Polynomial.py	/^    def totdeg(self, n, d, p, c, k, a):$/;"	m	class:Polynom
+transpose	SparseMatrix.py	/^    def transpose(self):$/;"	m	class:CSR
+transpose	SparseMatrix.py	/^  def transpose(self):$/;"	m	class:largeLL
+tst1	EigenSolver.py	/^    def tst1():$/;"	f
+weightFunction	Preconditioner.py	/^    def weightFunction(self):$/;"	m	class:chebyshevPolynomial
+weightFunction	Preconditioner.py	/^    def weightFunction(self):$/;"	m	class:leastSquaresPolynomial
+weights	Derivative.py	/^def weights(xi, x, m):$/;"	f
+weightsN	Derivative.py	/^def weightsN(xi, grid, m = 3):$/;"	f
+zero	Derivative.py	/^def zero(x):$/;"	f

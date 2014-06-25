@@ -1,0 +1,37 @@
+python module comm 
+  interface
+    subroutine comrr(n,nnz,ci,cj,cx,rho,rho2,nb,ne) 
+        integer intent(in), optional :: n=len(ci)-1
+        integer intent(in), dimension(*), check(len(ci)=n+1) :: ci
+        integer intent(in), optional :: nnz
+        integer intent(in), dimension(*), check(len(cj)>=nnz) :: cj
+        double precision intent(in), dimension(*), check(len(cx)>=nnz) :: cx
+        double precision intend(in), dimension(n*n), depend(n) :: rho
+        double precision intent(inout), dimension(n*n), depend(n) :: rho2
+        integer intent(in), optional :: nb=1
+        integer intent(in), optional :: ne=n
+    end subroutine comrr
+    subroutine comzz(n,nnz,ci,cj,cx,rho,rho2,nb,ne) 
+        integer intent(in), optional :: n=len(ci)-1
+        integer intent(in), dimension(*), check(len(ci)=n+1) :: ci
+        integer intent(in), optional :: nnz
+        integer intent(in), dimension(*), check(len(cj)>=nnz) :: cj
+        double complex intent(in), dimension(*), check(len(cx)>=nnz) :: cx
+        double complex intend(in), dimension(n*n), depend(n) :: rho
+        double complex intent(inout), dimension(n*n), depend(n) :: rho2
+        integer intent(in), optional :: nb=1
+        integer intent(in), optional :: ne=n
+    end subroutine comzz
+    subroutine comrz(n,nnz,ci,cj,cx,rho,rho2,nb,ne) 
+        integer intent(in), optional :: n=len(ci)-1
+        integer intent(in), dimension(*), check(len(ci)=n+1) :: ci
+        integer intent(in), optional :: nnz
+        integer intent(in), dimension(*), check(len(cj)>=nnz) :: cj
+        double precision intent(in), dimension(*), check(len(cx)>=nnz) :: cx
+        double complex intend(in), dimension(n*n), depend(n) :: rho
+        double complex intent(inout), dimension(n*n), depend(n) :: rho2
+        integer intent(in), optional :: nb=1
+        integer intent(in), optional :: ne=n
+    end subroutine comrz
+  end interface
+end python module comm

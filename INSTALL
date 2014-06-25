@@ -1,0 +1,23 @@
+
+Basic Installation
+==================
+
+These are generic installation instructions.
+
+The simplest way to compile this package is:
+
+  1. `cd` to the directory containing the package's source code.
+
+  2. Type `python setup.py build` to build the package.
+
+  3. Become superuser to install the package in a default system location.
+
+  4. Type `python setup.py install` to install the module.
+
+  5. You can remove the compiled extension modules and other installation
+     related files from the source code directory by typing
+     `python setup clean --all clean`.
+
+
+You can find more information on the installation of python packages with
+distutils at:   http://www.python.org/sigs/distutils-sig/

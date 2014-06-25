@@ -1,0 +1,101 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module csrVSmsr ! in
+  interface ! in :csrVSmsr
+    subroutine csrmsr(n,a,ja,ia,ao,jao,wk,iwk) ! in csrVSmsr.f
+        integer depend(ia), intent(hide) :: n=len(ia)-1
+        real*8  dimension(*), intent(in) :: a
+        integer dimension(*), intent(in) :: ja
+        integer dimension(*), intent(in) :: ia
+
+        real*8  dimension(len(a)+1), depend(a), intent(out) :: ao
+        integer dimension(len(a)+1), depend(a), intent(out) :: jao
+
+        real*8  dimension(n), depend(n), intent(hide) :: wk
+        integer dimension(n + 1), depend(n), intent(hide) :: iwk
+    end subroutine csrmsr
+    subroutine csrmsrcomplex(n,a,ja,ia,ao,jao,wk,iwk) ! in csrVSmsr.f
+        integer depend(ia), intent(hide) :: n=len(ia)-1
+        complex*16  dimension(*), intent(in) :: a
+        integer dimension(*), intent(in) :: ja
+        integer dimension(*), intent(in) :: ia
+
+        complex*16  dimension(len(a)+1), depend(a), intent(out) :: ao
+        integer dimension(len(a)+1), depend(a), intent(out) :: jao
+        complex*16  dimension(n), depend(n), intent(hide) :: wk
+        integer dimension(n + 1), depend(n), intent(hide) :: iwk
+    end subroutine csrmsr
+    subroutine msrcsr(n,a,ja,ao,jao,iao,wk,iwk) ! in csrVSmsr.f
+        integer :: n
+        real*8  dimension(*) :: a
+        integer dimension(*) :: ja
+
+        real*8  dimension(len(a)-1), depend(a), intent(out) :: ao
+        integer dimension(len(a)-1), depend(a), intent(out) :: jao
+        integer dimension(n + 1), depend(n), intent(out) :: iao
+
+        real*8 dimension(n), depend(n), intent(hide) :: wk
+        integer dimension(n + 1), depend(n), intent(hide) :: iwk
+    end subroutine msrcsr
+    subroutine msrcsrcomplex(n,a,ja,ao,jao,iao,wk,iwk) ! in csrVSmsr.f
+        integer :: n
+        complex*16  dimension(*) :: a
+        integer dimension(*) :: ja
+
+        complex*16  dimension(len(a)-1), depend(a), intent(out) :: ao
+        integer dimension(len(a)-1), depend(a), intent(out) :: jao
+        integer dimension(n + 1), depend(n), intent(out) :: iao
+
+        complex*16 dimension(n), depend(n), intent(hide) :: wk
+        integer dimension(n + 1), depend(n), intent(hide) :: iwk
+    end subroutine msrcsr
+    subroutine csrcsc(n,m,a,ja,ia,ao,jao,iao) ! in csrVSmsr.f
+        integer :: n
+        integer :: m
+        real*8 dimension(*) :: a
+        integer dimension(*) :: ja
+        integer depend(n), dimension(n+1) :: ia
+
+        real*8 depend(a), dimension(len(a)), intent(out) :: ao
+        integer depend(a), dimension(len(a)), intent(out) :: jao
+        integer depend(m), dimension(m+1), intent(out) :: iao
+    end subroutine csrcsc
+    subroutine csrcsccomplex(n,m,a,ja,ia,ao,jao,iao) ! in csrVSmsr.f
+        integer :: n
+        integer :: m
+        complex*16 dimension(*) :: a
+        integer dimension(*) :: ja
+        integer depend(n), dimension(n+1) :: ia
+
+        complex*16 depend(a), dimension(len(a)), intent(out) :: ao
+        integer depend(a), dimension(len(a)), intent(out) :: jao
+        integer depend(m), dimension(m+1), intent(out) :: iao
+    end subroutine csrcsc
+    subroutine dnscsr(nrow,ncol,nzmax,dns,a,ja,ia,ierr) ! in numeric/csrVSmsr.f
+        integer :: nrow
+        integer :: ncol
+        integer :: nzmax
+        real*8 dimension(*) :: dns
+
+        real*8 intent(out), dimension(nzmax) :: a
+        integer intent(out), dimension(nzmax) :: ja
+        integer intent(out), dimension(nrow+1) :: ia
+        integer intent(out) :: ierr
+    end subroutine dnscsr
+    subroutine dnscsrcomplex(nrow,ncol,nzmax,dns,a,ja,ia,ierr) ! in numeric/csrVSmsr.f
+        integer :: nrow
+        integer :: ncol
+        integer :: nzmax
+        complex*16 dimension(*) :: dns
+
+        complex*16 intent(out), dimension(nzmax) :: a
+        integer intent(out), dimension(nzmax) :: ja
+        integer intent(out), dimension(nrow+1) :: ia
+        integer intent(out) :: ierr
+    end subroutine dnscsrcomplex
+  end interface
+end python module csrVSmsr
+
+! This file was auto-generated with f2py (version:2_3473).
+! See http://cens.ioc.ee/projects/f2py2e/

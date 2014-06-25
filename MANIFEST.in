@@ -1,0 +1,10 @@
+#
+# MANIFEST.in
+#
+include *.txt INSTALL README COPYING LICENSES site.cfg.example
+recursive-include examples *
+recursive-include doc *
+recursive-include QC *.cdb
+recursive-include include *.h
+prune dist
+prune test

@@ -1,0 +1,12 @@
+files from external sources covered by the GPL:
+    numeric/bspline_22.f
+
+files with licenses different from the GPL:
+    numeric/icfs.f
+    numeric/colamd.c
+    include/colamd.h
+    numeric/rv.py
+    numeric/dlamch.c
+    numeric/dlamch.f
+    numeric/lsame.c
+    numeric/sparsepak_rcm.f90

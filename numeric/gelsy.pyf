@@ -1,0 +1,95 @@
+!    -*- f90 -*-
+!
+!  thctk.numeric: gelsy.pyf
+! 
+!    thctk - python package for Theoretical Chemistry
+!    Copyright (C) 2006 Christoph Scheurer
+! 
+!    This file is part of thctk.
+! 
+!    thctk is free software; you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation; either version 2 of the License, or
+!    (at your option) any later version.
+! 
+!    thctk is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+! 
+!    You should have received a copy of the GNU General Public License
+!    along with this program; if not, write to the Free Software
+!    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+! 
+!
+! Note: the context of this file is case sensitive.
+
+python module gelsy ! in 
+    interface  ! in :gelsy
+        subroutine sgelsy(m,n,nrhs,a,lda,b,ldb,jpvt,rcond,numrank,work,lwork,info) ! in :gelsy:sgelsy.f
+            integer, intent(in), optional, depend(lda), check(m<=lda) :: m=lda
+            integer, intent(in), optional, depend(a) :: n=shape(a,1)
+            integer, intent(in), optional, depend(b) :: nrhs=shape(b,1)
+            real dimension(lda,*) :: a
+            integer optional,check(shape(a,0)==lda),depend(a) :: lda=shape(a,0)
+            real dimension(ldb,*), intent(in,out) :: b
+            integer optional,check(ldb>=m),check(ldb>=n),check(shape(b,0)==ldb),depend(b) :: ldb=shape(b,0)
+            integer dimension(n), intent(inplace), depend(n) :: jpvt
+            real, intent(in) :: rcond
+            integer, intent(out) :: numrank
+            real dimension(*) :: work
+            integer, intent(in), optional :: lwork=shape(work,0)
+            integer, intent(out) :: info
+        end subroutine sgelsy
+        subroutine dgelsy(m,n,nrhs,a,lda,b,ldb,jpvt,rcond,numrank,work,lwork,info) ! in :gelsy:dgelsy.f
+            integer, intent(in), optional, depend(lda), check(m<=lda) :: m=lda
+            integer, intent(in), optional, depend(a) :: n=shape(a,1)
+            integer, intent(in), optional, depend(b) :: nrhs=shape(b,1)
+            double precision dimension(lda,*) :: a
+            integer optional,check(shape(a,0)==lda),depend(a) :: lda=shape(a,0)
+            double precision dimension(ldb,*), intent(in,out) :: b
+            integer optional,check(ldb>=m),check(ldb>=n),check(shape(b,0)==ldb),depend(b) :: ldb=shape(b,0)
+            integer dimension(n), intent(inplace), depend(n) :: jpvt
+            double precision, intent(in) :: rcond
+            integer, intent(out) :: numrank
+            double precision dimension(*) :: work
+            integer, intent(in), optional :: lwork=shape(work,0)
+            integer, intent(out) :: info
+        end subroutine dgelsy
+        subroutine cgelsy(m,n,nrhs,a,lda,b,ldb,jpvt,rcond,numrank,work,lwork,rwork,info) ! in :gelsy:cgelsy.f
+            integer, intent(in), optional, depend(lda), check(m<=lda) :: m=lda
+            integer, intent(in), optional, depend(a) :: n=shape(a,1)
+            integer, intent(in), optional, depend(b) :: nrhs=shape(b,1)
+            complex dimension(lda,*) :: a
+            integer optional,check(shape(a,0)==lda),depend(a) :: lda=shape(a,0)
+            complex dimension(ldb,*), intent(in,out) :: b
+            integer optional,check(ldb>=m),check(ldb>=n),check(shape(b,0)==ldb),depend(b) :: ldb=shape(b,0)
+            integer dimension(n), intent(inplace), depend(n) :: jpvt
+            real, intent(in) :: rcond
+            integer, intent(out) :: numrank
+            complex dimension(*) :: work
+            integer, intent(in), optional :: lwork=shape(work,0)
+            real dimension(*), depend(n), check(shape(rwork,0)>=2*n) :: rwork
+            integer, intent(out) :: info
+        end subroutine cgelsy
+        subroutine zgelsy(m,n,nrhs,a,lda,b,ldb,jpvt,rcond,numrank,work,lwork,rwork,info) ! in :gelsy:zgelsy.f
+            integer, intent(in), optional, depend(lda), check(m<=lda) :: m=lda
+            integer, intent(in), optional, depend(a) :: n=shape(a,1)
+            integer, intent(in), optional, depend(b) :: nrhs=shape(b,1)
+            complex*16 dimension(lda,*) :: a
+            integer optional,check(shape(a,0)==lda),depend(a) :: lda=shape(a,0)
+            complex*16 dimension(ldb,*), intent(inplace) :: b
+            integer optional,check(ldb>=m),check(ldb>=n),check(shape(b,0)==ldb),depend(b) :: ldb=shape(b,0)
+            integer dimension(n), intent(inplace), depend(n) :: jpvt
+            double precision, intent(in) :: rcond
+            integer, intent(out) :: numrank
+            complex*16 dimension(*) :: work
+            integer, intent(in), optional :: lwork=shape(work,0)
+            double precision dimension(*), depend(n), check(shape(rwork,0)>=2*n) :: rwork
+            integer, intent(out) :: info
+        end subroutine zgelsy
+    end interface 
+end python module gelsy
+
+! This file was auto-generated with f2py (version:2.45.241_1926).
+! See http://cens.ioc.ee/projects/f2py2e/

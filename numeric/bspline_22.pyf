@@ -1,0 +1,277 @@
+!    -*- f90 -*-
+!
+!  thctk.numeric: bspline_22.pyf
+! 
+!    thctk - python package for Theoretical Chemistry
+!    Copyright (C) 2002 Christoph Scheurer
+! 
+!    This file is part of thctk.
+! 
+!    thctk is free software; you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation; either version 2 of the License, or
+!    (at your option) any later version.
+! 
+!    thctk is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+! 
+!    You should have received a copy of the GNU General Public License
+!    along with this program; if not, write to the Free Software
+!    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+! 
+!
+
+python module bspline_22 ! in 
+    interface  ! in :bspline_22
+        subroutine dbsnak(nx,xvec,kxord,xknot) ! in :bspline_22:bspline_22.f
+            integer optional,check(len(xvec)>=nx),depend(xvec) :: nx=len(xvec)
+            double precision dimension(nx) :: xvec
+            integer :: kxord
+            double precision intent(out),dimension(nx+kxord),depend(nx,kxord) :: xknot
+        end subroutine dbsnak
+        subroutine dbsint(nx,xvec,xdata,kx,xknot,bcoef) ! in :bspline_22:bspline_22.f
+            integer optional,check(len(xvec)>=nx),depend(xvec) :: nx=len(xvec)
+            double precision dimension(nx) :: xvec
+            double precision dimension(nx),depend(nx) :: xdata
+            integer :: kx
+            double precision dimension(nx+kx),depend(nx,kx) :: xknot
+            double precision intent(out),dimension(nx),depend(nx) :: bcoef
+        end subroutine dbsint
+        function dbsval(x,kx,xknot,nx,bcoef) ! in :bspline_22:bspline_22.f
+            double precision :: x
+            integer :: kx
+            double precision dimension(nx+kx),depend(kx,nx) :: xknot
+            integer optional,check(len(bcoef)>=nx),depend(bcoef) :: nx=len(bcoef)
+            double precision dimension(nx) :: bcoef
+            double precision :: dbsval
+        end function dbsval
+        function dbsder(iderx,x,kx,xknot,nx,bcoef) ! in :bspline_22:bspline_22.f
+            integer :: iderx
+            double precision :: x
+            integer :: kx
+            double precision dimension(nx+kx),depend(kx,nx) :: xknot
+            integer optional,check(len(bcoef)>=nx),depend(bcoef) :: nx=len(bcoef)
+            double precision dimension(nx) :: bcoef
+            double precision :: dbsder
+        end function dbsder
+        subroutine dbs1gd(iderx,nxvec,xvec,kx,xknot,nx,bcoef,val) ! in :bspline_22:bspline_22.f
+            integer :: iderx
+            integer optional,check(len(xvec)>=nxvec),depend(xvec) :: nxvec=len(xvec)
+            double precision dimension(nxvec) :: xvec
+            integer :: kx
+            double precision dimension(nx+kx),depend(kx,nx) :: xknot
+            integer optional,check(len(bcoef)>=nx),depend(bcoef) :: nx=len(bcoef)
+            double precision dimension(nx) :: bcoef
+            double precision dimension(nxvec),depend(nxvec) :: val
+        end subroutine dbs1gd
+        function dbsdca(iderx,x,kx,xknot,nx,bcoef,leftx) ! in :bspline_22:bspline_22.f
+            integer :: iderx
+            double precision :: x
+            integer :: kx
+            double precision dimension(nx+kx),depend(kx,nx) :: xknot
+            integer optional,check(len(bcoef)>=nx),depend(bcoef) :: nx=len(bcoef)
+            double precision dimension(nx) :: bcoef
+            integer :: leftx
+            double precision :: dbsdca
+        end function dbsdca
+        subroutine dbs2in(nx,xvec,ny,yvec,xydata,ldf,kx,ky,xknot,yknot,bcoef) ! in :bspline_22:bspline_22.f
+            integer optional,check(len(xvec)>=nx),depend(xvec) :: nx=len(xvec)
+            double precision dimension(nx) :: xvec
+            integer optional,check(len(yvec)>=ny),depend(yvec) :: ny=len(yvec)
+            double precision dimension(ny) :: yvec
+            double precision dimension(ldf,*) :: xydata
+            integer optional,check(shape(xydata,0)==ldf),depend(xydata) :: ldf=shape(xydata,0)
+            integer :: kx
+            integer :: ky
+            double precision dimension(nx+kx),depend(nx,kx) :: xknot
+            double precision dimension(ny+ky),depend(ny,ky) :: yknot
+            double precision intent(out),dimension(nx,ny),depend(nx,ny) :: bcoef
+        end subroutine dbs2in
+        subroutine spli2d(xyvec,ld,xydata,xyknot,n,k,m,work2,work3,bcoef) ! in :bspline_22:bspline_22.f
+            double precision dimension(n) :: xyvec
+            integer optional,check(shape(xydata,0)==ld),depend(xydata) :: ld=shape(xydata,0)
+            double precision dimension(ld,m) :: xydata
+            double precision dimension(n+k),depend(n,k) :: xyknot
+            integer optional,check(len(xyvec)>=n),depend(xyvec) :: n=len(xyvec)
+            integer :: k
+            integer optional,check(shape(xydata,1)==m),depend(xydata) :: m=shape(xydata,1)
+            double precision dimension(n),depend(n) :: work2
+            double precision dimension((2*k-1)*n),depend(n,k) :: work3
+            double precision intent(out),dimension(m,n),depend(m,n) :: bcoef
+        end subroutine spli2d
+        function dbs2vl(x,y,kx,ky,xknot,yknot,nx,ny,bcoef) ! in :bspline_22:bspline_22.f
+            double precision :: x
+            double precision :: y
+            integer :: kx
+            integer :: ky
+            double precision dimension(nx+kx),depend(kx,nx) :: xknot
+            double precision dimension(ny+ky),depend(ky,ny) :: yknot
+            integer optional,check(shape(bcoef,0)==nx),depend(bcoef) :: nx=shape(bcoef,0)
+            integer optional,check(shape(bcoef,1)==ny),depend(bcoef) :: ny=shape(bcoef,1)
+            double precision dimension(nx,ny) :: bcoef
+            double precision :: dbs2vl
+        end function dbs2vl
+        function dbs2dr(iderx,idery,x,y,kx,ky,xknot,yknot,nx,ny,bcoef) ! in :bspline_22:bspline_22.f
+            integer :: iderx
+            integer :: idery
+            double precision :: x
+            double precision :: y
+            integer :: kx
+            integer :: ky
+            double precision dimension(nx+kx),depend(kx,nx) :: xknot
+            double precision dimension(ny+ky),depend(ky,ny) :: yknot
+            integer optional,check(shape(bcoef,0)==nx),depend(bcoef) :: nx=shape(bcoef,0)
+            integer optional,check(shape(bcoef,1)==ny),depend(bcoef) :: ny=shape(bcoef,1)
+            double precision dimension(nx,ny) :: bcoef
+            double precision :: dbs2dr
+        end function dbs2dr
+        subroutine dbs2gd(iderx,idery,nxvec,xvec,nyvec,yvec,kx,ky,xknot,yknot,nx,ny,bcoef,val,ldvalue) ! in :bspline_22:bspline_22.f
+            integer :: iderx
+            integer :: idery
+            integer optional,check(len(xvec)>=nxvec),depend(xvec) :: nxvec=len(xvec)
+            double precision dimension(nxvec) :: xvec
+            integer optional,check(len(yvec)>=nyvec),depend(yvec) :: nyvec=len(yvec)
+            double precision dimension(nyvec) :: yvec
+            integer :: kx
+            integer :: ky
+            double precision dimension(nx+kx),depend(kx,nx) :: xknot
+            double precision dimension(ny+ky),depend(ky,ny) :: yknot
+            integer optional,check(shape(bcoef,0)==nx),depend(bcoef) :: nx=shape(bcoef,0)
+            integer optional,check(shape(bcoef,1)==ny),depend(bcoef) :: ny=shape(bcoef,1)
+            double precision dimension(nx,ny) :: bcoef
+            double precision dimension(ldvalue,*) :: val
+            integer optional,check(shape(val,0)==ldvalue),depend(val) :: ldvalue=shape(val,0)
+        end subroutine dbs2gd
+        subroutine dbs3in(nx,xvec,ny,yvec,nz,zvec,xyzdata,ldf,mdf,kx,ky,kz,xknot,yknot,zknot,bcoef) ! in :bspline_22:bspline_22.f
+            integer optional,check(len(xvec)>=nx),depend(xvec) :: nx=len(xvec)
+            double precision dimension(nx) :: xvec
+            integer optional,check(len(yvec)>=ny),depend(yvec) :: ny=len(yvec)
+            double precision dimension(ny) :: yvec
+            integer optional,check(len(zvec)>=nz),depend(zvec) :: nz=len(zvec)
+            double precision dimension(nz) :: zvec
+            double precision dimension(ldf,mdf,nz),depend(nz) :: xyzdata
+            integer optional,check(shape(xyzdata,0)==ldf),depend(xyzdata) :: ldf=shape(xyzdata,0)
+            integer optional,check(shape(xyzdata,1)==mdf),depend(xyzdata) :: mdf=shape(xyzdata,1)
+            integer :: kx
+            integer :: ky
+            integer :: kz
+            double precision dimension(nx+kx),depend(nx,kx) :: xknot
+            double precision dimension(ny+ky),depend(ny,ky) :: yknot
+            double precision dimension(nz+kz),depend(nz,kz) :: zknot
+            double precision intent(out),dimension(nx,ny,nz),depend(nx,ny,nz) :: bcoef
+        end subroutine dbs3in
+        subroutine spli3d(xyzvec,ldf,mdf,xyzdata,xyzknot,n,k,m,l,work2,work3,bcoef,nxmax,nymax,nzmax) ! in :bspline_22:bspline_22.f
+            double precision dimension(n) :: xyzvec
+            integer optional,check(shape(xyzdata,0)==ldf),depend(xyzdata) :: ldf=shape(xyzdata,0)
+            integer optional,check(shape(xyzdata,1)==mdf),depend(xyzdata) :: mdf=shape(xyzdata,1)
+            double precision dimension(ldf,mdf,*) :: xyzdata
+            double precision dimension(n+k),depend(n,k) :: xyzknot
+            integer optional,check(len(xyzvec)>=n),depend(xyzvec) :: n=len(xyzvec)
+            integer :: k
+            integer :: m
+            integer :: l
+            double precision dimension(n),depend(n) :: work2
+            double precision dimension((2*k-1)*n),depend(n,k) :: work3
+            double precision intent(out),dimension(nxmax,nymax,nzmax) :: bcoef
+            integer optional,check(shape(bcoef,0)==nxmax),depend(bcoef) :: nxmax=shape(bcoef,0)
+            integer optional,check(shape(bcoef,1)==nymax),depend(bcoef) :: nymax=shape(bcoef,1)
+            integer optional,check(shape(bcoef,2)==nzmax),depend(bcoef) :: nzmax=shape(bcoef,2)
+        end subroutine spli3d
+        function dbs3vl(x,y,z,kx,ky,kz,xknot,yknot,zknot,nx,ny,nz,bcoef) ! in :bspline_22:bspline_22.f
+            double precision :: x
+            double precision :: y
+            double precision :: z
+            integer :: kx
+            integer :: ky
+            integer :: kz
+            double precision dimension(nx+kx),depend(kx,nx) :: xknot
+            double precision dimension(ny+ky),depend(ky,ny) :: yknot
+            double precision dimension(nz+kz),depend(kz,nz) :: zknot
+            integer optional,check(shape(bcoef,0)==nx),depend(bcoef) :: nx=shape(bcoef,0)
+            integer optional,check(shape(bcoef,1)==ny),depend(bcoef) :: ny=shape(bcoef,1)
+            integer optional,check(shape(bcoef,2)==nz),depend(bcoef) :: nz=shape(bcoef,2)
+            double precision dimension(nx,ny,nz) :: bcoef
+            double precision :: dbs3vl
+        end function dbs3vl
+        function dbs3dr(iderx,idery,iderz,x,y,z,kx,ky,kz,xknot,yknot,zknot,nx,ny,nz,bcoef) ! in :bspline_22:bspline_22.f
+            integer :: iderx
+            integer :: idery
+            integer :: iderz
+            double precision :: x
+            double precision :: y
+            double precision :: z
+            integer :: kx
+            integer :: ky
+            integer :: kz
+            double precision dimension(nx+kx),depend(kx,nx) :: xknot
+            double precision dimension(ny+ky),depend(ky,ny) :: yknot
+            double precision dimension(nz+kz),depend(kz,nz) :: zknot
+            integer optional,check(shape(bcoef,0)==nx),depend(bcoef) :: nx=shape(bcoef,0)
+            integer optional,check(shape(bcoef,1)==ny),depend(bcoef) :: ny=shape(bcoef,1)
+            integer optional,check(shape(bcoef,2)==nz),depend(bcoef) :: nz=shape(bcoef,2)
+            double precision dimension(nx,ny,nz) :: bcoef
+            double precision :: dbs3dr
+        end function dbs3dr
+        subroutine dbs3gd(iderx,idery,iderz,nxvec,xvec,nyvec,yvec,nzvec,zvec,kx,ky,kz,xknot,yknot,zknot,nx,ny,nz,bcoef,value,ldvalue,mdvalue) ! in :bspline_22:bspline_22.f
+            integer :: iderx
+            integer :: idery
+            integer :: iderz
+            integer optional,check(len(xvec)>=nxvec),depend(xvec) :: nxvec=len(xvec)
+            double precision dimension(nxvec) :: xvec
+            integer optional,check(len(yvec)>=nyvec),depend(yvec) :: nyvec=len(yvec)
+            double precision dimension(nyvec) :: yvec
+            integer optional,check(len(zvec)>=nzvec),depend(zvec) :: nzvec=len(zvec)
+            double precision dimension(nzvec) :: zvec
+            integer :: kx
+            integer :: ky
+            integer :: kz
+            double precision dimension(nx+kx),depend(kx,nx) :: xknot
+            double precision dimension(ny+ky),depend(ky,ny) :: yknot
+            double precision dimension(nz+kz),depend(kz,nz) :: zknot
+            integer optional,check(shape(bcoef,0)==nx),depend(bcoef) :: nx=shape(bcoef,0)
+            integer optional,check(shape(bcoef,1)==ny),depend(bcoef) :: ny=shape(bcoef,1)
+            integer optional,check(shape(bcoef,2)==nz),depend(bcoef) :: nz=shape(bcoef,2)
+            double precision dimension(nx,ny,nz) :: bcoef
+            double precision dimension(ldvalue,mdvalue,*) :: value
+            integer optional,check(shape(value,0)==ldvalue),depend(value) :: ldvalue=shape(value,0)
+            integer optional,check(shape(value,1)==mdvalue),depend(value) :: mdvalue=shape(value,1)
+        end subroutine dbs3gd
+        subroutine bsplvb(t,n,jhigh,index_bn,x,left,biatx) ! in :bspline_22:bspline_22.f
+            double precision dimension(n) :: t
+            integer optional,check(len(t)>=n),depend(t) :: n=len(t)
+            integer optional,check(len(biatx)>=jhigh),depend(biatx) :: jhigh=len(biatx)
+            integer :: index_bn
+            double precision :: x
+            integer :: left
+            double precision dimension(jhigh) :: biatx
+        end subroutine bsplvb
+        subroutine banfac(w,nroww,nrow,nbandl,nbandu,iflag) ! in :bspline_22:bspline_22.f
+            double precision dimension(nroww,nrow) :: w
+            integer optional,check(shape(w,0)==nroww),depend(w) :: nroww=shape(w,0)
+            integer optional,check(shape(w,1)==nrow),depend(w) :: nrow=shape(w,1)
+            integer :: nbandl
+            integer :: nbandu
+            integer :: iflag
+        end subroutine banfac
+        subroutine banslv(w,nroww,nrow,nbandl,nbandu,b) ! in :bspline_22:bspline_22.f
+            double precision dimension(nroww,nrow) :: w
+            integer optional,check(shape(w,0)==nroww),depend(w) :: nroww=shape(w,0)
+            integer optional,check(shape(w,1)==nrow),depend(w) :: nrow=shape(w,1)
+            integer :: nbandl
+            integer :: nbandu
+            double precision dimension(nrow),depend(nrow) :: b
+        end subroutine banslv
+        subroutine huntn(xx,n,kord,x,jlo) ! in :bspline_22:bspline_22.f
+            double precision dimension(n) :: xx
+            integer optional,check(len(xx)>=n),depend(xx) :: n=len(xx)
+            integer :: kord
+            double precision :: x
+            integer :: jlo
+        end subroutine huntn
+    end interface 
+end python module bspline_22
+
+! This file was auto-generated with f2py (version:2.35.229-1475).
+! See http://cens.ioc.ee/projects/f2py2e/

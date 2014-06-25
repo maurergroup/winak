@@ -1,0 +1,136 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module ilut ! in
+  interface ! in :ilut
+    subroutine ilut(n,a,ja,ia,lfil,droptol,alu,jlu,ju,iwk,w,jw,ierr) ! in ilut.f
+          integer check((len(ia)-1)>=n),depend(ia), intent(hide) :: n=(len(ia)-1)
+          real*8 dimension(*) :: a
+          integer dimension(*) :: ja
+          integer dimension(n + 1) :: ia
+          integer :: lfil
+          real*8 :: droptol
+          integer :: iwk
+          real*8 dimension(iwk), depend(iwk), intent(out) :: alu
+          integer dimension(iwk), depend(iwk), intent(out) :: jlu
+          integer dimension(n),depend(n), intent(out) :: ju
+          real*8 dimension(n + 1),depend(n), intent(hide) :: w
+          integer dimension(2 * n),depend(n), intent(hide)  :: jw
+          integer intent(out) :: ierr
+    end subroutine ilut
+    subroutine ilutp(n,a,ja,ia,lfil,droptol,permtol,mbloc,alu,jlu,ju,iwk,w,jw,iperm,ierr) ! in ilut.f
+        integer check((len(ia)-1)>=n),depend(ia), intent(hide) :: n=(len(ia)-1)
+        real*8 dimension(*) :: a
+        integer dimension(*) :: ja
+        integer dimension(n + 1) :: ia
+        integer :: lfil
+        real*8 :: droptol
+        integer :: iwk
+        real*8 dimension(iwk), depend(iwk), intent(out) :: alu
+        integer dimension(iwk), depend(iwk), intent(out) :: jlu
+        integer dimension(n),depend(n), intent(out) :: ju
+        real*8 dimension(n + 1),depend(n), intent(hide)  :: w
+        integer dimension(2 * n),depend(n), intent(hide) :: jw
+        integer intent(out) :: ierr
+        real*8 optional:: permtol=0.01
+        integer optional:: mbloc=n
+        integer dimension(2 * n),depend(n), intent(out) :: iperm
+    end subroutine ilutp
+    subroutine ilud(n,a,ja,ia,alph,tol,alu,jlu,ju,iwk,w,jw,ierr) ! in ilut.f
+        integer check((len(ia)-1)>=n),depend(ia) :: n=(len(ia)-1)
+        real*8 dimension(*) :: a
+        integer dimension(*) :: ja
+        integer dimension(n + 1) :: ia
+        real*8 :: alph
+        real*8 :: tol
+        integer :: iwk
+        real*8 dimension(iwk), depend(iwk), intent(out) :: alu
+        integer dimension(iwk), depend(iwk), intent(out) :: jlu
+        integer dimension(n),depend(n), intent(out) :: ju
+        real*8 dimension(2 * n),depend(n), intent(hide) :: w
+        integer dimension(2 * n),depend(n), intent(hide) :: jw
+        integer intent(out) :: ierr
+    end subroutine ilud
+    subroutine lutsol(n,y,x,alu,jlu,ju) ! in ilut.f
+        integer optional,check(len(y)>=n),depend(y) :: n=len(y)
+        real*8 dimension(n) :: y
+        real*8 dimension(n),depend(n), intent(out) :: x
+        real*8 dimension(*) :: alu
+        integer dimension(*) :: jlu
+        integer dimension(*) :: ju
+    end subroutine lutsol
+    subroutine lusol(n,y,x,alu,jlu,ju) ! in ilut.f
+        integer optional,check(len(y)>=n),depend(y) :: n=len(y)
+        real*8 dimension(n) :: y
+        real*8 dimension(n),depend(n), intent(out) :: x
+        real*8 dimension(*) :: alu
+        integer dimension(*) :: jlu
+        integer dimension(*) :: ju
+    end subroutine lusol
+    subroutine iludp(n,a,ja,ia,alph,droptol,permtol,mbloc,alu,jlu,ju,iwk,w,jw,iperm,ierr) ! in ilut.f
+        integer check((len(ia)-1)>=n),depend(ia), intent(hide) :: n=(len(ia)-1)
+        real*8 dimension(*) :: a
+        integer dimension(*) :: ja
+        integer dimension(n + 1) :: ia
+        real*8 :: droptol
+        real*8 optional :: alph=0.5
+        real*8 optional :: permtol=0.01
+        integer optional :: mbloc=n
+        integer :: iwk
+        real*8 dimension(iwk), depend(iwk), intent(out) :: alu
+        integer dimension(iwk), depend(iwk), intent(out) :: jlu
+        integer dimension(n),depend(n), intent(out) :: ju
+        integer dimension(2 * n),depend(n), intent(out) :: iperm
+        integer intent(out) :: ierr
+        real*8 dimension(2 * n),depend(n), intent(hide) :: w
+        integer dimension(2 * n),depend(n), intent(hide) :: jw
+    end subroutine iludp
+    subroutine iluk(n,a,ja,ia,lfil,alu,jlu,ju,levs,iwk,w,jw,ierr) ! in ilut.f
+        integer check((len(ia)-1)>=n),depend(ia), intent(hide) :: n=(len(ia)-1)
+        real*8 dimension(*) :: a
+        integer dimension(*) :: ja
+        integer dimension(n + 1) :: ia
+        integer :: lfil
+        integer :: iwk
+        real*8 dimension(iwk), depend(iwk), intent(out) :: alu
+        integer dimension(iwk), depend(iwk), intent(out) :: jlu
+        integer dimension(n),depend(n), intent(out) :: ju
+        integer dimension(iwk), depend(iwk), intent(out) :: levs
+        integer intent(out) :: ierr
+        real*8 dimension(n),depend(n),intent(hide):: w
+        integer dimension(3 * n),depend(n),intent(hide) :: jw
+    end subroutine iluk
+    subroutine ilu0(n,a,ja,ia,alu,jlu,ju,iw,ierr) ! in ilut.f
+        integer check((len(ia)-1)>=n),depend(ia), intent(hide) :: n=(len(ia)-1)
+        real*8 dimension(*) :: a
+        integer dimension(*) :: ja
+        integer dimension(n + 1) :: ia
+        real*8 dimension(len(a)), depend(a), intent(out) :: alu
+        integer dimension(len(a)), depend(a), intent(out) :: jlu
+        integer dimension(n),depend(n), intent(out) :: ju
+        real*8 dimension(n),depend(n), intent(hide) :: iw
+        integer intent(out) :: ierr
+    end subroutine ilu0
+    subroutine milu0(n,a,ja,ia,alu,jlu,ju,iw,ierr) ! in ilut.f
+        integer check((len(ia)-1)>=n),depend(ia), intent(hide) :: n=(len(ia)-1)
+        real*8 dimension(*) :: a
+        integer dimension(*) :: ja
+        integer dimension(n + 1) :: ia
+        real*8 dimension(len(a)), depend(a), intent(out) :: alu
+        integer dimension(len(a)), depend(a), intent(out) :: jlu
+        integer dimension(n),depend(n), intent(out) :: ju
+        real*8 dimension(n),depend(n), intent(hide) :: iw
+        integer intent(out) :: ierr
+    end subroutine milu0
+    subroutine qsplit(a,ind,n,ncut) ! in ilut.f
+        real*8 dimension(n) :: a
+        integer dimension(n),depend(n) :: ind
+        integer optional,check(len(a)>=n),depend(a) :: n=len(a)
+        integer :: ncut
+    end subroutine qsplit
+  end interface
+end python module ilut
+
+
+! Thi file was auto-generated with f2py (version:2_3473).
+! See http://cens.ioc.ee/projects/f2py2e/

@@ -40,7 +40,7 @@ from INTERNALS.constants import UNIT
 from INTERNALS.curvilinear.InternalCoordinates import icSystem, normalizeIC
 from INTERNALS.curvilinear.numeric.Rotation import rigidBodySuperposition
 from INTERNALS.curvilinear.numeric.Quaternions import Quaternion
-from INTERNALS.AtomInfo import *
+from INTERNALS import AtomInfo
 import INTERNALS.curvilinear._intcrd as intcrd
 
 from operator import itemgetter

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # INTERNALS documentation build configuration file, created by
-# sphinx-quickstart on Tue Aug 12 15:06:51 2014.
+# sphinx-quickstart on Tue Aug 12 15:21:20 2014.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.

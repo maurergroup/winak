@@ -46,10 +46,5 @@ class Vector:
     def cross(self,o):
         if not hasattr(o,'is_vec'):
             raise TypeError('Cross products only possible between vectors')
-        return Vector(self.components[1]*o.components[2]
-                                -self.components[2]*o.components[1],
-                      self.components[2]*o.components[0]
-                                -self.components[0]*o.components[2],
-                      self.components[0]*o.components[1]
-                                -self.components[1]*o.components[0])
+        return Vector([self.components[1]*o.components[2]-self.components[2]*o.components[1],self.components[2]*o.components[0]-self.components[0]*o.components[2],self.components[0]*o.components[1]-self.components[1]*o.components[0]])
             

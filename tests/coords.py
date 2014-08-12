@@ -134,3 +134,10 @@ L = L.transpose()
 coords= IEFC(e.x_ref.flatten(), e.masses, internal=True, atoms=e.atoms, \
              ic=e.ic, L=L, Li=Li)
 
+
+# ss = coords.s
+# ss[2] = 20
+# m.positions=(coords.getX(ss)).reshape(-1,3)
+# view(m)
+
+

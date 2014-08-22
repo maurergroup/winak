@@ -635,6 +635,7 @@ class InternalCoordinates(Coordinates):
             L[:,i] *= di
             Li[i,:] /= di
 
+
 class InternalEckartFrameCoordinates(EckartFrameCoordinates,
                                      InternalCoordinates):
     """
@@ -664,6 +665,58 @@ class InternalEckartFrameCoordinates(EckartFrameCoordinates,
     def s2x(self):
         InternalCoordinates.s2x(self)
         self.alignToFrame()
+
+#Konsti
+class DelocalizedCoordinates(InternalEckartFrameCoordinates):
+    def __init__(self, x0, masses,u=None, ns = None, internal = True,  xRef = None,
+                 atoms = None, freqs = None,
+                 ic = None, L = None, Li = None, unit = UNIT, rcond = 1e-10,
+                 biArgs = {}
+                 ):
+        self.u=u
+        if L is None or Li is None:
+            Li=u
+            L = N.dot(N.linalg.inv(N.dot(Li,Li.transpose())),Li)
+            L = L.transpose()
+        InternalEckartFrameCoordinates.__init__(self,x0,masses,ns=ns,internal=internal,xRef=xRef,atoms=atoms,freqs=freqs,
+                                                ic=ic,L=L,Li=Li,unit=unit,rcond=rcond,biArgs=biArgs)
+
+    def get_vectors(self):
+        """Returns the delocalized internal eigenvectors as cartesian
+        displacements. Careful! get_vectors()[0] is the first vector.
+        If you want to interpret it as a matrix in the same way numpy does,
+        you will have to transpose it first. They are normed so that
+        the largest single component is equal to 1"""
+        ss = self.s
+        w=[]
+        for i in range(0,len(ss)):
+            ss=N.zeros(len(self.s))
+            ss[i]=1
+            dd=(self.getX(ss)-self.x0).reshape(-1,3)
+            dd/=N.max(N.abs(dd))
+            w.append(dd)
+        w=N.asarray(w)
+        return w
+
+    def get_delocvectors(self):
+        """Returns the delocalized internal eigenvectors."""
+        return self.u.transpose()
+
+    def write_jmol(self,filename,constr=False):
+        """This works similar to write_jmol in ase.vibrations."""
+        fd = open(filename, 'w')
+        wtemp=self.get_vectors()
+        for i in range(len(wtemp)):
+            fd.write('%6d\n' % (len(self.x0)/3))
+            fd.write('Mode #%d, f = %.1f%s cm^-1 \n' % (i, i, ' '))
+            for j, pos in enumerate(self.x0.reshape(-1,3)):
+                fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f \n' %
+                     (self.atoms[j], pos[0], pos[1], pos[2],
+                      wtemp[i,j, 0],wtemp[i,j, 1], wtemp[i,j, 2]))
+        fd.close()
+
+
+
 
 #REINI
 class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordinates):

@@ -12,5 +12,5 @@ m =read('clethen.xyz')
 e=Delocalizer(m)
 
 coords=DC(e.x_ref.flatten(), e.masses, internal=True, atoms=e.atoms, \
-             ic=e.ic, L=None, Li=None,u=e.u)
+             ic=e.ic, L=None, Li=None,u=e.get_U())
 coords.write_jmol('dol') #delocalizing out loud

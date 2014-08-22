@@ -21,6 +21,7 @@ class Delocalizer:
         self.atoms = atoms_obj.get_chemical_symbols()
         self.vk=None
         self.vc=None
+        self.u2=None
         x0=self.x_ref.flatten()
         #VCG constructs primitive internals (bond length,bend,torsion,oop)
         if icList is None:
@@ -59,6 +60,22 @@ class Delocalizer:
 
         self.v2,self.ww,self.u=np.linalg.svd(self.g)
         self.u = self.u[:3*len(self.atoms_object)-6]
+
+    def get_U(self):
+        return self.u
+
+    def get_constrainedU(self):
+        return self.u2
+
+    def constrainStretches(self):
+        str=self.ic.getStretchBendTorsOop()[0][0]#all stretches
+        e=[]
+        for i in str:
+            d=np.zeros(len(self.ic))
+            d[i]=1
+            e.append(d)
+        self.constrain(e)
+
 
     def constrain(self,constraint):
         alright=True

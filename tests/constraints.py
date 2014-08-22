@@ -7,27 +7,10 @@ d=[]
 
 n=17
 
-ce=np.zeros(n)
-ce[0]=1
-d.append(ce)
-ce=np.zeros(n)
-ce[1]=1
-d.append(ce)
-ce=np.zeros(n)
-ce[2]=1
-d.append(ce)
-ce=np.zeros(n)
-ce[3]=1
-d.append(ce)
-ce=np.zeros(n)
-ce[4]=1
-d.append(ce)
-
-
-e.constrain(d)
+e.constrainStretches()
 
 coords=DC(e.x_ref.flatten(), e.masses, internal=True, atoms=e.atoms, \
-             ic=e.ic, L=None, Li=None,u=e.u2)
+             ic=e.ic, L=None, Li=None,u=e.get_constrainedU())
 
 coords.write_jmol('cdol') #constrained delocalizing out loud
 

@@ -39,8 +39,8 @@ except:
     pass
 from scipy.linalg.fblas import dnrm2 as norm2
 from scipy.linalg.fblas import ddot
-from thctk.numeric import blassm
-from thctk.numeric.comm import comrr, comzz, comrz
+from INTERNALS.curvilinear.numeric import blassm
+from INTERNALS.curvilinear.numeric.comm import comrr, comzz, comrz
 import itertools
 import re
 

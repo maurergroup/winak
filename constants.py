@@ -1,4 +1,4 @@
-from thctk.numeric import *
+from INTERNALS.curvilinear.numeric import *
 
 UNIT = 1./N.sqrt(1822.888485) # mass conversion
 

@@ -1,5 +1,4 @@
 import numpy as np
-
 from datetime import datetime
 from ase.optimize.optimize import Dynamics
 from ase.optimize.fire import FIRE
@@ -44,13 +43,13 @@ class BetterHopping(Dynamics):
         self.kT = temperature
         self.numdelmodes=numdelocmodes
         self.optimizer = optimizer
+        self.optimizer2=optimizer2
         self.fmax = fmax
         self.mm=maxmoves
         self.dr = dr
         self.lowstep=0
         self.movemode=movemode
         self.movename='Random Cartesian'
-        self.constr=constr
         self.minima=[]
         self.dynst=dynstep
         if movemode==1:
@@ -66,6 +65,7 @@ class BetterHopping(Dynamics):
             self.lm_trajectory = PickleTrajectory(local_minima_trajectory,'a', atoms)
         self.fi_trajectory=final_minima_trajectory
         self.initialize()
+        #print 'initialize done'
 
     def get_vectors(self,atoms):
         deloc=Delocalizer(atoms)
@@ -89,11 +89,12 @@ class BetterHopping(Dynamics):
         lastworkingpos=ro.copy()
         lastworkinge=Eo
         self.minima.append(self.atoms.copy())
+        #print 'starting for'
         for step in range(steps):
             En = None
             tries=0
             if self.movemode==1:
-                atemp=atoms.copy()
+                atemp=self.atoms.copy()
                 atemp.set_positions(ro)
                 try:
                     vectors=self.get_vectors(atemp)
@@ -101,17 +102,19 @@ class BetterHopping(Dynamics):
                     #usually the case when the molecule dissociates
                     self.log(msg='      WARNING: Could not create delocalized coordinates. Rolling back!\n')
                     self.atoms.set_positions(lastmol)
-                    atemp=atoms.copy
+                    atemp=self.atoms.copy
                     atemp.set_positions(ro)
                     vectors=self.get_vectors(atemp)
                 lastmol=ro.copy()
             #self.logfile.write('Starting Step\n')
+            #print 'starting step'
             while En is None:
                 if self.movemode==0:
                     rn = self.move(ro)
                 elif self.movemode==1:
                     rn=self.move_del(ro,vectors)
                 #self.logfile.write('move done\n')
+                #print 'move done'
                 #self.atoms.write(str(step)+'.xyz',format='xyz')
                 En = self.get_energy(rn)
                 tries+=1
@@ -121,6 +124,7 @@ class BetterHopping(Dynamics):
                     tries=0
                     self.log(msg='     WARNING: last step caused get_energy() failure; Resetting step\n')
             #self.logfile.write('while loop done\n')
+            #print 'while done'
             self.minima.append(self.atoms.copy())
             if En < self.Emin:
                 # new minimum found
@@ -148,7 +152,7 @@ class BetterHopping(Dynamics):
         if self.logfile is not None:
             name = self.__class__.__name__
             if step is not None:
-                self.logfile.write('%s: step %d, energy %15.6f, emin %15.6f\n' (name, step, En, Emin))
+                self.logfile.write('%s: step %d, energy %15.6f, emin %15.6f\n' %(name, step, En, Emin))
             elif msg is not None:
                 self.logfile.write(msg)
             self.logfile.flush()
@@ -178,7 +182,8 @@ class BetterHopping(Dynamics):
             numcomb=numvec #for extra snafe!
         w=np.random.choice(range(numvec),size=numcomb,replace=False)
         for i in w:
-            disp[:len(vectors[w[0]]),:3]+=vectors[i] #this is important if there is an adsorbate.
+            disp[:len(vectors[w[0]]),:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
+        disp/=np.max(np.abs(disp))
 
         #from here on, everything is JUST COPIED from self.move(); should be sane
         rn=ro+self.dr*disp
@@ -193,10 +198,11 @@ class BetterHopping(Dynamics):
 
     def get_energy(self, positions):
         """Return the energy of the nearest local minimum."""
-        ret=self.energy
+        ret=None
         if np.sometrue(self.positions != positions):
             self.positions = positions
             self.atoms.set_positions(positions)
+            #print 'try'
             try:
                 opt = self.optimizer2(self.atoms,logfile=self.optimizer_logfile)
                 #print 'initialized'
@@ -211,6 +217,7 @@ class BetterHopping(Dynamics):
                 ret=self.energy
                 #print 'get_pot'
             except:
+                #print sys.exc_info()[0]
                             #print 'get_energy fail'
                 # Something went wrong.
                 # In GPAW the atoms are probably to near to each other.

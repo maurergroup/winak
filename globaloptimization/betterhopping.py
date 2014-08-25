@@ -24,6 +24,7 @@ class BetterHopping(Dynamics):
     def __init__(self, atoms,
                     temperature=100 * kB,
                     optimizer=FIRE,
+                    optimizer2=FIRE, #which optimizer to use to 15*fmax
                     fmax=0.1,
                     dr=0.1,
                     logfile='-',
@@ -197,8 +198,11 @@ class BetterHopping(Dynamics):
             self.positions = positions
             self.atoms.set_positions(positions)
             try:
-                opt = self.optimizer(self.atoms,logfile=self.optimizer_logfile)
+                opt = self.optimizer2(self.atoms,logfile=self.optimizer_logfile)
                 #print 'initialized'
+                opt.run(fmax=self.fmax*15)
+
+                opt=self.optimizer(self.atoms,logfile=self.optimizer_logfile)
                 opt.run(fmax=self.fmax)
                 #print 'run'
                 if self.lm_trajectory is not None:

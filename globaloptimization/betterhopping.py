@@ -208,7 +208,7 @@ class BetterHopping(Dynamics):
             opt.run(fmax=self.fmax*15)
 
             opt=self.optimizer(self.atoms,logfile=self.optimizer_logfile)
-            opt.run(fmax=self.fmax)
+            opt.run(fmax=self.fmax,steps=2000)
             #print 'run'
             if self.lm_trajectory is not None:
                 self.lm_trajectory.write(self.atoms)

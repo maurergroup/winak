@@ -14,6 +14,7 @@ Contents:
    specs.rst
    curvilinear.rst
    globaloptimisation.rst
+   BetterHopping.rst
 
 
 Indices and tables

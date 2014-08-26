@@ -198,29 +198,28 @@ class BetterHopping(Dynamics):
 
     def get_energy(self, positions):
         """Return the energy of the nearest local minimum."""
+        self.positions = positions
+        self.atoms.set_positions(positions)
         ret=None
-        if np.sometrue(self.positions != positions):
-            self.positions = positions
-            self.atoms.set_positions(positions)
-            #print 'try'
-            try:
-                opt = self.optimizer2(self.atoms,logfile=self.optimizer_logfile)
-                #print 'initialized'
-                opt.run(fmax=self.fmax*15)
+        #print 'try'
+        try:
+            opt = self.optimizer2(self.atoms,logfile=self.optimizer_logfile)
+            #print 'initialized'
+            opt.run(fmax=self.fmax*15)
 
-                opt=self.optimizer(self.atoms,logfile=self.optimizer_logfile)
-                opt.run(fmax=self.fmax)
-                #print 'run'
-                if self.lm_trajectory is not None:
-                    self.lm_trajectory.write(self.atoms)
-                self.energy = self.atoms.get_potential_energy()
-                ret=self.energy
-                #print 'get_pot'
-            except:
+            opt=self.optimizer(self.atoms,logfile=self.optimizer_logfile)
+            opt.run(fmax=self.fmax)
+            #print 'run'
+            if self.lm_trajectory is not None:
+                self.lm_trajectory.write(self.atoms)
+            self.energy = self.atoms.get_potential_energy()
+            ret=self.energy
+            #print 'get_pot'
+        except:
                 #print sys.exc_info()[0]
                             #print 'get_energy fail'
                 # Something went wrong.
                 # In GPAW the atoms are probably to near to each other.
                 # In Hotbit: "overlap matrix is not positive definite"
-                ret=None
+            ret=None
         return ret

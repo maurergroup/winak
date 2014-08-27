@@ -24,4 +24,4 @@ Constructor Arguments
 
 .. class:: INTERNALS.globaloptimization.BetterHopping(atoms,temperature=100*kB,optimizer=FIRE,optimizer2=FIRE,fmax=0.1,dr=0.1,logfile='-',trajectory='lowest.traj',optimizer_logfile='stdout.log',local_minima_trajectory='temp_local_minima.traj',final_minima_trajectory='final_minima.traj',adjust_cm=True,movemode=0,maxmoves=10000,dynstep=-1,numdelocmodes=1,adsorb=None)
 
-Returns something, I guess
+

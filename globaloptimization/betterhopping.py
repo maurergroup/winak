@@ -102,7 +102,7 @@ class BetterHopping(Dynamics):
                     #usually the case when the molecule dissociates
                     self.log(msg='      WARNING: Could not create delocalized coordinates. Rolling back!\n')
                     self.atoms.set_positions(lastmol)
-                    atemp=self.atoms.copy
+                    atemp=self.atoms.copy()
                     atemp.set_positions(ro)
                     vectors=self.get_vectors(atemp)
                 lastmol=ro.copy()

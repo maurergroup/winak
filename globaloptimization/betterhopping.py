@@ -38,7 +38,7 @@ class BetterHopping(Dynamics):
                     numdelocmodes=1,    #should a LC of modes be applied for the displacement? How many should be combined?
                     adsorb=None):	#If movemode==1, only the delocalized internals of the adsorbate are of interest. Calculate them with adsorbate.
                     #adsorbate atoms have to be the first atoms in the atoms object
-        Dynamics.__init__(self, atoms, logfile, trajectory)
+        Dynamics.__init__(self, atoms, logf ile, trajectory)
         self.adsorbate=adsorb
         self.kT = temperature
         self.numdelmodes=numdelocmodes
@@ -103,7 +103,7 @@ class BetterHopping(Dynamics):
                     self.log(msg='      WARNING: Could not create delocalized coordinates. Rolling back!\n')
                     self.atoms.set_positions(lastmol)
                     atemp=self.atoms.copy()
-                    atemp.set_positions(ro)
+                    #atemp.set_positions(ro)
                     vectors=self.get_vectors(atemp)
                 lastmol=ro.copy()
             #self.logfile.write('Starting Step\n')

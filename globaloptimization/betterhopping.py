@@ -105,6 +105,7 @@ class BetterHopping(Dynamics):
                     atemp=self.atoms.copy()
                     #atemp.set_positions(ro)
                     vectors=self.get_vectors(atemp)
+                    ro=lastmol.copy()
                 lastmol=ro.copy()
             #self.logfile.write('Starting Step\n')
             #print 'starting step'

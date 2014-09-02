@@ -729,11 +729,11 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
     Hereby InternalEckartFrameCoordinates are used.
     """
 
-    def __init__(self, x0, masses, atoms, xRef = None, freqs = None, internals = None, Ltrans = None,
-                Lrot = None, Lvib = None, cell = None, unit = UNIT, rcond = 1e-10, \
+    def __init__(self, x0, masses, atoms, xRef = None, freqs = None, ic = None, Ltrans = None,
+                Lrot = None, Lvib = None, Lvibi=None, cell = None, unit = UNIT, rcond = 1e-10, \
                 com_list = None):
 
-        from thctk.constants import UNIT
+        from INTERNALS.constants import UNIT
         if unit is None:
             self.unit = UNIT
         else:
@@ -759,7 +759,7 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
 
         #TRANSLATION  project out com
         if Ltrans is None:
-           self.Ltrans = (N.identity(3)*N.sqrt(1./masses.sum()))
+           self.Ltrans = (N.identity(3))#*N.sqrt(1./masses.sum()))
         else:
             self.Ltrans = Ltrans
         self.Ltransi = N.linalg.inv(self.Ltrans)
@@ -778,7 +778,7 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
 
         #Rotation
         if Lrot is None:
-            self.Lrot = (N.identity(3)*N.sqrt(1./masses.sum()))
+            self.Lrot = (N.identity(3))#*N.sqrt(1./masses.sum()))
         else:
             self.Lrot = Lrot
         self.Lroti = N.linalg.inv(self.Lrot)
@@ -790,16 +790,13 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
         self.q0[3:6] = qrot.getTaitBryanZYXAngles()
 
         #Internal Coordinates
-        if internals is None:
+        if ic is None:
             raise ValueError('Internal coordinates have to be specified')
-
-        ic = icSystem(internals, len(atoms), masses = masses, xyz = x0.copy() )
-        ic.backIteration = ic.denseBackIteration
 
         self.coords_int = InternalEckartFrameCoordinates(x0, \
                                 masses, ns=None, internal=True,\
                                 xRef = self.xRef,atoms = atoms, freqs = freqs, ic=ic,\
-                                L=Lvib, Li=None, unit=self.unit, rcond=1e-10, biArgs={})
+                                L=Lvib, Li=Lvibi, unit=self.unit, rcond=1e-10, biArgs={})
 
         #should be normalized
         #self.coords_int.normalize()
@@ -895,15 +892,15 @@ class ReducedDimSurfaceCoordinates(CompleteAdsorbateInternalEckartFrameCoordinat
     read in as mbe potentials.
     """
 
-    def __init__(self, x0, masses, atoms, xRef = None, freqs = None, internals = None, Ltrans = None,
-                Lrot = None, Lvib = None, cell = None, unit = UNIT, rcond = 1e-10, \
+    def __init__(self, x0, masses, atoms, xRef = None, freqs = None, ic=None, Ltrans = None,
+                Lrot = None, Lvib = None, Lvibi = None, cell = None, unit = UNIT, rcond = 1e-10, \
                 com_list = None, use_mbecoords = False, active_coords = None, data_dir=None):
 
         CompleteAdsorbateInternalEckartFrameCoordinates.__init__(self, x0=x0, \
                                                              masses=masses, atoms=atoms, xRef = xRef, \
-                                                             freqs = freqs, internals = internals, \
+                                                             freqs = freqs, ic=ic, \
                                                              Ltrans = Ltrans, Lrot = Lrot, \
-                                                             Lvib = Lvib, cell = cell, unit = unit, rcond = 1e-10, \
+                                                             Lvib = Lvib, Lvibi=Lvibi, cell = cell, unit = unit, rcond = 1e-10, \
                                                              com_list = com_list)
 
         #per default is the dimensionality the same is in Compl.Ads.Int.EckartCoords
@@ -997,6 +994,101 @@ class ReducedDimSurfaceCoordinates(CompleteAdsorbateInternalEckartFrameCoordinat
         return s
 
 
+#Reini
+class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordinates):
+    """
+    Derived CAIFC object do host Delocalized Internal Coordinates
+    """
+    def __init__(self, x0, masses, u=None, xRef = None, atoms, freqs = None, ic = None, Ltrans = None,
+                Lrot = None, cell = None, unit = UNIT, rcond = 1e-10, \
+                com_list = None):
+    if u is None:
+        raise ValueError('the DI vector u has to be given!')
+    self.u = u
+    Li = u
+    L = N.dot(N.linalg.inv(N.dot(Li,Li.transpose())),Li)
+    CompleteAdsorbateInternalEckartFrameCoordinates.__init__(self, x0=x0, \
+                                                             masses=masses, atoms=atoms, xRef = xRef, \
+                                                             freqs = freqs, \
+                                                             Ltrans = Ltrans, Lrot = Lrot, \
+                                                             Lvib = L, Lvibi=Li, cell = cell, unit = unit, rcond = 1e-10, \
+                                                             com_list = com_list)
+    def get_vectors(self):
+        """Returns the delocalized internal eigenvectors as cartesian
+        displacements. Careful! get_vectors()[0] is the first vector.
+        If you want to interpret it as a matrix in the same way numpy does,
+        you will have to transpose it first. They are normed so that
+        the largest single component is equal to 1"""
+        ss = self.s
+        w=[]
+        for i in range(0,len(ss)):
+            ss=N.zeros(len(self.s))
+            ss[i]=1
+            dd=(self.getX(ss)-self.x0).reshape(-1,3)
+            dd/=N.max(N.abs(dd))
+            w.append(dd)
+        w=N.asarray(w)
+        return w
+    
+    def get_DI_vectors(self):
+        """TBD"""
+        ss = self.s
+        w=[]
+        for i in range(6,len(ss)):
+            ss=N.zeros(len(self.s))
+            ss[i]=1
+            dd=(self.getX(ss)-self.x0).reshape(-1,3)
+            dd/=N.max(N.abs(dd))
+            w.append(dd)
+        w=N.asarray(w)
+        return w
+    
+    def get_trans_vectors(self):
+        """TBD"""
+        ss = self.s
+        w=[]
+        for i in range(0,3):
+            ss=N.zeros(len(self.s))
+            ss[i]=1
+            dd=(self.getX(ss)-self.x0).reshape(-1,3)
+            dd/=N.max(N.abs(dd))
+            w.append(dd)
+        w=N.asarray(w)
+        return w
+
+    def get_rot_vectors(self):
+        """TBD"""
+        ss = self.s
+        w=[]
+        for i in range(3,6):
+            ss=N.zeros(len(self.s))
+            ss[i]=1
+            dd=(self.getX(ss)-self.x0).reshape(-1,3)
+            dd/=N.max(N.abs(dd))
+            w.append(dd)
+        w=N.asarray(w)
+        return w
+
+    def get_delocvectors(self):
+        """Returns the delocalized internal eigenvectors."""
+        return self.u.transpose()
+
+    def write_jmol(self,filename,constr=False):
+        """This works similar to write_jmol in ase.vibrations."""
+        fd = open(filename, 'w')
+        wtemp=self.get_vectors()
+        for i in range(len(wtemp)):
+            fd.write('%6d\n' % (len(self.x0)/3))
+            fd.write('Mode #%d, f = %.1f%s cm^-1 \n' % (i, i, ' '))
+            for j, pos in enumerate(self.x0.reshape(-1,3)):
+                fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f \n' %
+                     (self.atoms[j], pos[0], pos[1], pos[2],
+                      wtemp[i,j, 0],wtemp[i,j, 1], wtemp[i,j, 2]))
+        fd.close()
+
+
+
+
 
 class InternalPASCoordinates(PASCoordinates, InternalCoordinates):
     """
@@ -1026,6 +1118,9 @@ class InternalPASCoordinates(PASCoordinates, InternalCoordinates):
     def s2x(self):
         InternalCoordinates.s2x(self)
         self.alignToFrame()
+
+
+
 
 class InternalNormalModes(InternalCoordinates):
     """

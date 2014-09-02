@@ -8,9 +8,12 @@ from INTERNALS.curvilinear.Coordinates import CompleteDelocalizedCoordinates as 
 
 from INTERNALS.globaloptimization.delocalizer import *
 
-m =read('clethen.xyz')
+m =read('clethen-on-Ag.traj')
+
 e=Delocalizer(m)
 
+cell = m.get_cell()
+
 coords=CDC(e.x_ref.flatten(), e.masses, atoms=e.atoms, \
-             ic=e.ic, u=e.get_U())
+             ic=e.ic, u=e.get_U(), unit=1.0 cell=cell)
 coords.write_jmol('dol') #delocalizing out loud

@@ -746,10 +746,10 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
         self.ns = ns = len(x0)
         self.masses = masses
         self.atoms = atoms
-        self.q0 = N.zeros(self.nx)
+        self.q0 = N.zeros(Lvibi.shape[1]+6)
         self.x0 = x0.copy()
         self.x = N.empty(self.nx)
-        self.q = N.empty(self.nx)
+        self.q = N.empty(Lvibi.shape[1]+6)
         self.s = N.empty(self.ns)
 
         if xRef is None:
@@ -793,6 +793,7 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
         if ic is None:
             raise ValueError('Internal coordinates have to be specified')
 
+        self.Lvibi = Lvibi
         self.coords_int = InternalEckartFrameCoordinates(x0, \
                                 masses, ns=None, internal=True,\
                                 xRef = self.xRef,atoms = atoms, freqs = freqs, ic=ic,\
@@ -852,7 +853,7 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
     def getS(self, x): # conversion from 's' to 'x' (curvilinear to Cartesian)
         s = N.zeros(self.nx)
         x = N.array(x)
-        self.q = N.zeros(self.nx)
+        self.q = N.zeros(self.Lvibi.shape[1]+6)
         #TRANSLATION
         com = N.zeros(3)
         for ind in self.com_list:
@@ -999,20 +1000,21 @@ class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordin
     """
     Derived CAIFC object do host Delocalized Internal Coordinates
     """
-    def __init__(self, x0, masses, u=None, xRef = None, atoms, freqs = None, ic = None, Ltrans = None,
+    def __init__(self, x0, masses, u=None, xRef = None, atoms=None, freqs = None, ic = None, Ltrans = None,
                 Lrot = None, cell = None, unit = UNIT, rcond = 1e-10, \
                 com_list = None):
-    if u is None:
-        raise ValueError('the DI vector u has to be given!')
-    self.u = u
-    Li = u
-    L = N.dot(N.linalg.inv(N.dot(Li,Li.transpose())),Li)
-    CompleteAdsorbateInternalEckartFrameCoordinates.__init__(self, x0=x0, \
-                                                             masses=masses, atoms=atoms, xRef = xRef, \
-                                                             freqs = freqs, \
-                                                             Ltrans = Ltrans, Lrot = Lrot, \
-                                                             Lvib = L, Lvibi=Li, cell = cell, unit = unit, rcond = 1e-10, \
-                                                             com_list = com_list)
+        if u is None:
+            raise ValueError('the DI vector u has to be given!')
+        self.u = u
+        Li = u
+        L = N.dot(N.linalg.inv(N.dot(Li,Li.transpose())),Li)
+        L = L.transpose()
+        CompleteAdsorbateInternalEckartFrameCoordinates.__init__(self, x0=x0, \
+                                                                masses=masses, atoms=atoms, xRef = xRef, \
+                                                                freqs = freqs, ic=ic, \
+                                                                Ltrans = Ltrans, Lrot = Lrot, \
+                                                                Lvib = L, Lvibi=Li, cell = cell, unit = unit, rcond = 1e-10, \
+                                                                com_list = com_list)
     def get_vectors(self):
         """Returns the delocalized internal eigenvectors as cartesian
         displacements. Careful! get_vectors()[0] is the first vector.
@@ -1029,7 +1031,7 @@ class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordin
             w.append(dd)
         w=N.asarray(w)
         return w
-    
+
     def get_DI_vectors(self):
         """TBD"""
         ss = self.s
@@ -1042,7 +1044,7 @@ class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordin
             w.append(dd)
         w=N.asarray(w)
         return w
-    
+
     def get_trans_vectors(self):
         """TBD"""
         ss = self.s

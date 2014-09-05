@@ -13,7 +13,7 @@ class Delocalizer:
         atoms_obj: a properly initialized ase Atoms object (positions,
         masses, symbols)
         weighted: boolean, if you want mass weighted delocalized internals
-        icList: if you want to supply your own icList, simply hand it over
+        icList: if you want to supply your own icList, simply hand it over (iclist oder Leben!)
         """
         self.atoms_object = atoms_obj
         self.x_ref=atoms_obj.get_positions()

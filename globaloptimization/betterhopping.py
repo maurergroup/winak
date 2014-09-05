@@ -7,6 +7,7 @@ from ase.parallel import world
 from ase.io.trajectory import PickleTrajectory
 from INTERNALS.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from INTERNALS.globaloptimization.delocalizer import *
+from INTERNALS.curvilinear.Coordinates import CompleteDelocalizedCoordinates as CDC
 
 class BetterHopping(Dynamics):
     """Basin hopping algorythm.
@@ -33,13 +34,16 @@ class BetterHopping(Dynamics):
                     final_minima_trajectory='final_minima.traj',	#saved at the end of the basin hopping
                     adjust_cm=True,
                     movemode=0,		#Pick a way for displacement. 0->random cartesian, 1->delocalized internals
-                    maxmoves=10000,	#Should prevent an issue, where you get stuck in a structure, for which get_energy() fails
+                    maxmoves=1000,	#Should prevent an issue, where you get stuck in a structure, for which get_energy() fails
                     dynstep=-1,		#after what number of steps into the same minimum should the stepwidth increase? TODO
                     numdelocmodes=1,    #should a LC of modes be applied for the displacement? How many should be combined?
-                    adsorb=None):	#If movemode==1, only the delocalized internals of the adsorbate are of interest. Calculate them with adsorbate.
-                    #adsorbate atoms have to be the first atoms in the atoms object
+                    adsorbmask=None):	#mask that specifies where the adsorbate is located in the atoms object (list of lowest and highest pos)
         Dynamics.__init__(self, atoms, logfile, trajectory)
-        self.adsorbate=adsorb
+        self.adsorbate=adsorbmask
+        #if adsorbmask is not None:
+            #self.adsorbate=atoms[adsorbmask[0]:(adsorbmask[1]+1)]
+        #else:
+            #self.adsorbate=None
         self.kT = temperature
         self.numdelmodes=numdelocmodes
         self.optimizer = optimizer
@@ -69,7 +73,10 @@ class BetterHopping(Dynamics):
 
     def get_vectors(self,atoms):
         deloc=Delocalizer(atoms)
-        coords=DC(deloc.x_ref.flatten(), deloc.masses, internal=True, atoms=deloc.atoms, ic=deloc.ic, u=deloc.u)
+        if self.adsorbate is None:
+            coords=DC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, u=deloc.u)
+        else:
+            coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=deloc.u)
         return coords.get_vectors()
 
     def initialize(self):
@@ -97,14 +104,20 @@ class BetterHopping(Dynamics):
                 atemp=self.atoms.copy()
                 atemp.set_positions(ro)
                 try:
-                    vectors=self.get_vectors(atemp)
+                    if self.adsorbate is None:
+                        vectors=self.get_vectors(atemp)
+                    else:
+                        vectors=self.get_vectors(atemp[self.adsorbate[0]:(self.adsorbate[1]+1)])
                 except:
                     #usually the case when the molecule dissociates
                     self.log(msg='      WARNING: Could not create delocalized coordinates. Rolling back!\n')
                     self.atoms.set_positions(lastmol)
                     atemp=self.atoms.copy()
                     #atemp.set_positions(ro)
-                    vectors=self.get_vectors(atemp)
+                    if self.adsorbate is None:
+                        vectors=self.get_vectors(atemp)
+                    else:
+                        vectors=self.get_vectors(atemp[self.adsorbate[0]:(self.adsorbate[1]+1)])
                     ro=lastmol.copy()
                 lastmol=ro.copy()
             #self.logfile.write('Starting Step\n')
@@ -116,7 +129,7 @@ class BetterHopping(Dynamics):
                     rn=self.move_del(ro,vectors)
                 #self.logfile.write('move done\n')
                 #print 'move done'
-                #self.atoms.write(str(step)+'.xyz',format='xyz')
+                self.atoms.write(str(step)+'.xyz',format='xyz')
                 En = self.get_energy(rn)
                 tries+=1
                 if tries>self.mm:
@@ -183,9 +196,9 @@ class BetterHopping(Dynamics):
             numcomb=numvec #for extra snafe!
         w=np.random.choice(range(numvec),size=numcomb,replace=False)
         for i in w:
-            disp[:len(vectors[w[0]]),:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
+            disp[self.adsorbate[0]:(self.adsorbate[1]+1),:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
         disp/=np.max(np.abs(disp))
-
+        #print disp
         #from here on, everything is JUST COPIED from self.move(); should be sane
         rn=ro+self.dr*disp
         atoms.set_positions(rn)

@@ -8,6 +8,8 @@ from ase.io.trajectory import PickleTrajectory
 from INTERNALS.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from INTERNALS.globaloptimization.delocalizer import *
 from INTERNALS.curvilinear.Coordinates import CompleteDelocalizedCoordinates as CDC
+from INTERNALS.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
+from INTERNALS.curvilinear.InternalCoordinates import icSystem
 
 class BetterHopping(Dynamics):
     """Basin hopping algorythm.
@@ -70,6 +72,21 @@ class BetterHopping(Dynamics):
         self.fi_trajectory=final_minima_trajectory
         self.initialize()
         #print 'initialize done'
+
+    def check_distances(self,atoms,min=0.1):
+        vcg=VCG(atoms.get_chemical_symbols(),masses=atoms.get_masses())
+        iclist=vcg(atoms.get_positions().flatten())
+        ic=icSystem(iclist,len(atoms), masses=atoms.get_masses(),xyz=atoms.get_positions().flatten())
+        stre=ic.getStretchBendTorsOop()[0][0]
+        ics=ic.getStretchBendTorsOop()[1]
+        ret=True
+        for i in stre:
+            a=atoms[ics[i][0]-1].position #For some absurd reason, IC stuff starts at atom number 1, not 0...
+            b=atoms[ics[i][1]-1].position
+            if np.linalg.norm(a-b)<min:
+                ret=False
+                break
+        return ret
 
     def get_vectors(self,atoms):
         deloc=Delocalizer(atoms)
@@ -190,24 +207,31 @@ class BetterHopping(Dynamics):
         """Displace atoms by randomly selected delocalized 'normal mode' """
         atoms=self.atoms
         numvec=len(vectors)
-        disp=np.zeros((len(ro),3))
         numcomb=self.numdelmodes
         if self.numdelmodes>numvec:
             numcomb=numvec #for extra snafe!
-        w=np.random.choice(range(numvec),size=numcomb,replace=False)
-        for i in w:
-            disp[self.adsorbate[0]:(self.adsorbate[1]+1),:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
-        disp/=np.max(np.abs(disp))
-        #print disp
-        #from here on, everything is JUST COPIED from self.move(); should be sane
-        rn=ro+self.dr*disp
-        atoms.set_positions(rn)
-        if self.cm is not None:
-            cm = atoms.get_center_of_mass()
-            atoms.translate(self.cm - cm)
-        rn = atoms.get_positions()
-        world.broadcast(rn, 0)
-        atoms.set_positions(rn)
+        while True:
+            disp=np.zeros((len(ro),3))
+            w=np.random.choice(range(numvec),size=numcomb,replace=False)
+            for i in w:
+                disp[self.adsorbate[0]:(self.adsorbate[1]+1),:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
+            disp/=np.max(np.abs(disp))
+            #print disp
+            #from here on, everything is JUST COPIED from self.move(); should be sane
+            rn=ro+self.dr*disp
+            atoms.set_positions(rn)
+
+            if self.cm is not None:
+                cm = atoms.get_center_of_mass()
+                atoms.translate(self.cm - cm)
+            rn = atoms.get_positions()
+            world.broadcast(rn, 0)
+            atoms.set_positions(rn)
+            if self.check_distances(atoms):
+                break
+            else:
+                print 'HIIIIGHWAY TO THE DANGERZONE!'
+                atoms.write('Maverick.xyz')
         return atoms.get_positions()
 
     def get_energy(self, positions):
@@ -219,7 +243,7 @@ class BetterHopping(Dynamics):
         try:
             opt = self.optimizer2(self.atoms,logfile=self.optimizer_logfile)
             #print 'initialized'
-            opt.run(fmax=self.fmax*15)
+            opt.run(fmax=self.fmax*15,steps=2000)
 
             opt=self.optimizer(self.atoms,logfile=self.optimizer_logfile)
             opt.run(fmax=self.fmax,steps=2000)

@@ -2,7 +2,6 @@ import numpy as np
 from ase.atoms import Atoms
 from INTERNALS.curvilinear.InternalCoordinates import icSystem
 from INTERNALS.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
-from INTERNALS.curvilinear.Coordinates import InternalCoordinates as IC
 #from thctk.constants import UNIT
 from scipy import linalg as la
 

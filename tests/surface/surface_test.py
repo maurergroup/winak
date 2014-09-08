@@ -45,7 +45,7 @@ QMMM = qmme(atoms=molecule,
             nmm_regions=1,
             qm_calculators=[calc_dftb],
             mm_calculators=[calc_vdw],
-            qm_atoms=[[(4,11)]],
+            qm_atoms=[[(4,12)]],
             mm_mode='allatoms')
 
 molecule.set_calculator(QMMM)
@@ -56,7 +56,7 @@ bh = BetterHopping(atoms=molecule,
                   optimizer=BFGS,
                   fmax=2,
                   logfile='tt.log',
-                  maxmoves=500,
+                  maxmoves=50,
                   movemode=1,
                   numdelocmodes=14,
                   adsorbmask=(8,11)

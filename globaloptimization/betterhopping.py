@@ -39,13 +39,15 @@ class BetterHopping(Dynamics):
                     maxmoves=1000,	#Should prevent an issue, where you get stuck in a structure, for which get_energy() fails
                     dynstep=-1,		#after what number of steps into the same minimum should the stepwidth increase? TODO
                     numdelocmodes=1,    #should a LC of modes be applied for the displacement? How many should be combined?
-                    adsorbmask=None):	#mask that specifies where the adsorbate is located in the atoms object (list of lowest and highest pos)
+                    adsorbmask=None,	#mask that specifies where the adsorbate is located in the atoms object (list of lowest and highest pos)
+                    cell_scale=[1.0,1.0,1.0]):
         Dynamics.__init__(self, atoms, logfile, trajectory)
         self.adsorbate=adsorbmask
         #if adsorbmask is not None:
             #self.adsorbate=atoms[adsorbmask[0]:(adsorbmask[1]+1)]
         #else:
             #self.adsorbate=None
+        self.cell_scale=cell_scale
         self.kT = temperature
         self.numdelmodes=numdelocmodes
         self.optimizer = optimizer
@@ -73,7 +75,7 @@ class BetterHopping(Dynamics):
         self.initialize()
         #print 'initialize done'
 
-    def check_distances(self,atoms,min=0.1):
+    def check_distances(self,atoms,min=0.25):
         vcg=VCG(atoms.get_chemical_symbols(),masses=atoms.get_masses())
         iclist=vcg(atoms.get_positions().flatten())
         ic=icSystem(iclist,len(atoms), masses=atoms.get_masses(),xyz=atoms.get_positions().flatten())
@@ -93,7 +95,8 @@ class BetterHopping(Dynamics):
         if self.adsorbate is None:
             coords=DC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, u=deloc.u)
         else:
-            coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=deloc.u)
+            cell = self.atoms.get_cell()*self.cell_scale
+            coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=deloc.u,cell=cell)
         return coords.get_vectors()
 
     def initialize(self):

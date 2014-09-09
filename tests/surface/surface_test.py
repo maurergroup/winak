@@ -59,7 +59,7 @@ bh = BetterHopping(atoms=molecule,
                   maxmoves=50,
                   movemode=1,
                   numdelocmodes=14,
-                  adsorbmask=(8,11)
+                  adsorbmask=(8,12)
                   )
 bh.run(50)
 

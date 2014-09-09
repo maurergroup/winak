@@ -42,7 +42,10 @@ class BetterHopping(Dynamics):
                     adsorbmask=None,	#mask that specifies where the adsorbate is located in the atoms object (list of lowest and highest pos)
                     cell_scale=[1.0,1.0,1.0]):
         Dynamics.__init__(self, atoms, logfile, trajectory)
-        self.adsorbate=adsorbmask
+        if adsorbmask is None:
+            self.adsorbate=(0,len(atoms))
+        else:
+            self.adsorbate=adsorbmask
         #if adsorbmask is not None:
             #self.adsorbate=atoms[adsorbmask[0]:(adsorbmask[1]+1)]
         #else:
@@ -217,7 +220,7 @@ class BetterHopping(Dynamics):
             disp=np.zeros((len(ro),3))
             w=np.random.choice(range(numvec),size=numcomb,replace=False)
             for i in w:
-                disp[self.adsorbate[0]:(self.adsorbate[1]+1),:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
+                disp[self.adsorbate[0]:(self.adsorbate[1]),:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
             disp/=np.max(np.abs(disp))
             #print disp
             #from here on, everything is JUST COPIED from self.move(); should be sane

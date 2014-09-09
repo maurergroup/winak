@@ -52,20 +52,14 @@ molecule.set_calculator(QMMM)
 
 bh = BetterHopping(atoms=molecule,
                   temperature=100 * kB,
-                  dr=1.5,
+                  dr=1.0,
                   optimizer=BFGS,
                   fmax=2,
                   logfile='tt.log',
                   maxmoves=50,
                   movemode=1,
-                  numdelocmodes=14,
-                  adsorbmask=(8,12)
+                  numdelocmodes=3,
+                  adsorbmask=(8,12),
+                  cell_scale=(0.5,0.5,0.1)
                   )
-bh.run(50)
-
-
-# Einkommentieren fuer eine Geometrieoptimierung
-#f = FixAtoms(mask=[atom.symbol == 'Au' for atom in atoms])
-#atoms.set_constraint(f)
-#dyn = BFGS(atoms, trajectory='ReA_Au.traj')
-#dyn.run(fmax=0.025)
+bh.run(20)

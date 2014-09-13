@@ -130,7 +130,7 @@ class BetterHopping(Dynamics):
                     if self.adsorbate is None:
                         vectors=self.get_vectors(atemp)
                     else:
-                        vectors=self.get_vectors(atemp[self.adsorbate[0]:(self.adsorbate[1]+1)])
+                        vectors=self.get_vectors(atemp[self.adsorbate[0]:(self.adsorbate[1])])
                 except:
                     #usually the case when the molecule dissociates
                     self.log(msg='      WARNING: Could not create delocalized coordinates. Rolling back!\n')
@@ -140,7 +140,7 @@ class BetterHopping(Dynamics):
                     if self.adsorbate is None:
                         vectors=self.get_vectors(atemp)
                     else:
-                        vectors=self.get_vectors(atemp[self.adsorbate[0]:(self.adsorbate[1]+1)])
+                        vectors=self.get_vectors(atemp[self.adsorbate[0]:(self.adsorbate[1])])
                     ro=lastmol.copy()
                 lastmol=ro.copy()
             #self.logfile.write('Starting Step\n')

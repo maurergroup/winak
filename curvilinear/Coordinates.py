@@ -691,7 +691,7 @@ class DelocalizedCoordinates(InternalEckartFrameCoordinates):
         w=[]
         for i in range(0,len(ss)):
             ss=N.zeros(len(self.s))
-            ss[i]=1
+            ss[i]=0.05
             dd=(self.getX(ss)-self.x0).reshape(-1,3)
             dd/=N.max(N.abs(dd))
             w.append(dd)

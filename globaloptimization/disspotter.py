@@ -23,21 +23,21 @@ class DisSpotter:
         self.stre=ic.getStretchBendTorsOop()[0][0]
         self.ics=ic.getStretchBendTorsOop()[1]
 
-    def numConnections(self,ics,stre,j):
+    def numConnections(self,j):
         """ics: as in the main program bottom
            stre: list of stretches
            j: atom you want to find
         """
         found=0
         s=[]
-        for i in stre:
+        for i in self.stre:
             a=ics[i]
             if a[0]==j or a[1]==j:
                 found+=1
                 s.append(i)
         return found,s
 
-    def fragment(self,ics,stre,j):
+    def fragment(self,j):
         """
         This might seem complicated, but it is actually not.
         """
@@ -45,7 +45,7 @@ class DisSpotter:
         if not self.visited[j]:
             ret+=1
             self.visited[j]=True
-            x=self.numConnections(ics,stre,j)
+            x=self.numConnections(j)
             #print 'looking at '+str(j)
             #print str(j)+' has '+str(x[0])+' connections'
             if x[0]==1:
@@ -53,11 +53,11 @@ class DisSpotter:
                 return ret
             else:
                 for l in x[1]:
-                    tmp=ics[l][1]
+                    tmp=self.ics[l][1]
                     if tmp==j:
-                        tmp=ics[l][0]
+                        tmp=self.ics[l][0]
                     #print str(j)+' is connected to atom '+str(tmp)
-                    ret+=self.fragment(ics,stre,tmp)
+                    ret+=self.fragment(tmp)
                     #print 'back at atom '+str(j)
                     #print 'ret is now '+str(ret)
             return ret
@@ -69,4 +69,4 @@ class DisSpotter:
         """
         Returns true if dissociation happened
         """
-        return len(self.molecule)>self.fragment(self.ics,self.stre,1)
+        return len(self.molecule)>self.fragment(1)

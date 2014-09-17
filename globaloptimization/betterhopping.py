@@ -40,7 +40,8 @@ class BetterHopping(Dynamics):
                     dynstep=-1,		#after what number of steps into the same minimum should the stepwidth increase? TODO
                     numdelocmodes=1,    #should a LC of modes be applied for the displacement? How many should be combined?
                     adsorbmask=None,	#mask that specifies where the adsorbate is located in the atoms object (list of lowest and highest pos)
-                    cell_scale=[1.0,1.0,1.0]):
+                    cell_scale=[1.0,1.0,1.0],    #used for translation in adsorbates
+                    constrain=False):   #constrain stretches?
         Dynamics.__init__(self, atoms, logfile, trajectory)
         if adsorbmask is None:
             self.adsorbate=(0,len(atoms))
@@ -63,6 +64,7 @@ class BetterHopping(Dynamics):
         self.movename='Random Cartesian'
         self.minima=[]
         self.dynst=dynstep
+        self.constr=constrain
         if movemode==1:
             self.movename='Delocalized Internals'
         if adjust_cm:
@@ -218,7 +220,13 @@ class BetterHopping(Dynamics):
             numcomb=numvec #for extra snafe!
         while True:
             disp=np.zeros((len(ro),3))
-            w=np.random.choice(range(numvec),size=numcomb,replace=False)
+            start=0 #find way for start to be number of stretches
+            if self.constr:
+                mm=atoms.get_masses()
+                x0=atoms.get_positions().flatten()
+                vv=VCG(atoms.get_chemical_symbols(),masses=mm)
+                start=len(icSystem(vv(x0),len(atoms), masses=mm,xyz=x0).getStretchBendTorsOop()[0][0])
+            w=np.random.choice(range(start,numvec),size=numcomb,replace=False)
             for i in w:
                 disp[self.adsorbate[0]:(self.adsorbate[1]),:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
             disp/=np.max(np.abs(disp))

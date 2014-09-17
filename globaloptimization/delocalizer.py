@@ -24,7 +24,7 @@ class Delocalizer:
         x0=self.x_ref.flatten()
         #VCG constructs primitive internals (bond length,bend,torsion,oop)
         if icList is None:
-            self.vcg=VCG(self.atoms,masses=self.masses)
+            self.vcg=VCG(atoms=self.atoms,masses=self.masses)
             self.iclist=self.vcg(x0)
         else:
             self.iclist=icList

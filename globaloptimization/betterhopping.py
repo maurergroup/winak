@@ -216,8 +216,6 @@ class BetterHopping(Dynamics):
         atoms=self.atoms
         numvec=len(vectors)
         numcomb=self.numdelmodes
-        if self.numdelmodes>numvec:
-            numcomb=numvec #for extra snafe!
         while True:
             disp=np.zeros((len(ro),3))
             start=0 #find way for start to be number of stretches
@@ -226,6 +224,8 @@ class BetterHopping(Dynamics):
                 x0=atoms.get_positions().flatten()
                 vv=VCG(atoms.get_chemical_symbols(),masses=mm)
                 start=len(icSystem(vv(x0),len(atoms), masses=mm,xyz=x0).getStretchBendTorsOop()[0][0])
+            if numcomb>len(range(start,numvec)):
+                numcomb=len(range(start,numvec))
             w=np.random.choice(range(start,numvec),size=numcomb,replace=False)
             for i in w:
                 disp[self.adsorbate[0]:(self.adsorbate[1]),:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.

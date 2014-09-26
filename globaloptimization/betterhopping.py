@@ -32,12 +32,10 @@ class BetterHopping(Dynamics):
                     logfile='-',
                     trajectory='lowest.traj',
                     optimizer_logfile='stdout.log',
-                    local_minima_trajectory='temp_local_minima.traj',	#saved during the optimization in case of program crashes
-                    final_minima_trajectory='final_minima.traj',	#saved at the end of the basin hopping
+                    local_minima_trajectory='temp_local_minima.traj',	#local minima found
                     adjust_cm=True,
                     movemode=0,		#Pick a way for displacement. 0->random cartesian, 1->delocalized internals
                     maxmoves=1000,	#Should prevent an issue, where you get stuck in a structure, for which get_energy() fails
-                    dynstep=-1,		#after what number of steps into the same minimum should the stepwidth increase? TODO
                     numdelocmodes=1,    #should a LC of modes be applied for the displacement? How many should be combined?
                     adsorbmask=None,	#mask that specifies where the adsorbate is located in the atoms object (list of lowest and highest pos)
                     cell_scale=[1.0,1.0,1.0],    #used for translation in adsorbates
@@ -63,7 +61,6 @@ class BetterHopping(Dynamics):
         self.movemode=movemode
         self.movename='Random Cartesian'
         self.minima=[]
-        self.dynst=dynstep
         self.constr=constrain
         if movemode==1:
             self.movename='Delocalized Internals'
@@ -76,7 +73,6 @@ class BetterHopping(Dynamics):
         self.lm_trajectory = local_minima_trajectory
         if isinstance(local_minima_trajectory, str):
             self.lm_trajectory = PickleTrajectory(local_minima_trajectory,'a', atoms)
-        self.fi_trajectory=final_minima_trajectory
         self.initialize()
         #print 'initialize done'
 
@@ -174,15 +170,9 @@ class BetterHopping(Dynamics):
             self.log(step, En, self.Emin)
             lastworkingpos=ro.copy()
             lastworkinge=Eo
-            accept = np.exp((Eo - En) / self.kT) > np.random.uniform()
-            if accept:
+            if np.exp((Eo - En) / self.kT) > np.random.uniform():
                 ro = rn.copy()
                 Eo = En
-        self.fi_trajectory=PickleTrajectory(self.fi_trajectory,'a')
-        i=0
-        for a in self.minima:
-            self.fi_trajectory.write(a)
-            i+=1
         self.endT = datetime.now()
         self.log(msg='ENDING BASINHOPPING at '+self.endT.strftime('%Y-%m-%d %H:%M:%S')+':\n Number of steps to Minimum: %d\n'%self.lowstep)
         self.log(msg='Time elapsed: '+str(self.endT-self.startT)+'\n')
@@ -200,7 +190,8 @@ class BetterHopping(Dynamics):
         """Move atoms by a random step."""
         atoms = self.atoms
         # displace coordinates
-        disp = np.random.uniform(-1., 1., (len(atoms), 3))
+        disp=np.zeros((len(ro),3))
+        disp[self.adsorbate[0]:self.adsorbate[1],:3] = np.random.uniform(-1., 1., (self.adsorbate[1]-self.adsorbate[0], 3))
         rn = ro + self.dr * disp
         atoms.set_positions(rn)
         if self.cm is not None:

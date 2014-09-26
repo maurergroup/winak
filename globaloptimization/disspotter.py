@@ -8,20 +8,18 @@ class DisSpotter:
     """
     Tells you if a molecule is dissociated or not.
     """
-    def __init__(self, atoms=None,file=None):
-        if atoms is None and file is None:
-            raise ValueError('Please specify either a file or an ase atoms object!')
-        elif atoms is None:
+    def __init__(self, atoms):
+        if isinstance(atoms,basestring):
             self.molecule=read(file)
         else:
             self.molecule=atoms
         self.visited=[False]*(len(self.molecule)+1)
-        vcg=VCG(self.molecule.get_chemical_symbols(),masses=self.molecule.get_masses())
-        iclist=vcg(self.molecule.get_positions().flatten())
-        ic=icSystem(iclist,len(self.molecule),masses=self.molecule.get_masses(),xyz=self.molecule.get_positions().flatten())
+        self.vcg=VCG(self.molecule.get_chemical_symbols(),masses=self.molecule.get_masses())
+        self.iclist=self.vcg(self.molecule.get_positions().flatten())
+        self.ic=icSystem(self.iclist,len(self.molecule),masses=self.molecule.get_masses(),xyz=self.molecule.get_positions().flatten())
 
-        self.stre=ic.getStretchBendTorsOop()[0][0]
-        self.ics=ic.getStretchBendTorsOop()[1]
+        self.stre=self.ic.getStretchBendTorsOop()[0][0]
+        self.ics=self.ic.getStretchBendTorsOop()[1]
 
     def numConnections(self,j):
         """ics: as in the main program bottom
@@ -31,7 +29,7 @@ class DisSpotter:
         found=0
         s=[]
         for i in self.stre:
-            a=ics[i]
+            a=self.ics[i]
             if a[0]==j or a[1]==j:
                 found+=1
                 s.append(i)
@@ -69,4 +67,4 @@ class DisSpotter:
         """
         Returns true if dissociation happened
         """
-        return len(self.molecule)>self.fragment(1)
+        return len(self.molecule)>self.fragment(1)#1 is arbitrary

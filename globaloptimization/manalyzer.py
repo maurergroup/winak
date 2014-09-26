@@ -36,7 +36,6 @@ class Manalyzer:
     def dothebartman(self):
         tmp=0
 
-
         d = '/home/konstantin/software/HOTBIT/param/SURF/'
 
         elm = {'H': d + 'H.elm',
@@ -74,9 +73,9 @@ class Manalyzer:
                 self.dis.append(Minimum(i,e.vcg,e.iclist,e.ic,tmp))
             else:
                 i.set_calculator(calc_dftb)
-                print 'lol'
                 self.notdis.append(Minimum(i,e.vcg,e.iclist,e.ic,tmp,i.get_potential_energy()))
                 tmp+=1
+        print str(len(self.dis))+' dissociated minima, '+str(len(self.notdis))+ ' undissociated minima, '+str(len(self.allmin))+' total'
         for i in self.notdis:
             if len(self.min)==0:
                 tmpmin=[]

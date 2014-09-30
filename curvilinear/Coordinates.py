@@ -690,11 +690,22 @@ class DelocalizedCoordinates(InternalEckartFrameCoordinates):
         ss = self.s
         w=[]
         for i in range(0,len(ss)):
-            ss=N.zeros(len(self.s))
-            ss[i]=0.05
-            dd=(self.getX(ss)-self.x0).reshape(-1,3)
-            dd/=N.max(N.abs(dd))
-            w.append(dd)
+            worked=False
+            tries=1
+            fac=0.01
+            while not worked:
+                try:
+                    ss=N.zeros(len(self.s))
+                    ss[i]=fac
+                    dd=(self.getX(ss)-self.x0).reshape(-1,3)
+                    dd/=N.max(N.abs(dd))
+                    w.append(dd)
+                    worked=True
+                except:
+                    tries+=1
+                    fac*=2
+                    if tries>40:
+                        raise ValueError('NO convergence')
         w=N.asarray(w)
         return w
 
@@ -1024,11 +1035,22 @@ class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordin
         ss = self.s
         w=[]
         for i in range(0,len(ss)):
-            ss=N.zeros(len(self.s))
-            ss[i]=1
-            dd=(self.getX(ss)-self.x0).reshape(-1,3)
-            dd/=N.max(N.abs(dd))
-            w.append(dd)
+            worked=False
+            tries=1
+            fac=0.01
+            while not worked:
+                try:
+                    ss=N.zeros(len(self.s))
+                    ss[i]=fac
+                    dd=(self.getX(ss)-self.x0).reshape(-1,3)
+                    dd/=N.max(N.abs(dd))
+                    w.append(dd)
+                    worked=True
+                except:
+                    tries+=1
+                    fac*=2
+                    if tries>40:
+                        raise ValueError('NO convergence')
         w=N.asarray(w)
         return w
 

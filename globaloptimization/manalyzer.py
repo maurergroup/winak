@@ -32,17 +32,13 @@ class Manalyzer:
         self.notdis=[]
         self.dis=[]
         self.min=[]
-
-    def dothebartman(self):
-        tmp=0
+        self.conf=[]
 
         d = '/home/konstantin/software/HOTBIT/param/SURF/'
-
         elm = {'H': d + 'H.elm',
                'C': d + 'C.elm',
                'N': d + 'N.elm',
                'O': d + 'O.elm'}
-
         tab = {'CH': d + 'C_H.par',
                'HH': d + 'H_H.par',
                'CC': d + 'C_C.par',
@@ -50,7 +46,6 @@ class Manalyzer:
                'NH': d + 'N_H.par',
                'NN': d + 'N_N.par',
                'rest': 'default'}
-
         mixer = {'name': 'Pulay', 'convergence': 1E-7}
         calc_dftb = Hotbit(txt='hotbit.txt',
                    elements=elm,
@@ -66,7 +61,8 @@ class Manalyzer:
                    kpts=(1,1,1)
                    )
 
-
+        print 'Calculating Energies...'
+        tmp=0
         for i in self.allmin:
             e=DisSpotter(atoms=i)
             if e.spot_dis():
@@ -75,8 +71,43 @@ class Manalyzer:
                 i.set_calculator(calc_dftb)
                 self.notdis.append(Minimum(i,e.vcg,e.iclist,e.ic,tmp,i.get_potential_energy()))
                 tmp+=1
+                print str(tmp)+' done'
         print str(len(self.dis))+' dissociated minima, '+str(len(self.notdis))+ ' undissociated minima, '+str(len(self.allmin))+' total'
+
+    def findConformers(self,strref=None,icsref=None):
+        """
+        all stretches have to be the same;
+        """
+        if strref is None or icsref is None:
+            stre=self.notdis[0].ic.getStretchBendTorsOop()[0][0]
+            ics=self.notdis[0].ic.getStretchBendTorsOop()[1]
+        else:
+            stre=strref
+            ics=icsref
+        xx=PickleTrajectory('confs.traj','a')
         for i in self.notdis:
+            istre=i.ic.getStretchBendTorsOop()[0][0]
+            iics=i.ic.getStretchBendTorsOop()[1]
+            same=True
+            for j in stre:
+                if not (iics[j][0]==ics[j][0] and iics[j][1]==iics[j][1]):
+                    same=False
+                    break
+            if same:
+                xx.write(i.atoms)
+                print i.oldn
+                self.conf.append(i)
+
+
+    def dothebartman(self,onlyconf=False):
+        if onlyconf:
+            self.findConformers()
+            iter=self.conf
+            pre='c'
+        else:
+            iter=self.notdis
+            pre=''
+        for i in iter:
             if len(self.min)==0:
                 tmpmin=[]
                 tmpmin.append(i)
@@ -101,7 +132,7 @@ class Manalyzer:
                     self.min.append(tmpmin)
 
         for i in range(len(self.min)):
-            xx=PickleTrajectory(str(i)+'.traj','w')
+            xx=PickleTrajectory(pre+str(i)+'.traj','w')
             print 'minim: '+str(i)
             for j in range(len(self.min[i])):
                 xx.write(self.min[i][j].atoms)

@@ -22,13 +22,13 @@ molecule.set_calculator(calc_dftb)
 
 bh = BetterHopping(atoms=molecule,
                   temperature=100 * kB,
-                  dr=0.55,
+                  dr=0.7,
                   optimizer=BFGS,
                   fmax=4,
                   logfile='tt.log',
                   maxmoves=50,
                   movemode=1,
-                  numdelocmodes=7,
+                  numdelocmodes=20,
                   constrain=True
                   )
 bh.run(50)

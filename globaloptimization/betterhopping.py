@@ -43,8 +43,10 @@ class BetterHopping(Dynamics):
         Dynamics.__init__(self, atoms, logfile, trajectory)
         if adsorbmask is None:
             self.adsorbate=(0,len(atoms))
+            self.ads=False
         else:
             self.adsorbate=adsorbmask
+            self.ads=True
         #if adsorbmask is not None:
             #self.adsorbate=atoms[adsorbmask[0]:(adsorbmask[1]+1)]
         #else:
@@ -93,11 +95,15 @@ class BetterHopping(Dynamics):
 
     def get_vectors(self,atoms):
         deloc=Delocalizer(atoms)
-        if self.adsorbate is None:
-            coords=DC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, u=deloc.u)
+        tu=deloc.u
+        if self.constr:
+            deloc.constrainStretches()
+            tu=deloc.u2
+        if not self.ads:
+            coords=DC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, u=tu)
         else:
             cell = self.atoms.get_cell()*self.cell_scale
-            coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=deloc.u,cell=cell)
+            coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=tu,cell=cell)
         return coords.get_vectors()
 
     def initialize(self):
@@ -125,7 +131,7 @@ class BetterHopping(Dynamics):
                 atemp=self.atoms.copy()
                 atemp.set_positions(ro)
                 try:
-                    if self.adsorbate is None:
+                    if not self.ads:
                         vectors=self.get_vectors(atemp)
                     else:
                         vectors=self.get_vectors(atemp[self.adsorbate[0]:(self.adsorbate[1])])
@@ -135,7 +141,7 @@ class BetterHopping(Dynamics):
                     self.atoms.set_positions(lastmol)
                     atemp=self.atoms.copy()
                     #atemp.set_positions(ro)
-                    if self.adsorbate is None:
+                    if not self.ads:
                         vectors=self.get_vectors(atemp)
                     else:
                         vectors=self.get_vectors(atemp[self.adsorbate[0]:(self.adsorbate[1])])

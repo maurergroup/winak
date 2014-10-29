@@ -887,6 +887,7 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
         self.coords_int.x2s()
         self.q[6:] = self.coords_int.q0 + N.dot(self.coords_int.L, self.coords_int.s*self.coords_int.unit)
         s[6:]= self.coords_int.s
+
         return s
 
     def Q2S(self, q):
@@ -1037,7 +1038,7 @@ class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordin
         for i in range(0,len(ss)):
             worked=False
             tries=1
-            fac=0.01
+            fac=0.0001
             while not worked:
                 try:
                     ss=N.zeros(len(self.s))
@@ -1050,7 +1051,11 @@ class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordin
                     tries+=1
                     fac*=2
                     if tries>40:
-                        raise ValueError('NO convergence')
+                        raise ValueError('NO convergence after 40 tries')
+        vectmp=w[0:6]
+        del w[0:6]
+        for vtmp in vectmp:
+            w.append(vtmp)#otherwise rot and trans will be filtered out later
         w=N.asarray(w)
         return w
 

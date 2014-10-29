@@ -134,7 +134,7 @@ class BetterHopping(Dynamics):
                     if not self.ads:
                         vectors=self.get_vectors(atemp)
                     else:
-                        vectors=self.get_vectors(atemp[self.adsorbate[0]:(self.adsorbate[1])])
+                        vectors=self.get_vectors(atemp[self.adsorbate[0]:self.adsorbate[1]])
                 except:
                     #usually the case when the molecule dissociates
                     self.log(msg='      WARNING: Could not create delocalized coordinates. Rolling back!\n')
@@ -144,7 +144,7 @@ class BetterHopping(Dynamics):
                     if not self.ads:
                         vectors=self.get_vectors(atemp)
                     else:
-                        vectors=self.get_vectors(atemp[self.adsorbate[0]:(self.adsorbate[1])])
+                        vectors=self.get_vectors(atemp[self.adsorbate[0]:self.adsorbate[1]])
                     ro=lastmol.copy()
                 lastmol=ro.copy()
             #self.logfile.write('Starting Step\n')
@@ -210,7 +210,8 @@ class BetterHopping(Dynamics):
 
     def move_del(self, ro,vectors):
         """Displace atoms by randomly selected delocalized 'normal mode' """
-        atoms=self.atoms
+        atoms=self.atoms[self.adsorbate[0]:self.adsorbate[1]]
+        atms=self.atoms
         numvec=len(vectors)
         numcomb=self.numdelmodes
         while True:
@@ -230,20 +231,20 @@ class BetterHopping(Dynamics):
             #print disp
             #from here on, everything is JUST COPIED from self.move(); should be sane
             rn=ro+self.dr*disp
-            atoms.set_positions(rn)
+            atms.set_positions(rn)
 
             if self.cm is not None:
-                cm = atoms.get_center_of_mass()
-                atoms.translate(self.cm - cm)
-            rn = atoms.get_positions()
+                cm = atms.get_center_of_mass()
+                atms.translate(self.cm - cm)
+            rn = atms.get_positions()
             world.broadcast(rn, 0)
-            atoms.set_positions(rn)
+            atms.set_positions(rn)
             if self.check_distances(atoms):
                 break
             else:
                 print 'HIIIIGHWAY TO THE DANGERZONE!'
                 atoms.write('Maverick.xyz')
-        return atoms.get_positions()
+        return atms.get_positions()
 
     def get_energy(self, positions):
         """Return the energy of the nearest local minimum."""

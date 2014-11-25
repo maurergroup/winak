@@ -48,8 +48,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'INTERNALS'
-copyright = u'2014, Konstantin Krautgasser, Reinhard Maurer'
+project = u'winak'
+copyright = u'2014, Konstantin Krautgasser, Reinhard J. Maurer'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

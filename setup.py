@@ -1,8 +1,8 @@
 #
-# thctk distutils setup
+# winak distutils setup
 #
 
-package_name = 'INTERNALS'
+package_name = 'winak'
 
 
 # the following provides: __version__, __revision__, __all__
@@ -79,19 +79,11 @@ packages = [ package_name ]
 for package in __all__:
     packages.append(package_name + '.' + package)
 
-#packages.append(package_name + '.QD.KineticEnergy')
-#packages.append(package_name + '.QD.VCI')
-
 ext_modules = [
     Extension('curvilinear.numeric.comm', ['curvilinear/numeric/comm.pyf', 'curvilinear/numeric/comm.f'],
         library_dirs = lapack_dirs + fortran_dirs,
         libraries = lapack_libs + fortran_libs,
         define_macros= f2py_macros + numerix_macros),
-#    Extension('numeric.bspline_22', ['numeric/bspline_22.pyf',
-#        'numeric/bspline_22.f'],
-#        library_dirs = lapack_dirs + fortran_dirs,
-#        libraries = lapack_libs + fortran_libs,
-#        define_macros= f2py_macros + numerix_macros),
     Extension('curvilinear.numeric.rcm', ['curvilinear/numeric/rcm.pyf', 
         'curvilinear/numeric/sparsepak_rcm.f90',],
         library_dirs = fortran_dirs,
@@ -101,10 +93,6 @@ ext_modules = [
         library_dirs = lapack_dirs + fortran_dirs,
         libraries = lapack_libs + fortran_libs,
         define_macros= f2py_macros + numerix_macros),
-#    Extension('numeric.ilut', ['numeric/ilut.pyf', 'numeric/ilut.f'],
-#        define_macros= f2py_macros + numerix_macros),
-#    Extension('numeric.tensorIndices', ['numeric/tensorIndices.pyf', 'numeric/tensorIndices.f'],
-#        define_macros= f2py_macros + numerix_macros),
     Extension('curvilinear.numeric.csrVSmsr', ['curvilinear/numeric/csrVSmsr.pyf', 'curvilinear/numeric/csrVSmsr.f'],
         define_macros= f2py_macros + numerix_macros),
     Extension('curvilinear.numeric.blassm', ['curvilinear/numeric/blassm.pyf', 'curvilinear/numeric/blassm.f'],
@@ -122,81 +110,25 @@ ext_modules = [
         libraries = ['gomp'],
         include_dirs=['include'],
         define_macros= [('THCTK_INTERFACE', None),] + NO_THCTK_PY_CHECKS  + numerix_macros),
-#    Extension('numeric.gelsy', ['numeric/gelsy.pyf',],
-#        library_dirs = lapack_dirs + fortran_dirs,
-#        libraries = lapack_libs + fortran_libs,
-#        define_macros= f2py_macros + numerix_macros),
-#    Extension('spectroscopy._exciton', ['spectroscopy/exciton.pyf',
-#        'spectroscopy/exciton.f'],
-#        library_dirs = fortran_dirs,
-#        libraries = fortran_libs,
-#        define_macros= f2py_macros + numerix_macros),
     Extension('curvilinear._intcrd', ['curvilinear/intcrd.c'],
         include_dirs=['include'],
         undef_macros=['MAIN', 'NOthctkPyChecks'],
         define_macros=[('THCTK_INTERFACE', None),] + numerix_macros),
-#    Extension('QD._offDiagonalElement', ['QD/offDiagonalElement.c'],
-#        include_dirs=['include'],
-#        define_macros= [] + NO_THCTK_PY_CHECKS  + numerix_macros),
-#    Extension('extensionTypes.symmetricArrays',
-#        ['extensionTypes/symmetricArrays.c',],
-#        include_dirs=['include'],
-#        define_macros= [] + NO_THCTK_PY_CHECKS  + numerix_macros),
-#    Extension("QD.offDiagonalElement", ["QD/offDiagonalElement.c"]),
-#    Extension("numeric.RJD", ["numeric/RJD.c"]),
-#    Extension("numeric.cJacobiBandDiagonalization", 
-#                ["numeric/cJacobiBandDiagonalization.c"], 
-#                ),
-#   Extension("numeric.cVarianceMinimization", 
-#               ["numeric/cVarianceMinimization.c"], 
-#               ),
-#   Extension("numeric.cBandMatrixTools", 
-#               ["numeric/cBandMatrixTools.c"], 
-#               ),
-#   Extension("numeric.cVariance", 
-#               ["numeric/cVariance.c", "numeric/cVarianceTools.c"], 
-#               ),
-#   Extension("numeric.cOffDiagLeastSquares", 
-#               ["numeric/cOffDiagLeastSquares.c", 
-#                   "numeric/cOffDiagLeastSquaresTools.c"], 
-#               ),
     Extension("curvilinear.cICTools", ["curvilinear/cICTools.c", ]
                 ),
-#    Extension("numeric.cSymmetricArrayTools", ["numeric/cSymmetricArrayTools.c", ]
-#                ),
-#    Extension("QD.VCI.cTools", ["QD/VCI/cTools.c",],
-#                extra_compile_args =['-fopenmp'], 
-#                libraries = ['blas', 'gomp'],
-#                define_macros = [] + NO_THCTK_PY_CHECKS, 
-#                ),
-#   Extension("numeric.DifEqSolvers", ["numeric/DifEqSolvers.c"],
-#       include_dirs=['include'],
-#       undef_macros=['MAIN', 'NOthctkPyChecks'],
-#       define_macros=[('THCTK_INTERFACE', None),] + numerix_macros),
     ]
-
-#if pardiso_libs: ext_modules.append(
-#    Extension('numeric.pardiso', ['numeric/pardiso.pyf',],
-#        library_dirs = pardiso_dirs + lapack_dirs + fortran_dirs,
-#        libraries = pardiso_libs + lapack_libs + fortran_libs,
-#        define_macros=[f2py_report_copy, ('long_long', '"long long"'),] + numerix_macros))
-
-#data_files = [
-#    (package_name, ['QC/basis.cdb',]),
-#    ]
 
 setup(name = package_name,
       version = __version__,
-      author = 'Christoph Scheurer',
-      author_email = 'christoph.scheurer@web.de',
-      url = 'http://scheurer-clark.net/thctk/',
+      author = 'Konstantin Krautgasser, Reinhard J. Maurer',
+      author_email = 'reinhard.maurer@yale.edu',
+      #url = 'http://url.com/',
       package_dir = { package_name: '.' },
-      description = 'python package for Theoretical Chemistry',
-      long_description = 'python package for Theoretical Chemistry',
+      description = 'python package for Global Optimization in Curvilinear Coordinates',
+      long_description = 'python package for Global Optimization in Curvilinear Coordinates',
       license = 'GNU GPL',
       platforms = 'POSIX',
       packages = packages,
       ext_package = package_name,
       ext_modules = ext_modules,
-#      data_files = data_files,
     )

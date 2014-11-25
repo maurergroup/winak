@@ -10,7 +10,7 @@ if use_cython:
 # the following provides: __version__, __revision__, __all__
     execfile('__init__.py')
 
-    package_name = 'INTERNALS'
+    package_name = 'winak'
 
     packages = [ package_name ]
     for package in __all__:

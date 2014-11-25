@@ -4,14 +4,11 @@
 # gcc into a loadable module
 
 [DEFAULT]
-lapack_libs = mkl_lapack mkl
-lapack_dirs = /opt/lib
+lapack_libs = lapack blas 
+lapack_dirs = /usr/lib
 fortran_libs = imf ifcore g2c
-fortran_dirs = /opt/lib
+fortran_dirs = /usr/lib
 
 # set the following if you want to see f2py info messages
 f2py_report_on_array_copy = 1
 
-# if you have a valid PARDISO license and want to build the interface:
-pardiso_libs = pardiso
-pardiso_dirs = /opt/lib

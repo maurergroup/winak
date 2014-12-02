@@ -674,6 +674,7 @@ class DelocalizedCoordinates(InternalEckartFrameCoordinates):
                  biArgs = {}
                  ):
         self.u=u
+        self.amasses = masses
         if L is None or Li is None:
             Li=u
             L = N.dot(N.linalg.inv(N.dot(Li,Li.transpose())),Li)
@@ -755,6 +756,9 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
             self.cell = cell
         self.nx = nx = len(x0) # number of Cartesian (OUTSIDE MBE/SG) coords
         self.ns = ns = len(x0)
+        self.amasses = masses 
+        if len(masses) == nx // 3:
+            masses = N.array([(masses,)*3]).T.ravel()
         self.masses = masses
         self.atoms = atoms
         self.q0 = N.zeros(Lvibi.shape[1]+6)
@@ -782,10 +786,10 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
 
         com = N.zeros(3)
         for ind in self.com_list:
-            com += x0.reshape((-1,3))[ind] * masses[ind]
-        com = com / masses[self.com_list].sum()
+            com += x0.reshape((-1,3))[ind] * self.amasses[ind]
+        com = com / self.amasses[self.com_list].sum()
         self.q0[:3] = N.dot(com,self.celli)
-        x0 = (x0.reshape((-1,3)) - centerOfMass(x0, masses)).flatten()
+        x0 = (x0.reshape((-1,3)) - centerOfMass(x0, self.amasses)).flatten()
 
         #Rotation
         if Lrot is None:
@@ -796,7 +800,7 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
 
         qrot = rigidBodySuperposition(x0.reshape((-1, 3)),
                                    self.xRef.reshape((-1, 3)),
-                                   weights = self.masses[:],
+                                   weights = self.amasses[:],
                                    )[2][1]
         self.q0[3:6] = qrot.getTaitBryanZYXAngles()
 
@@ -852,8 +856,8 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
         #get translation
         com = N.zeros(3)
         for ind in self.com_list:
-            com += x.reshape((-1,3))[ind] * self.masses[ind]
-        com = com / self.masses[self.com_list].sum()
+            com += x.reshape((-1,3))[ind] * self.amasses[ind]
+        com = com / self.amasses[self.com_list].sum()
         x = (x.reshape((-1,3)) - com).flatten()
         ##TRANSLATION around Center of Mass
         com = N.dot(self.q0[:3] + N.dot(self.Ltrans, s[:3]*self.unit),self.cell)
@@ -868,17 +872,17 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
         #TRANSLATION
         com = N.zeros(3)
         for ind in self.com_list:
-            com += x.reshape((-1,3))[ind] * self.masses[ind]
-        com = com / self.masses[self.com_list].sum()
+            com += x.reshape((-1,3))[ind] * self.amasses[ind]
+        com = com / self.amasses[self.com_list].sum()
         x = (x.reshape((-1,3)) - com).flatten()
         self.q[:3] = N.dot(com, self.celli)
         s[:3] = N.dot(self.Ltransi, self.q[:3]-self.q0[:3]) / self.unit
         #ROTATION
-        com = centerOfMass(x, self.masses)
+        com = centerOfMass(x, self.amasses)
         x = (x.reshape((-1,3)) - com).flatten()
         qrot = rigidBodySuperposition(x.reshape((-1, 3)),
                                    self.xRef.reshape((-1, 3)),
-                                   weights = self.masses[:],
+                                   weights = self.amasses[:],
                                    )[2][1]
         self.q[3:6] = qrot.getTaitBryanZYXAngles()
         s[3:6] = N.dot(self.Lroti, self.q[3:6]-self.q0[3:6]) / self.unit
@@ -1018,6 +1022,7 @@ class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordin
             raise ValueError('the DI vector u has to be given!')
         self.u = u
         Li = u
+        self.amasses = masses
         L = N.dot(N.linalg.inv(N.dot(Li,Li.transpose())),Li)
         L = L.transpose()
         CompleteAdsorbateInternalEckartFrameCoordinates.__init__(self, x0=x0, \
@@ -1136,14 +1141,17 @@ class Set_of_CDCs(Coordinates):
         else:
             self.unit = unit
 
-        self.subsystem_indices = [] 
+        self.subsystem_nx = [] 
+        self.subsystem_ns = [] 
         self.atoms = []
         self.nx = nx = 0
+        self.ns = ns = 0
         for subsystem in self.CDCs:
             self.atoms += subsystem.atoms
             self.nx += subsystem.nx
-            self.subsystem_indices.append(subsystem.nx)
-        self.ns = ns = self.nx
+            self.ns += subsystem.ns
+            self.subsystem_nx.append(subsystem.nx)
+            self.subsystem_ns.append(subsystem.ns)
         self.masses = N.empty(0)
         self.x0 = N.empty(0)
         self.q = N.empty(0)
@@ -1151,7 +1159,7 @@ class Set_of_CDCs(Coordinates):
         self.x = N.empty(self.nx)
         self.s = N.empty(self.ns)
         for subsystem in self.CDCs:
-            self.masses = N.concatenate([self.masses,subsystem.masses])
+            self.masses = N.concatenate([self.masses,subsystem.amasses])
             self.x0 = N.concatenate([self.x0,subsystem.x0])
             self.q0 = N.concatenate([self.q0,subsystem.q0])
         
@@ -1162,14 +1170,18 @@ class Set_of_CDCs(Coordinates):
         
         x = N.zeros(self.nx)
         s = N.array(s)
-        start = 0
-        end = 0
+        starts = 0
+        startx = 0
+        ends = 0
+        endx = 0
         for i,subsystem in enumerate(self.CDCs):
-            end += self.subsystem_indices[i]
-            ss =s[start:end]
+            ends += self.subsystem_ns[i]
+            endx += self.subsystem_nx[i]
+            ss =s[starts:ends]
             xx = subsystem.getX(ss)
-            x[start:end] = xx
-            start = end
+            x[startx:endx] = xx
+            starts = ends
+            startx = endx
 
         return x
         
@@ -1177,14 +1189,18 @@ class Set_of_CDCs(Coordinates):
 
         s = N.zeros(self.nx)
         x = N.array(x)
-        start = 0
-        end = 0
+        startx = 0
+        starts = 0
+        ends = 0
+        endx = 0
         for i,subsystem in enumerate(self.CDCs):
-            end += self.subsystem_indices[i]
-            xx =x[start:end]
+            ends += self.subsystem_ns[i]
+            endx += self.subsystem_nx[i]
+            xx =x[startx:endx]
             ss = subsystem.getS(xx)
-            s[start:end] = ss
-            start = end
+            s[starts:ends] = ss
+            starts = ends
+            startx = endx
 
         return s
 

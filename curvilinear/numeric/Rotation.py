@@ -1,4 +1,4 @@
-# thctk.numeric.Rotation
+# numeric.Rotation
 #
 #
 #   thctk - python package for Theoretical Chemistry
@@ -24,7 +24,7 @@
 Rigid Body rotations
 """
 
-from INTERNALS.curvilinear.numeric import *
+from winak.curvilinear.numeric import *
 from operator import itemgetter
 
 def rotationFromQuaternion(e):

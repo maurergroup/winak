@@ -1,4 +1,4 @@
-# thctk.numeric.SparseMatrix
+# numeric.SparseMatrix
 #
 #
 #   thctk - python package for Theoretical Chemistry
@@ -24,14 +24,14 @@
     This Module provides functions for handling sparse matrices.
 """
 
-from INTERNALS.curvilinear.numeric import *
+from winak.curvilinear.numeric import *
 import copy, pysparse
 from types import IntType
-from INTERNALS.curvilinear.numeric.spmatrixIterator import spmatrixIterator
-from INTERNALS.curvilinear.numeric.csrVSmsr import csrmsr, csrcsc
-from INTERNALS.curvilinear.numeric._numeric import amux_CSR, amux_CSR_complex, amux_CSRd
-from INTERNALS.curvilinear.numeric._numeric import bosonelements, copyArray, dp_index_dd
-from INTERNALS.curvilinear.numeric.rcm import genrcm
+from winak.curvilinear.numeric.spmatrixIterator import spmatrixIterator
+from winak.curvilinear.numeric.csrVSmsr import csrmsr, csrcsc
+from winak.curvilinear.numeric._numeric import amux_CSR, amux_CSR_complex, amux_CSRd
+from winak.curvilinear.numeric._numeric import bosonelements, copyArray, dp_index_dd
+from winak.curvilinear.numeric.rcm import genrcm
 from pysparse import spmatrix
 try: # this is only built if PARDISO is available
     import thctk.numeric.pardiso
@@ -39,8 +39,8 @@ except:
     pass
 from scipy.linalg.fblas import dnrm2 as norm2
 from scipy.linalg.fblas import ddot
-from INTERNALS.curvilinear.numeric import blassm
-from INTERNALS.curvilinear.numeric.comm import comrr, comzz, comrz
+from winak.curvilinear.numeric import blassm
+from winak.curvilinear.numeric.comm import comrr, comzz, comrz
 import itertools
 import re
 

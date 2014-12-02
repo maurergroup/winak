@@ -25,7 +25,7 @@
 """
 
 import math
-from INTERNALS.curvilinear.numeric import *
+from winak.curvilinear.numeric import *
 LA = importLinearAlgebra()
 
 SVD = LA.singular_value_decomposition

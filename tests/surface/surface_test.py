@@ -7,7 +7,7 @@ from ase.calculators.dftb import Dftb
 
 from ase.calculators.qmme import qmme
 from ase.optimize import BFGS
-from INTERNALS.globaloptimization.betterhopping import BetterHopping
+from winak.globaloptimization.betterhopping import BetterHopping
 import numpy as np
 
 adsorbate = '../testsystems/NH3_on_Ag100.traj'

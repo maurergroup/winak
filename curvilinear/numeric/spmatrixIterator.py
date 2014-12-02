@@ -1,5 +1,5 @@
 from pysparse import spmatrix 
-from INTERNALS.curvilinear.numeric import *
+from winak.curvilinear.numeric import *
 LLMatType=type(spmatrix.ll_mat_sym(1,1))
 SSSMatType=type(spmatrix.ll_mat_sym(1,1).to_sss())
 CSRMatType=type(spmatrix.ll_mat_sym(1,1).to_csr())

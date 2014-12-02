@@ -1,8 +1,7 @@
 import numpy as np
 from ase.atoms import Atoms
-from INTERNALS.curvilinear.InternalCoordinates import icSystem
-from INTERNALS.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
-#from thctk.constants import UNIT
+from winak.curvilinear.InternalCoordinates import icSystem
+from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
 from scipy import linalg as la
 
 class Delocalizer:

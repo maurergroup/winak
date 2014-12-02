@@ -1,20 +1,12 @@
-# thctk.QD.InternalCoordinates
+#  InternalCoordinates
 #
 #
-#   thctk - python package for Theoretical Chemistry
-#   Copyright (C) 2004 Christoph Scheurer
-#
-#   This file is part of thctk.
+#   This file was taken from Christoph Scheureres thctk package.
 #
 #   thctk is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation; either version 2 of the License, or
 #   (at your option) any later version.
-#
-#   thctk is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#   GNU General Public License for more details.
 #
 #   You should have received a copy of the GNU General Public License
 #   along with this program; if not, write to the Free Software
@@ -26,17 +18,17 @@ Module for handling Internal Coordinates
 
 import string
 from copy import deepcopy
-import INTERNALS.curvilinear._intcrd as ic
-from INTERNALS.curvilinear.cICTools import normalizeIC, denseDampIC, sparseDampIC
-from INTERNALS.curvilinear.numeric._numeric import inv_L_x_cd, inv_Lt_x_cd, inv_LtL_x_cd, \
+import winak.curvilinear._intcrd as ic
+from winak.curvilinear.cICTools import normalizeIC, denseDampIC, sparseDampIC
+from winak.curvilinear.numeric._numeric import inv_L_x_cd, inv_Lt_x_cd, inv_LtL_x_cd, \
     colamd, daxpy_p
-from INTERNALS.curvilinear.numeric.SparseMatrix import spmatrix, CSR, CSRd
-from INTERNALS.curvilinear.numeric.icfs import dicfs
-from INTERNALS.curvilinear.numeric.Matrix import regularizedInverse
-from INTERNALS.curvilinear.numeric.Rotation import rigidBodySuperposition
-from INTERNALS.curvilinear.numeric.MyVector import Vector
-from INTERNALS.curvilinear.numeric import *
-from INTERNALS.constants import covalentRadius, mass
+from winak.curvilinear.numeric.SparseMatrix import spmatrix, CSR, CSRd
+from winak.curvilinear.numeric.icfs import dicfs
+from winak.curvilinear.numeric.Matrix import regularizedInverse
+from winak.curvilinear.numeric.Rotation import rigidBodySuperposition
+from winak.curvilinear.numeric.MyVector import Vector
+from winak.curvilinear.numeric import *
+from winak.constants import covalentRadius, mass
 
 import warnings
 

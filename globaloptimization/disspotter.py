@@ -1,7 +1,7 @@
 from ase.all import *
-from INTERNALS.curvilinear.InternalCoordinates import icSystem
-from INTERNALS.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
-from INTERNALS.curvilinear.Coordinates import InternalCoordinates as IC
+from winak.curvilinear.InternalCoordinates import icSystem
+from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
+from winak.curvilinear.Coordinates import InternalCoordinates as IC
 
 
 class DisSpotter:

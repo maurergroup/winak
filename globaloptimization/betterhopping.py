@@ -5,11 +5,11 @@ from ase.optimize.fire import FIRE
 from ase.units import kB
 from ase.parallel import world
 from ase.io.trajectory import PickleTrajectory
-from INTERNALS.curvilinear.Coordinates import DelocalizedCoordinates as DC
-from INTERNALS.globaloptimization.delocalizer import *
-from INTERNALS.curvilinear.Coordinates import CompleteDelocalizedCoordinates as CDC
-from INTERNALS.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
-from INTERNALS.curvilinear.InternalCoordinates import icSystem
+from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
+from winak.globaloptimization.delocalizer import *
+from winak.curvilinear.Coordinates import CompleteDelocalizedCoordinates as CDC
+from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
+from winak.curvilinear.InternalCoordinates import icSystem
 
 class BetterHopping(Dynamics):
     """Basin hopping algorythm.

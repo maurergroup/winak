@@ -4,7 +4,6 @@
 
 package_name = 'winak'
 
-
 # the following provides: __version__, __revision__, __all__
 execfile('__init__.py')
 
@@ -16,10 +15,10 @@ if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
 try:
     from scipy_distutils.core import setup, Extension
-    use_numpy = False
+    use_numpy = False 
 except:
     from numpy.distutils.core import setup, Extension
-    use_numpy = True
+    use_numpy = True 
 
 if use_numpy:
     import numpy
@@ -30,10 +29,10 @@ else:
     numerix_include_dirs = []
 
 # C extensions should NOT check python types
-NO_THCTK_PY_CHECKS = [('NOthctkPyChecks', None),] # use no checks (faster)
+NO_PY_CHECKS = [('NOPyChecks', None),] # use no checks (faster)
 
 # C extensions should check python types
-# NO_THCTK_PY_CHECKS = [] # use checks
+# NO_PY_CHECKS = [] # use checks
 
 # The following variables define which LAPACK and BLAS libraries are to be
 # used and the defaults should be overwritten in a site.cfg file.
@@ -80,7 +79,8 @@ for package in __all__:
     packages.append(package_name + '.' + package)
 
 ext_modules = [
-    Extension('curvilinear.numeric.comm', ['curvilinear/numeric/comm.pyf', 'curvilinear/numeric/comm.f'],
+    Extension('curvilinear.numeric.comm', ['curvilinear/numeric/comm.pyf', \
+            'curvilinear/numeric/comm.f'],
         library_dirs = lapack_dirs + fortran_dirs,
         libraries = lapack_libs + fortran_libs,
         define_macros= f2py_macros + numerix_macros),
@@ -89,13 +89,16 @@ ext_modules = [
         library_dirs = fortran_dirs,
         libraries = fortran_libs,
         define_macros= f2py_macros + numerix_macros),
-    Extension('curvilinear.numeric.icfs', ['curvilinear/numeric/icfs.pyf', 'curvilinear/numeric/icfs.f'],
+    Extension('curvilinear.numeric.icfs', ['curvilinear/numeric/icfs.pyf', \
+            'curvilinear/numeric/icfs.f'],
         library_dirs = lapack_dirs + fortran_dirs,
         libraries = lapack_libs + fortran_libs,
         define_macros= f2py_macros + numerix_macros),
-    Extension('curvilinear.numeric.csrVSmsr', ['curvilinear/numeric/csrVSmsr.pyf', 'curvilinear/numeric/csrVSmsr.f'],
+    Extension('curvilinear.numeric.csrVSmsr', ['curvilinear/numeric/csrVSmsr.pyf', \
+            'curvilinear/numeric/csrVSmsr.f'],
         define_macros= f2py_macros + numerix_macros),
-    Extension('curvilinear.numeric.blassm', ['curvilinear/numeric/blassm.pyf', 'curvilinear/numeric/blassm.f'],
+    Extension('curvilinear.numeric.blassm', ['curvilinear/numeric/blassm.pyf', \
+            'curvilinear/numeric/blassm.f'],
         define_macros= f2py_macros + numerix_macros),
 #    Extension('numeric.sparslab', ['numeric/sparslab.pyf', 'numeric/sainvsr.f', 
 #        'numeric/rifsr.f'],
@@ -105,14 +108,15 @@ ext_modules = [
 #   Extension('numeric.sainv', ['numeric/sainvmodule.c', 'numeric/sainv.f'],
 #       include_dirs=['include'],
 #       define_macros= f2py_macros + numerix_macros),
-    Extension('curvilinear.numeric._numeric', ['curvilinear/numeric/thctk_numeric.c', 'curvilinear/numeric/colamd.c'],
+    Extension('curvilinear.numeric._numeric', ['curvilinear/numeric/thctk_numeric.c', \
+            'curvilinear/numeric/colamd.c'],
         extra_compile_args =['-fopenmp'], 
         libraries = ['gomp'],
         include_dirs=['include'],
-        define_macros= [('THCTK_INTERFACE', None),] + NO_THCTK_PY_CHECKS  + numerix_macros),
+        define_macros= [('THCTK_INTERFACE', None),] + NO_PY_CHECKS  + numerix_macros),
     Extension('curvilinear._intcrd', ['curvilinear/intcrd.c'],
         include_dirs=['include'],
-        undef_macros=['MAIN', 'NOthctkPyChecks'],
+        undef_macros=['MAIN', 'NOPyChecks'],
         define_macros=[('THCTK_INTERFACE', None),] + numerix_macros),
     Extension("curvilinear.cICTools", ["curvilinear/cICTools.c", ]
                 ),
@@ -123,7 +127,7 @@ setup(name = package_name,
       author = 'Konstantin Krautgasser, Reinhard J. Maurer',
       author_email = 'reinhard.maurer@yale.edu',
       #url = 'http://url.com/',
-      package_dir = { package_name: '.' },
+      package_dir = {package_name: '.'},
       description = 'python package for Global Optimization in Curvilinear Coordinates',
       long_description = 'python package for Global Optimization in Curvilinear Coordinates',
       license = 'GNU GPL',

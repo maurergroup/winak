@@ -1,4 +1,4 @@
-# thctk.numeric initialization
+# numeric initialization
 #
 #
 #   thctk - python package for Theoretical Chemistry
@@ -22,7 +22,7 @@
 
 """
 """
-from INTERNALS.curvilinear.numeric._numeric import numericBackend
+from winak.curvilinear.numeric._numeric import numericBackend
 numericBackendNumeric, numericBackendNumpy = 0, 1
 
 # FFT is used rarely and handled in each file depending on numericBackend

@@ -1,6 +1,6 @@
 from ase.all import *
-from INTERNALS.globaloptimization.delocalizer import *
-from INTERNALS.curvilinear.Coordinates import DelocalizedCoordinates as DC
+from winak.globaloptimization.delocalizer import *
+from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 m=read('clethen.xyz')
 e=Delocalizer(m)
 d=[]

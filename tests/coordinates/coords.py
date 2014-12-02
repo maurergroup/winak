@@ -1,12 +1,11 @@
 import numpy as np
 from ase.all import *
 
+from winak.curvilinear.InternalCoordinates import icSystem
+from winak.curvilinear import Coordinates
+from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 
-from INTERNALS.curvilinear.InternalCoordinates import icSystem
-from INTERNALS.curvilinear import Coordinates
-from INTERNALS.curvilinear.Coordinates import DelocalizedCoordinates as DC
-
-from INTERNALS.globaloptimization.delocalizer import *
+from winak.globaloptimization.delocalizer import *
 
 m =read('clethen.xyz')
 e=Delocalizer(m)

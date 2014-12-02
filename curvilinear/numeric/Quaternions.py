@@ -7,7 +7,7 @@ Hopefully this will be implemented in NumPy, SciPy or another standard library
 soon.
 """
 
-from INTERNALS.curvilinear.numeric import *
+from winak.curvilinear.numeric import *
 TRANSPOSER = N.array([1., -1., -1., -1.])
 
 class TransposeDescriptor(object):

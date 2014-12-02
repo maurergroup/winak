@@ -1,7 +1,7 @@
 from ase.all import *
 from ase.calculators.dftb import Dftb
 from ase.optimize import BFGS
-from INTERNALS.globaloptimization.betterhopping import BetterHopping
+from winak.globaloptimization.betterhopping import BetterHopping
 
 adsorbate = '../testsystems/rea.xyz'
 d='/home/konstantin/software/DFTB/param/SURF/'

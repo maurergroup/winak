@@ -1,10 +1,10 @@
 /*
- * thctk.QD: intcrd.c
+ *   intcrd.c
  *
  *   thctk - python package for Theoretical Chemistry
  *   Copyright (C) 2004 Christoph Scheurer
  *
- *   This file is part of thctk.
+ *   This file was taken from the thctk package of Christoph Scheurer.
  *
  *   thctk is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by

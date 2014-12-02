@@ -1,4 +1,4 @@
-from INTERNALS.globaloptimization.disspotter import *
+from winak.globaloptimization.disspotter import *
 
 d=DisSpotter(file='diss.xyz')
 

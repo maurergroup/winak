@@ -1,5 +1,5 @@
-from INTERNALS.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
-from INTERNALS.globaloptimization.disspotter import *
+from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
+from winak.globaloptimization.disspotter import *
 from ase.io.trajectory import PickleTrajectory
 import numpy as np
 from hotbit import *

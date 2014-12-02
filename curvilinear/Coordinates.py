@@ -1,4 +1,4 @@
-# thctk.Coordinates
+#  Coordinates
 #
 #
 #   thctk - python package for Theoretical Chemistry
@@ -24,7 +24,7 @@
 ###############
 # COORDINATES #
 ###############
-by Daniel Strobusch
+by Daniel Strobusch and R.J Maurer
 
 This module provides classes for different kinds of coordinates, i.e.
 rectilinear and curvilinear coordinates.
@@ -35,13 +35,13 @@ coordinates properly.
 
 from warnings import warn
 
-from INTERNALS.curvilinear.numeric import *
-from INTERNALS.constants import UNIT
-from INTERNALS.curvilinear.InternalCoordinates import icSystem, normalizeIC
-from INTERNALS.curvilinear.numeric.Rotation import rigidBodySuperposition
-from INTERNALS.curvilinear.numeric.Quaternions import Quaternion
-from INTERNALS import AtomInfo
-import INTERNALS.curvilinear._intcrd as intcrd
+from winak.curvilinear.numeric import *
+from winak.constants import UNIT
+from winak.curvilinear.InternalCoordinates import icSystem, normalizeIC
+from winak.curvilinear.numeric.Rotation import rigidBodySuperposition
+from winak.curvilinear.numeric.Quaternions import Quaternion
+from winak import AtomInfo
+import winak.curvilinear._intcrd as intcrd
 
 from operator import itemgetter
 
@@ -744,7 +744,7 @@ class CompleteAdsorbateInternalEckartFrameCoordinates(InternalEckartFrameCoordin
                 Lrot = None, Lvib = None, Lvibi=None, cell = None, unit = UNIT, rcond = 1e-10, \
                 com_list = None):
 
-        from INTERNALS.constants import UNIT
+        from winak.constants import UNIT
         if unit is None:
             self.unit = UNIT
         else:
@@ -1007,14 +1007,13 @@ class ReducedDimSurfaceCoordinates(CompleteAdsorbateInternalEckartFrameCoordinat
         return s
 
 
-#Reini
 class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordinates):
     """
-    Derived CAIFC object do host Delocalized Internal Coordinates
+    Derived CAIFC object do host Delocalized Internal Coordinates for adsorbate on surface
     """
-    def __init__(self, x0, masses, u=None, xRef = None, atoms=None, freqs = None, ic = None, Ltrans = None,
-                Lrot = None, cell = None, unit = UNIT, rcond = 1e-10, \
-                com_list = None):
+    def __init__(self, x0, masses, u=None, xRef = None, atoms=None, freqs = None, \
+            ic = None, Ltrans = None, Lrot = None, cell = None, \
+            unit = UNIT, rcond = 1e-10, com_list = None):
         if u is None:
             raise ValueError('the DI vector u has to be given!')
         self.u = u
@@ -1115,6 +1114,79 @@ class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordin
                       wtemp[i,j, 0],wtemp[i,j, 1], wtemp[i,j, 2]))
         fd.close()
 
+
+class Set_of_CDCs(Coordinates):
+    """
+    This coordinate object hosts a set of CDC coordinates, which can be 
+    an adsorbate and the underlying surface or several molecules in a dense 
+    overlayer or a crystal. The coordinates are the overall center of mass 
+    translations and rotations followed by the subsystem translations and rotations 
+    as well as the subsystem internal degrees of freedom
+    """
+
+    def __init__(self, list_of_CDCs=None, unit=UNIT):
+
+        #collect the CDCs
+        if list_of_CDCs is None:
+            raise ValueError('At least one CDC object has to be passed.')
+        self.CDCs = list_of_CDCs
+
+        if unit is None:
+            self.unit = UNIT
+        else:
+            self.unit = unit
+
+        self.subsystem_indices = [] 
+        self.atoms = []
+        self.nx = nx = 0
+        for subsystem in self.CDCs:
+            self.atoms += subsystem.atoms
+            self.nx += subsystem.nx
+            self.subsystem_indices.append(subsystem.nx)
+        self.ns = ns = self.nx
+        self.masses = N.empty(0)
+        self.x0 = N.empty(0)
+        self.q = N.empty(0)
+        self.q0 = N.zeros(0)
+        self.x = N.empty(self.nx)
+        self.s = N.empty(self.ns)
+        for subsystem in self.CDCs:
+            self.masses = N.concatenate([self.masses,subsystem.masses])
+            self.x0 = N.concatenate([self.x0,subsystem.x0])
+            self.q0 = N.concatenate([self.q0,subsystem.q0])
+        
+    def __len__(self):
+        return self.ns #number of coords
+
+    def getX(self, s):
+        
+        x = N.zeros(self.nx)
+        s = N.array(s)
+        start = 0
+        end = 0
+        for i,subsystem in enumerate(self.CDCs):
+            end += self.subsystem_indices[i]
+            ss =s[start:end]
+            xx = subsystem.getX(ss)
+            x[start:end] = xx
+            start = end
+
+        return x
+        
+    def getS(self, x):
+
+        s = N.zeros(self.nx)
+        x = N.array(x)
+        start = 0
+        end = 0
+        for i,subsystem in enumerate(self.CDCs):
+            end += self.subsystem_indices[i]
+            xx =x[start:end]
+            ss = subsystem.getS(xx)
+            s[start:end] = ss
+            start = end
+
+        return s
 
 
 

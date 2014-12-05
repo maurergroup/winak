@@ -1351,7 +1351,7 @@ class Periodic_icSystem(icSystem):
         #get Bmatrix dimensions and number of DoFs Bmatrix has n times Bnnz
         # we add the three cell vectors as 9 rows at the end of the B matrix
         self.Bnnz, self.n = ic.Bmatrix_pbc_nnz(self.nx, self.ic)
-        print self.Bnnz, self.n
+        print self.Bnnz, self.n, self.nx+9
         self.cell_indices = N.array([
             [0,0,0],[1,0,0],[0,1,0],[0,0,1],
             [1,1,0],[1,0,1],[0,1,1],[1,1,1]
@@ -1386,7 +1386,7 @@ class Periodic_icSystem(icSystem):
     
     def initA(self):
         self.connectivity()
-        self.evalB(sort= 0)
+        self.evalB(sort= 1)
         self.evalBt(perm = 0)
         self.colamd(inverse=1)
         self.evalBt()
@@ -1394,7 +1394,7 @@ class Periodic_icSystem(icSystem):
     def evalB(self, sort = 0):
         if not hasattr(self, 'B'):
             self.B = CSR(n=self.n, m=self.nx+9, nnz=self.Bnnz, type = nxFloat)
-            ic.Bmatrix_pbc(self.nx, self.xyz_pbc, self.ic, self.B.x, self.B.j, self.B.i, sort)
+        ic.Bmatrix_pbc(self.nx, self.xyz_pbc, self.ic, self.B.x, self.B.j, self.B.i, sort)
         return self.B
 
     def evalBt(self, update = 0, perm = 1):

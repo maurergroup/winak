@@ -1,7 +1,7 @@
 from ase.all import *
 from winak.curvilinear.Coordinates import CompleteDelocalizedCoordinates as CDC
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
-from winak.curvilinear.Coordinates import InternalCoordinates as IC
+from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
 from winak.globaloptimization.delocalizer import *
 from winak.curvilinear.Coordinates import Set_of_CDCs
 
@@ -11,7 +11,7 @@ from ase.lattice.surface import fcc100
 system = fcc(directions=[[1,0,0], [0,1,0], [0,0,1]],
             size=(1,1,1), symbol='Pd' )
 
-system = fcc100('Pd', (2,2,1), a=3.94, vacuum=10.)
+system = fcc100('Pd', (2,2,2), a=3.94, vacuum=10.)
 #system = fcc100('Pd', (1,1,1), a=3.94, vacuum=10.)
 
 from winak.curvilinear.InternalCoordinates import icSystem, Periodic_icSystem
@@ -45,9 +45,10 @@ print ic2.Bnnz, ic2.n, ic2.nx+9
 
 #Periodic ic INIT works!
 
+natoms =len(system) 
+
 import numpy as np
 #from winak.curvilinear.numeric.SparseMatrix import AmuB,svdB
-#natoms =len(system) 
 #B=ic2.B
 #Bt=ic2.Bt
 #G=AmuB(B,Bt)
@@ -56,18 +57,31 @@ import numpy as np
 #u = u[:3*natoms+9]
 #print (ww[:3*natoms+9])[::-1]
 
-#b = ic2.B.full()
-#g = np.dot(b, b.transpose())
-#v2,ww,u=np.linalg.svd(g)
-#u = u[:3*natoms+9]
-#print ww[:3*natoms+9]
+b = ic2.B.full()
+g = np.dot(b, b.transpose())
+v2,ww,u=np.linalg.svd(g)
+u = u[:3*natoms]
+print ww[:3*natoms]
 
-#coords = DC(x0,masses,unit=1.0,atoms=atoms,ic=ic2, u=u)
-#coords.write_jmol('s2.jmol')
+coords = PC(x0,masses,unit=1.0,atoms=atoms,ic=ic2, Li=u)
+
+view(system)
+print coords.x
+print coords.cell
+
+coords.write_jmol('s2.jmol')
+
+#coords.s=np.random.random(3*natoms)
+#coords.s2x()
+
 
 #print(ic2)
 
-view(system)
+#system.positions = coords.x.reshape(-1,3)
+#system.cell = coords.cell.reshape(-1,3)
+#view(system)
+#print coords.x 
+#print coords.cell
 
 #coords.x2s()
 #coords.s2x()

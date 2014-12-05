@@ -1204,7 +1204,151 @@ class Set_of_CDCs(Coordinates):
 
         return s
 
+class PeriodicCoordinates(InternalCoordinates):
+    """
+    This class can deal with a periodic icSystem.
+    ns always equals nx
+    """
 
+    def __init__(self, x0, masses, ic = None, atoms = None, cell = None, L = None, 
+            Li = None, unit = UNIT, rcond = 1e-10, biArgs = {}):
+        """
+        x0 : array
+            coordinates as 1d array
+        masses : array
+            masses as 1d array
+        ic : Periodic_icSystem
+            coordinate specification
+        atoms : array
+            atomic symbols as 1d array
+        L : array, optional 
+            that defines linear combinations of coordinates, such as 
+            deloc. internals
+        Li : array, optional
+            inverse of L
+        unit : float, optional
+            multiplicative scalar for the definition of the vibrational
+            coordinates. Usually the conversion factor of 'u' to 'a.u.' is used.
+        rcond : float, optional
+            control the pseudo inversion of 'L', see 'numpy.linalg.pinv'
+        biArgs : dict, optional
+            keyword arguments to be passed to the back iteration
+        
+        """
+
+        L = N.identity(len(atoms))
+        self.L = L
+        if Li is not None:
+            L = N.dot(N.linalg.inv(N.dot(Li,Li.transpose())),Li)
+            L = L.transpose()
+            ns = Li.shape[0]
+        else:
+            L = N.dot(N.linalg.inv(N.dot(L,L.transpose())),L)
+        
+        if cell is None:
+            self.cell = ic.cell
+        else:
+            self.cell = cell.flatten()
+        
+        InternalCoordinates.__init__(self, x0, masses, ns=ns, ic = ic, 
+                internal = False, atoms = atoms, L = L, Li = Li, unit= UNIT, 
+                rcond = rcond, biArgs = biArgs)
+
+        del self.Atrans
+        del self.Arot
+        del self.Btrans
+        del self.Brot
+        del self.Avib
+        del self.Bvib
+        self.A = N.empty((self.nx+9, self.ns))
+        self.B = N.empty((self.ns, self.nx+9))
+        self.Bvib = self.B
+ 
+        self.evalB = self.evalBvib
+        self.evalA = self.evalAvib
+
+    def x2s(self):
+        ic = self.ic
+        ic.xyz[:] = self.x
+        ic.cell = self.cell
+        q = ic()
+        normalizeIC(q, *ic.tmp_icArrays)
+        dq = q - self.q0
+        if ic.torsions is not None:
+            dq = intcrd.dphi_mod_2pi(dq, N.asarray(ic.torsions, N.int32))
+        self.s[:] = N.dot(self.Li, dq)/self.unit
+
+    def s2x(self):
+        ic = self.ic
+        q = self.q0 + N.dot(self.L, self.s*self.unit)
+        ic.xyz[:] = self.x
+        ic.backIteration(q, **self.biArgs)
+        #R = centerOfMass(ic.xyz, self.masses)
+        #for i in range(0, self.nx, 3): ic.xyz[i:i+3] -= R
+        self.x[:] = ic.xyz
+        self.cell[:] = ic.cell
+
+    def get_vectors(self):
+        """Returns the delocalized internal eigenvectors as cartesian
+        displacements. Careful! get_vectors()[0] is the first vector.
+        If you want to interpret it as a matrix in the same way numpy does,
+        you will have to transpose it first. They are normed so that
+        the largest single component is equal to 1"""
+        ss = self.s
+        w=[]
+        for i in range(0,len(ss)):
+            worked=False
+            tries=1
+            fac=0.0001
+            while not worked:
+                try:
+                    ss=N.zeros(len(self.s))
+                    ss[i]=fac
+                    dd=(self.getX(ss)-self.x0).reshape(-1,3)
+                    dd/=N.max(N.abs(dd))
+                    w.append(dd)
+                    worked=True
+                except:
+                    tries+=1
+                    fac*=2
+                    if tries>40:
+                        raise ValueError('NO convergence after 40 tries')
+        vectmp=w[0:6]
+        del w[0:6]
+        for vtmp in vectmp:
+            w.append(vtmp)#otherwise rot and trans will be filtered out later
+        w=N.asarray(w)
+        return w
+
+    def get_DI_vectors(self):
+        """TBD"""
+        ss = self.s
+        w=[]
+        for i in range(len(ss)):
+            ss=N.zeros(len(self.s))
+            ss[i]=1
+            dd=(self.getX(ss)-self.x0).reshape(-1,3)
+            dd/=N.max(N.abs(dd))
+            w.append(dd)
+        w=N.asarray(w)
+        return w
+
+    def get_delocvectors(self):
+        """Returns the delocalized internal eigenvectors."""
+        return self.u.transpose()
+
+    def write_jmol(self,filename,constr=False):
+        """This works similar to write_jmol in ase.vibrations."""
+        fd = open(filename, 'w')
+        wtemp=self.get_vectors()
+        for i in range(len(wtemp)):
+            fd.write('%6d\n' % (len(self.x0)/3))
+            fd.write('Mode #%d, f = %.1f%s cm^-1 \n' % (i, i, ' '))
+            for j, pos in enumerate(self.x0.reshape(-1,3)):
+                fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f \n' %
+                     (self.atoms[j], pos[0], pos[1], pos[2],
+                      wtemp[i,j, 0],wtemp[i,j, 1], wtemp[i,j, 2]))
+        fd.close()
 
 
 class InternalPASCoordinates(PASCoordinates, InternalCoordinates):

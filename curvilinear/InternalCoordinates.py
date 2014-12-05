@@ -1351,7 +1351,6 @@ class Periodic_icSystem(icSystem):
         #get Bmatrix dimensions and number of DoFs Bmatrix has n times Bnnz
         # we add the three cell vectors as 9 rows at the end of the B matrix
         self.Bnnz, self.n = ic.Bmatrix_pbc_nnz(self.nx, self.ic)
-        print self.Bnnz, self.n, self.nx+9
         self.cell_indices = N.array([
             [0,0,0],[1,0,0],[0,1,0],[0,0,1],
             [1,1,0],[1,0,1],[0,1,1],[1,1,1]
@@ -1429,10 +1428,9 @@ class Periodic_icSystem(icSystem):
         return ic.internals(xyz_pbc, self.ic, self.crd)
 
     def biInit(self):
-
-        icSystem.biInit(self)
         if not hasattr(self, 'tmp_cell'): self.tmp_cell = N.zeros(9, nxFloat)
-        self.tmp_x = N.zeros(self.nx+9, nxFloat)
+        icSystem.biInit(self)
+        self.tmp_x = N.zeros(self.nx, nxFloat)
     
     def denseBackIteration(self, q, maxiter = 200, eps = 1e-5, initialize = 1,
             inveps = 1e-9, maxStep = 0.5, warn = True, 
@@ -1474,11 +1472,14 @@ class Periodic_icSystem(icSystem):
 
         dq = self.tmp_q
         dx = self.tmp_x
-        xn = N.concatenate([self.xyz, self.cell],axis=0)
+        dc = self.tmp_cell
+        xn = self.xyz
+        cn = self.cell
         n = 0
         nScalings = 0 
         neps = eps*eps*self.nx
         xList = [] # geoms for RIIS
+        cList = [] # cells for RIIS
         dxList = [] # error vectors for RIIS
         RIIS_on = False
 
@@ -1491,7 +1492,6 @@ class Periodic_icSystem(icSystem):
         while 1:
             n += 1
             qn = self()
-
             # self.qn = qn # DEBUGGING
 
             # determine new dq by RIIS or traditional 
@@ -1526,35 +1526,46 @@ class Periodic_icSystem(icSystem):
             A = N.dot(N.transpose(B), B)
             self.Ainv = regularizedInverse(A, eps = inveps)
             #this dx is the displacement vector in x and the 3 lattice vectors
-            dx[:] = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
+            tmp = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
+            dx = tmp [:-9]
+            dc = tmp [-9:]
             # self.dx.append(dx.copy()) # for DEBUGGING
 
             if RIIS and n >= RIIS_start - RIIS_maxLength:
                 dxList.append(dx.copy().reshape((-1,3))) # store dx for RIIS
+                dcList.append(dc.copy().reshape((-1,3))) # store dc for RIIS
                 if len(xList) > 0:
                     xList.append(
                         rigidBodySuperposition(
                             xn.reshape((-1,3)), xList[-1]
                                 )[0]
                             )
+                    cList.append(
+                        rigidBodySuperposition(
+                            cn.reshape((-1,3)), cList[-1]
+                                )[0]
+                            )
                 else: 
                     xList.append(xn.reshape((-1,3)))
+                    cList.append(cn.reshape((-1,3)))
 
             if RIIS_on:
                 xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
+                cn[:] = doRIIS(cList, dcList, dim = RIIS_dim)
             else:
                 xn += dx
+                cn += dc
 
-            norm = N.dot(dx, dx)
-            self.convergence = n, N.sqrt(norm/self.nx)
+            norm = N.dot(tmp, tmp)
+            self.convergence = n, N.sqrt(norm/(self.nx+9))
             # remove old data not needed anymore for RIIS
             if len(xList) >= RIIS_maxLength:
                 dxList = dxList[-RIIS_maxLength:]
+                dcList = dcList[-RIIS_maxLength:]
                 xList = xList[-RIIS_maxLength:]
+                cList = cList[-RIIS_maxLength:]
 
-            if (norm < neps) and N.linalg.norm(dx, ord = N.inf) < maxEps:
-                self.xyz = xn[:-9]
-                self.cell = xn[-9:]
+            if (norm < neps) and N.linalg.norm(tmp, ord = N.inf) < maxEps:
                 return self.convergence
             elif n >= maxiter:
                 for i in range(len(self.xyz)//3):

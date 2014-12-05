@@ -33,10 +33,6 @@ from winak.curvilinear.numeric._numeric import amux_CSR, amux_CSR_complex, amux_
 from winak.curvilinear.numeric._numeric import bosonelements, copyArray, dp_index_dd
 from winak.curvilinear.numeric.rcm import genrcm
 from pysparse import spmatrix
-try: # this is only built if PARDISO is available
-    import thctk.numeric.pardiso
-except:
-    pass
 from scipy.linalg.fblas import dnrm2 as norm2
 from scipy.linalg.fblas import ddot
 from winak.curvilinear.numeric import blassm
@@ -825,6 +821,43 @@ class TensorProduct(Sparse):
         dp_index_dd(a.data, a.shape[0], a.shape[1], a.iindex, a.jindex,
             self.transpose, self.l, self.r, c, x, y)
         return y
+
+def eigB(B, k=None, S=None, sigma=None, which='LM'):
+    """
+    Calculates k number of eigenvalues of Sparse Matrix B.
+    S ... overlap matrix for gener. Eig-Problem
+    sigma...find values close to sigma
+    which...LM=largest magnitude, SM=smallest magnitude
+
+    uses scipy.sparse.linalg.eigs
+    """
+
+    from scipy.sparse.linalg import eigs
+    from scipy.sparse import csr_matrix
+
+    bx, bj, bi = B.matrices()
+    n, m = B.n, B.m
+    B = csr_matrix((bx, bj, bi),shape=(n, m))
+
+    if k is None:
+        k = 6
+
+    E, V = eigs(B, k, M=S, sigma=sigma, which=which)
+    return E, V
+
+def svdB(B, k=6, ncv=None, tol=0, which='LM'):
+    """
+    Calculates SVD decomposition
+    """
+    from scipy.sparse.linalg import svds 
+    from scipy.sparse import csr_matrix
+
+    bx, bj, bi = B.matrices()
+    n, m = B.n, B.m
+    B = csr_matrix((bx, bj, bi),shape=(n, m))
+    
+    u, s, vt = svds(B, k, ncv, tol, which)
+    return u, s, vt
 
 def AmuB(A, B, Cnnz=None, job=1, offset=0):
     """

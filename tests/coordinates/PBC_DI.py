@@ -7,7 +7,7 @@ from winak.curvilinear.Coordinates import Set_of_CDCs
 
 from ase.lattice.surface import fcc100
 
-system = fcc100('Pd', (2,2,2), a=3.94, vacuum=10.)
+system = fcc100('Pd', (1,1,2), a=3.94, vacuum=10.)
 
 from winak.curvilinear.InternalCoordinates import icSystem, Periodic_icSystem
 from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG 
@@ -37,13 +37,13 @@ print ic2.Bnnz, ic2.n, ic2.nx+9
 
 #Periodic ic INIT works!
 #import numpy as np
-natoms =1 
-#m=np.identity(natoms*3+9)
-#b=ic2.B.full()
-#g=np.dot(b,m)
-#g=np.dot(g,b.transpose())
+natoms =len(system) 
+m=np.identity(natoms*3+9)
+b=ic2.B.full()
+g=np.dot(b,m)
+g=np.dot(g,b.transpose())
 
-#v2,ww,u=np.linalg.svd(g)
+v2,ww,u=np.linalg.svd(g)
 #u = u[:3*natoms]
 #print ww[:3*natoms]
 

@@ -1387,9 +1387,9 @@ class Periodic_icSystem(icSystem):
     def initA(self):
         self.connectivity()
         self.evalB(sort= 0)
-        #self.evalBt(perm = 0)
-        #self.colamd(inverse=1)
-        #self.evalBt()
+        self.evalBt(perm = 0)
+        self.colamd(inverse=1)
+        self.evalBt()
     
     def evalB(self, sort = 0):
         if not hasattr(self, 'B'):

@@ -1,4 +1,4 @@
-/*
+    /*
  *   intcrd.c
  *
  *   thctk - python package for Theoretical Chemistry
@@ -708,27 +708,27 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
         switch (type) {
             case 1:
                 i1 = *cint++; i2 = *cint++;
-                if (i1%na==i2%na) {*nnz -= 3;} 
+                /*if (i1%na==i2%na) {*nnz -= 3;} */
                 z = i1/na; pbcT(z); 
                 z = i2/na; pbcT(z);
                 break;
             case 2:
                 i1 = *cint++; i2 = *cint++; i3 = *cint++; 
-                if (i1%na==i2%na && i2%na==i3%na) {*nnz -= 6;}
-                if (i1%na==i2%na || i2%na==i3%na || i1%na==i3%na) {*nnz -= 3;} 
+                /*if (i1%na==i2%na && i2%na==i3%na) {*nnz -= 6;}*/
+                /*if (i1%na==i2%na || i2%na==i3%na || i1%na==i3%na) {*nnz -= 3;} */
                 z = i1/na; pbcT(z); 
                 z = i2/na; pbcT(z);
                 z = i3/na; pbcT(z); 
                 break;
             case 3:
                 i1 = *cint++; i2 = *cint++; i3 = *cint++; i4 = *cint++; 
-                if (i1%na==i2%na && i2%na==i3%na) {*nnz -= 9;}
-                if ( (i1%na==i2%na && i2%na==i3%na) || \
-                     (i1%na==i2%na && i2%na==i4%na) || \
-                     (i2%na==i3%na && i3%na==i4%na) || \
-                     (i1%na==i3%na && i3%na==i4%na) ) {*nnz -= 6;}
-                if (i1%na==i2%na || i1%na==i3%na || i1%na==i4%na || \
-                    i2%na==i3%na || i2%na==i4%na || i3%na==i4%na ) {*nnz -= 3;}
+                /*if (i1%na==i2%na && i2%na==i3%na) {*nnz -= 9;}*/
+                /*if ( (i1%na==i2%na && i2%na==i3%na) || \*/
+                     /*(i1%na==i2%na && i2%na==i4%na) || \*/
+                     /*(i2%na==i3%na && i3%na==i4%na) || \*/
+                     /*(i1%na==i3%na && i3%na==i4%na) ) {*nnz -= 6;}*/
+                /*if (i1%na==i2%na || i1%na==i3%na || i1%na==i4%na || \*/
+                    /*i2%na==i3%na || i2%na==i4%na || i3%na==i4%na ) {*nnz -= 3;}*/
                 z = i1/na; pbcT(z); 
                 z = i2/na; pbcT(z);
                 z = i3/na; pbcT(z); 
@@ -736,13 +736,13 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
                 break;
             case 4:
                 i1 = *cint++; i2 = *cint++; i3 = *cint++; i4 = *cint++; 
-                if (i1%na==i2%na && i2%na==i3%na) {*nnz -=9;}
-                if ( (i1%na==i2%na && i2%na==i3%na) || \
-                     (i1%na==i2%na && i2%na==i4%na) || \
-                     (i2%na==i3%na && i3%na==i4%na) || \
-                     (i1%na==i3%na && i3%na==i4%na) ) {*nnz -= 6;}
-                if (i1%na==i2%na || i1%na==i3%na || i1%na==i4%na || \
-                    i2%na==i3%na || i2%na==i4%na || i3%na==i4%na ) {*nnz -= 3;}
+                /*if (i1%na==i2%na && i2%na==i3%na) {*nnz -=9;}*/
+                /*if ( (i1%na==i2%na && i2%na==i3%na) || \*/
+                     /*(i1%na==i2%na && i2%na==i4%na) || \*/
+                     /*(i2%na==i3%na && i3%na==i4%na) || \*/
+                     /*(i1%na==i3%na && i3%na==i4%na) ) {*nnz -= 6;}*/
+                /*if (i1%na==i2%na || i1%na==i3%na || i1%na==i4%na || \*/
+                    /*i2%na==i3%na || i2%na==i4%na || i3%na==i4%na ) {*nnz -= 3;}*/
                 z = i1/na; pbcT(z); 
                 z = i2/na; pbcT(z);
                 z = i3/na; pbcT(z); 

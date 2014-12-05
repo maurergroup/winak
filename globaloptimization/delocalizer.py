@@ -5,7 +5,7 @@ from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as 
 from scipy import linalg as la
 
 class Delocalizer:
-    def __init__(self,atoms_obj,weighted=False,icList=None):
+    def __init__(self,atoms_obj,weighted=False,icList=None, periodic=False):
         """This generates the delocalized internals as described in the
         paper.
         atoms_obj: a properly initialized ase Atoms object (positions,

@@ -571,7 +571,108 @@ class ValenceCoordinateGenerator:
 
 # end of class ValenceCoordinateGenerator
 
+
+# class PeriodicValenceCoordinateGenerator
+
+class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
+    """
+    constructs coordinates for periodic boundary conditions, just 
+    does the same as VCG, but for a duplicated cell
+    """
+    def __init__(self, atoms, vdW = covalentRadius, masses = None, \
+            threshold = 0.5, cell = None ):
+
+        if cell is None:
+            raise ValueError('unit cell needs to be given.')
+        self.cell = cell
+        atoms_pbc = N.array(atoms)
+        masses_pbc = N.array(masses)
+        #nomenclature is x 0 y 0 z 0 , 1, -1
+        self.cell_indices = N.array([
+            [0,0,0],[1,0,0],[0,1,0],[0,0,1],
+            [1,1,0],[1,0,1],[0,1,1],[1,1,1]
+            ])
+        self.atom_indices = N.zeros(len(atoms)) 
+        for i in range(1,8):
+            atoms_pbc = N.concatenate([atoms_pbc, atoms])
+            masses_pbc = N.concatenate([masses_pbc, masses])
+            self.atom_indices = N.concatenate([self.atom_indices, N.ones(len(atoms))*i])
+        #we duplicate the system according to periodicity
+        ValenceCoordinateGenerator.__init__(self, atoms_pbc, vdW, \
+                masses_pbc, threshold)
+
         
+    def __call__(self,coord, **kwargs):
+        """
+        construct an IC List for PBC, remove duplicate DoFs
+        """
+
+        xyz = N.reshape(coord,(-1,3))
+        n = len(xyz)
+        #duplicate coordinates
+        xyz_pbc = N.empty([0,3])
+        for vec in self.cell_indices:
+            trans = N.dot(vec,self.cell)
+            xyz_tmp = xyz + trans
+            xyz_pbc = N.concatenate([xyz_pbc, xyz_tmp]) 
+        self.xyz_pbc = xyz_pbc
+        #construct iclist
+        IClist =  ValenceCoordinateGenerator.__call__(self, xyz_pbc, **kwargs)
+       
+        #delete bonds which do not reach into unit cell
+        for bb,bond in reversed(list(enumerate(self.bonds))):
+            indices, b_len = bond
+            indices  = list(indices)
+            truth = [self.atom_indices[ii] == 0 for ii in indices]
+            if any(truth):
+                #backfolding indices
+                pass
+                #for i, ind in enumerate(indices):
+                    #ind -= int(n * self.atom_indices[ind])
+                    #indices[i] = ind
+                #self.bonds[bb] = (tuple(indices), b_len)
+            else:
+                del self.bonds[bb]
+        #delete bends which do not reach into unit cell
+        for bb, bend in reversed(list(enumerate(self.bends))):
+            indices = list(bend)
+            truth = [self.atom_indices[ii] == 0 for ii in indices]
+            if any(truth):
+                pass
+                #for i, ind in enumerate(indices):
+                    #ind -= int(n * self.atom_indices[ind])
+                    #indices[i] = ind
+                #self.bends[bb] = indices 
+            else:
+                del self.bends[bb]
+        #delete torsions which do not reach into unit cell
+        for bb, tor in reversed(list(enumerate(self.torsions))):
+            indices = list(tor)
+            truth = [self.atom_indices[ii] == 0 for ii in indices]
+            if any(truth):
+                pass
+                #for i, ind in enumerate(indices):
+                    #ind -= int(n * self.atom_indices[ind])
+                    #indices[i] = ind
+                #self.torsions[bb] = tuple(indices)
+            else:
+                del self.torsions[bb]
+        #delete oop angles which do not reach into unit cell
+        for bb, oop in reversed(list(enumerate(self.oops))):
+            indices = list(oop)
+            truth = [self.atom_indices[ii] == 0 for ii in indices]
+            if any(truth):
+                pass
+                #for i, ind in enumerate(indices):
+                    #ind -= int(n * self.atom_indices[ind])
+                    #indices[i] = ind
+                #self.oops[bb] = tuple(indices) 
+            else:
+                del self.oops[bb]
+
+        return self.toIClist()
+       
+
 class icSystem:
 
     def __init__(self, intcrd, natom, xyz = None, masses = None):
@@ -581,6 +682,7 @@ class icSystem:
         self.ic = N.array(intcrd).astype(nxInt32)
         self.atoms_in_type = (2, 3, 4, 4)
         self.natom = natom
+        #get Bmatrix dimensions and number of DoFs Bmatrix has n times Bnnz
         self.Bnnz, self.n = ic.Bmatrix_nnz(self.ic)
         self.nx = 0
         if xyz is not None:
@@ -1058,6 +1160,7 @@ class icSystem:
 
         assert False, "This point shouldn't be reached, there is a bug."
 
+
     def sparseBackIteration(self, q, maxiter = 100, eps = 1e-6, initialize = 1,
             # iceps = 1e-6,  # old value (too small for RIIS)
             iceps = 1e-4, icp = 10, iclambda = 0, maxStep = 0.5, warn = True,
@@ -1218,6 +1321,257 @@ class icSystem:
         return n, N.sqrt(norm/self.nx)
 
     ig = internalGradient
+
+
+class Periodic_icSystem(icSystem):
+    """
+    Periodic Boundary condition version of icSystem. 
+    There are no translation, rotation B matrix components, 
+    but there is a Bmatrix part for the lattice vectors
+    """
+
+    def __init__(self, intcrd, natom, xyz = None, \
+            masses = None, cell = None):
+
+        if intcrd[-1] > 0:
+            intcrd = list(intcrd)
+            intcrd.append(0)
+        self.ic = N.array(intcrd).astype(nxInt32)
+        self.atoms_in_type = (2, 3, 4, 4)
+        self.natom = natom
+        self.nx = 0
+        if xyz is not None:
+            self.xyz = N.ravel(xyz).astype(nxFloat)
+            self.nx = len(self.xyz)
+            if self.nx != 3*self.natom:
+                raise IndexError("Array dimension of xyz does not match natom")
+        else: self.xyz = xyz
+        self.cell = cell
+        
+        #get Bmatrix dimensions and number of DoFs Bmatrix has n times Bnnz
+        # we add the three cell vectors as 9 rows at the end of the B matrix
+        self.Bnnz, self.n = ic.Bmatrix_pbc_nnz(self.nx, self.ic)
+        print self.Bnnz, self.n
+        self.cell_indices = N.array([
+            [0,0,0],[1,0,0],[0,1,0],[0,0,1],
+            [1,1,0],[1,0,1],[0,1,1],[1,1,1]
+            ])
+        #duplicate coordinates
+        xyz_pbc = N.empty([0,3])
+        xyz = xyz.reshape(-1,3)
+        for vec in self.cell_indices:
+            trans = N.dot(vec,self.cell)
+            xyz_tmp = xyz + trans
+            xyz_pbc = N.concatenate([xyz_pbc, xyz_tmp]) 
+
+        if xyz_pbc is not None:
+            self.xyz_pbc = N.ravel(xyz_pbc.astype(nxFloat))
+        else:
+            self.xyz_pbc = xyz_pbc
+        if cell is not None:
+            self.cell = N.ravel(cell.astype(nxFloat))
+        else: self.cell = cell
+        if masses is not None:
+            if len(masses) != self.natom:
+                raise IndexError("Array dimension of masses does not match natom")
+            self.masses = N.array(masses).astype(nxFloat)
+        else: self.masses = masses
+        self.typeList = self.types()
+        if len(self.typeList[2]) > 0:
+            # function 'dphi_mod_2pi' of C module '_intcrd' needs an int32 array
+            self.torsions = N.array(self.typeList[2], dtype = N.int32)[:,0]
+        else:
+            self.torsions = None
+        self.initA()
+    
+    def initA(self):
+        self.connectivity()
+        self.evalB(sort= 0)
+        #self.evalBt(perm = 0)
+        #self.colamd(inverse=1)
+        #self.evalBt()
+    
+    def evalB(self, sort = 0):
+        if not hasattr(self, 'B'):
+            self.B = CSR(n=self.n, m=self.nx+9, nnz=self.Bnnz, type = nxFloat)
+            ic.Bmatrix_pbc(self.nx, self.xyz_pbc, self.ic, self.B.x, self.B.j, self.B.i, sort)
+        return self.B
+
+    def evalBt(self, update = 0, perm = 1):
+        if not hasattr(self, 'Bt'):
+            self.Bt = CSR(n=self.nx+9, m=self.n, nnz=self.Bnnz, type = nxFloat)
+        if not hasattr(self, 'colperm') or not perm:
+            ic.Btrans(self.Bnnz, self.n, self.nx+9, update, self.B.x, self.B.j,
+                self.B.i, self.Bt.x, self.Bt.j, self.Bt.i)
+        else:
+            ic.Btrans_p(self.Bnnz, self.n, self.nx+9, update, self.colperm,
+                self.B.x, self.B.j, self.B.i, self.Bt.x, self.Bt.j, self.Bt.i)
+        return self.Bt
+
+    def connectivity(self):
+        self.cj, self.ci = ic.symbolicAc(self.ic, 8*self.natom)
+
+    def __call__(self, x = None, cell = None):
+        if x is None: x = self.xyz
+        if x is None: return None
+        if cell is None: cell = self.cell 
+        #duplicate coordinates
+        cell = cell.reshape(-1,3)
+        xyz_pbc = N.empty([0,3])
+        xyz = x.reshape(-1,3)
+        for vec in self.cell_indices:
+            trans = N.dot(vec,cell)
+            xyz_tmp = xyz + trans
+            xyz_pbc = N.concatenate([xyz_pbc, xyz_tmp]) 
+        xyz_pbc = N.ravel(xyz_pbc.astype(nxFloat))
+        
+        if not hasattr(self, 'crd'): self.crd = N.zeros(self.n, nxFloat)
+        return ic.internals(xyz_pbc, self.ic, self.crd)
+
+    def biInit(self):
+
+        icSystem.biInit(self)
+        if not hasattr(self, 'tmp_cell'): self.tmp_cell = N.zeros(9, nxFloat)
+        self.tmp_x = N.zeros(self.nx+9, nxFloat)
+    
+    def denseBackIteration(self, q, maxiter = 200, eps = 1e-5, initialize = 1,
+            inveps = 1e-9, maxStep = 0.5, warn = True, 
+            RIIS = True, RIIS_start = 20, RIIS_maxLength = 6, RIIS_dim = 4, 
+            restart = True, dampingThreshold = 0.1, maxEps = 1e-5, 
+            ):
+        """
+        Find Cartesian coordinates belonging to the set of internal coordinates
+        'q' in an iterative way. 
+        Parameters are:
+        'inveps'         Parameter for the regularized inverse.
+        'maxStep'        Maximal step during iteration. (Don't make 'maxStep'
+                         too small, when dealing with convergence problems, 
+                         try to increase the 'RIIS_dim' instead, since
+                         RIIS will only work properly if steps are not scaled 
+                         down. But also don't make maxStep too small, 
+                         since then you might converge on spurious solutions.
+        'RIIS'           Perform Regularized Inversion of the Iterative Subspace
+                         to accelerate convergence.
+        'RIIS_start'     Start RIIS after given number of steps.
+        'RIIS_maxLength' maximal length of spanning set for the iterative 
+                         subspace.
+        'RIIS_dim'       Parameter for the Tikhonov regularization, so 
+                         indirectly the dimension of space that will be 
+                         inverted is determined here.
+        """
+        assert isinstance(maxStep, float)
+        assert maxStep > eps
+        self.biInit()
+        icArrays = self.tmp_icArrays
+
+        if warn: printWarning = self._printWarning
+        else:    printWarning = lambda *x: None
+
+        # self.q = q # DEBUGGING
+        # self.dx = [] # DEBUGGING
+        # bendsInOthers = self.getBendsInOthers() # DEBUGGING
+        # ((stretch, bend, tors, oop), tmp) = self.getStretchBendTorsOop() # DEBUGGING
+
+        dq = self.tmp_q
+        dx = self.tmp_x
+        xn = N.concatenate([self.xyz, self.cell],axis=0)
+        n = 0
+        nScalings = 0 
+        neps = eps*eps*self.nx
+        xList = [] # geoms for RIIS
+        dxList = [] # error vectors for RIIS
+        RIIS_on = False
+
+        normalizeIC(q, *icArrays)
+
+        if self.torsions is not None: torsions = N.asarray(self.torsions, 
+                                                            dtype = N.int32)
+        else:                         torsions = None
+
+        while 1:
+            n += 1
+            qn = self()
+
+            # self.qn = qn # DEBUGGING
+
+            # determine new dq by RIIS or traditional 
+            # RIIS will be performed, if norm of last error vector is 
+            # larger than the one of the second last vector and a sufficient 
+            # number of vectors is available to do an extrapolation
+            dq = N.subtract(q, qn, dq)
+            if RIIS: 
+                if not RIIS_on and n >= RIIS_start:
+                    RIIS_on = True
+                    # print("Turning on RIIS in step %i" %n)
+
+            # check phase 
+            if torsions is not None: dq = ic.dphi_mod_2pi(dq, torsions)
+
+            # step width control
+            dqMax = N.max(N.abs(dq))
+            if dqMax > maxStep:
+                # print("scaling step %i" %n)
+                nScalings += 1
+                dq *= maxStep/dqMax
+
+            B = self.evalB().full()
+            # self.Bfull = B # DEBUGGING
+
+            # check all coordinates, if they are close to a singularity
+            # i.e. stretches -> 0. , bends -> pi, bends of tors -> 0, pi
+            # out of plains -> -pi/2, pi/2 or bends of out of plains -> 0., pi
+            # If they get close, damp them away with 
+            denseDampIC(printWarning, qn, dq, B, dampingThreshold, *icArrays)
+
+            A = N.dot(N.transpose(B), B)
+            self.Ainv = regularizedInverse(A, eps = inveps)
+            #this dx is the displacement vector in x and the 3 lattice vectors
+            dx[:] = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
+            # self.dx.append(dx.copy()) # for DEBUGGING
+
+            if RIIS and n >= RIIS_start - RIIS_maxLength:
+                dxList.append(dx.copy().reshape((-1,3))) # store dx for RIIS
+                if len(xList) > 0:
+                    xList.append(
+                        rigidBodySuperposition(
+                            xn.reshape((-1,3)), xList[-1]
+                                )[0]
+                            )
+                else: 
+                    xList.append(xn.reshape((-1,3)))
+
+            if RIIS_on:
+                xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
+            else:
+                xn += dx
+
+            norm = N.dot(dx, dx)
+            self.convergence = n, N.sqrt(norm/self.nx)
+            # remove old data not needed anymore for RIIS
+            if len(xList) >= RIIS_maxLength:
+                dxList = dxList[-RIIS_maxLength:]
+                xList = xList[-RIIS_maxLength:]
+
+            if (norm < neps) and N.linalg.norm(dx, ord = N.inf) < maxEps:
+                self.xyz = xn[:-9]
+                self.cell = xn[-9:]
+                return self.convergence
+            elif n >= maxiter:
+                for i in range(len(self.xyz)//3):
+                    ii = i*3
+                    for j in range(i):
+                        jj = j*3
+                        d = N.linalg.norm(xn[ii:ii+3] - xn[jj:jj+3])
+                        if d < 1.0:
+                            warnings.warn(
+                                "WARNING: Nuclear fusion of atoms " + 
+                                "%i and %i is imminent (distance " %(i, j) +
+                                "is %1.2f)." %d, Warning)
+                print("Made %i steps and scaled %i of them" %(n, nScalings))
+                raise ValueError('No convergence!')
+
+        assert False, "This point shouldn't be reached, there is a bug."
+
 
 def doRIIS(x, e, dim = 3):
     """

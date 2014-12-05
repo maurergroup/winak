@@ -37,7 +37,6 @@
 #define vtype   double
 #endif
 
-
 typedef vtype vec[3];
 struct ijarray { int *i, *j; };
 
@@ -219,7 +218,7 @@ int stretch(const vec a1, const vec a2, vec s1, vec s2) {
 
     DIRV(a1, a2, s2, r)
     VINV(s1, s2);
-
+                
     return 0;
 }
 
@@ -684,6 +683,85 @@ int Bmatrix_nnz(const int *cint, int *nint, int *nnz) {
 
 /* }}} */
 
+/* {{{ Bmatrix_pbc_nnz */
+
+THCTK_PRIVATE
+int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
+
+    int type, n, i, index, na=nx/3;
+    int i1, i2, i3, i4, z;
+
+    *nint = 0;
+    *nnz = 0;
+
+#define pbcT(zz)  if ( zz==1 || zz==2 || zz==3) {*nnz+=3;} \
+                  if ( zz==4 || zz==5 || zz==6) {*nnz+=6;} \
+                  if ( zz==7) {*nnz+=9;}
+
+    while (1) {
+        type = *cint++;
+        if (type > NINTERNALS) return 1;    /* unknown internal coordinate type */
+        if (type <= 0) return 0;            /* end of list, everything went fine */
+        n = atoms_per_internal[type];
+        //every type gets 3*n elements
+        (*nnz) += 3*n;
+        switch (type) {
+            case 1:
+                i1 = *cint++; i2 = *cint++;
+                if (i1%na==i2%na) {*nnz -= 3;} 
+                z = i1/na; pbcT(z); 
+                z = i2/na; pbcT(z);
+                break;
+            case 2:
+                i1 = *cint++; i2 = *cint++; i3 = *cint++; 
+                if (i1%na==i2%na && i2%na==i3%na) {*nnz -= 6;}
+                if (i1%na==i2%na || i2%na==i3%na || i1%na==i3%na) {*nnz -= 3;} 
+                z = i1/na; pbcT(z); 
+                z = i2/na; pbcT(z);
+                z = i3/na; pbcT(z); 
+                break;
+            case 3:
+                i1 = *cint++; i2 = *cint++; i3 = *cint++; i4 = *cint++; 
+                if (i1%na==i2%na && i2%na==i3%na) {*nnz -= 9;}
+                if ( (i1%na==i2%na && i2%na==i3%na) || \
+                     (i1%na==i2%na && i2%na==i4%na) || \
+                     (i2%na==i3%na && i3%na==i4%na) || \
+                     (i1%na==i3%na && i3%na==i4%na) ) {*nnz -= 6;}
+                if (i1%na==i2%na || i1%na==i3%na || i1%na==i4%na || \
+                    i2%na==i3%na || i2%na==i4%na || i3%na==i4%na ) {*nnz -= 3;}
+                z = i1/na; pbcT(z); 
+                z = i2/na; pbcT(z);
+                z = i3/na; pbcT(z); 
+                z = i4/na; pbcT(z); 
+                break;
+            case 4:
+                i1 = *cint++; i2 = *cint++; i3 = *cint++; i4 = *cint++; 
+                if (i1%na==i2%na && i2%na==i3%na) {*nnz -=9;}
+                if ( (i1%na==i2%na && i2%na==i3%na) || \
+                     (i1%na==i2%na && i2%na==i4%na) || \
+                     (i2%na==i3%na && i3%na==i4%na) || \
+                     (i1%na==i3%na && i3%na==i4%na) ) {*nnz -= 6;}
+                if (i1%na==i2%na || i1%na==i3%na || i1%na==i4%na || \
+                    i2%na==i3%na || i2%na==i4%na || i3%na==i4%na ) {*nnz -= 3;}
+                z = i1/na; pbcT(z); 
+                z = i2/na; pbcT(z);
+                z = i3/na; pbcT(z); 
+                z = i4/na; pbcT(z); 
+                break;
+            
+            default:
+                break;
+
+        }
+        /*cint += n; */
+        /*(*nnz) += 3*n;*/
+        (*nint)++;
+    }
+#undef pbcT
+}
+
+/* }}} */
+
 /* {{{ Bmatrix*/
 
 THCTK_PRIVATE
@@ -735,6 +813,399 @@ int Bmatrix(const vtype *x, const int *cint, vtype *b, int *jb, int *ib,
 
 #undef NXYZ
 #undef BIDX
+}
+
+/* }}} */
+
+/* {{{ Bmatrix_pbc*/
+
+THCTK_PRIVATE
+int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int *ib, int sort) {
+
+    int type, nint = 0, n, *j;
+    int p1, p2, p3, p4, nb = 0, pad = 0;
+    int i1, i2, i3, i4;
+    int z;
+    vec dsum, d1, d2, d3, d4, zero, tx, ty, tz;
+    zero[0]=0.0; zero[1]=0.0, zero[2]=0.0;
+
+#define NXYZ    (3*((*cint++)-1))
+#define BIDX(p) *jb++ = p%nx; *jb++ = (++p)%nx; *jb++ = (++p)%nx;
+
+#define SETVEC(vec1, num) vec1[0]= (*(b+num+0)); \
+                          vec1[1]= (*(b+num+1)); \
+                          vec1[2]= (*(b+num+2));
+#define SETB(num, vec1)   (*(b+num+0)) = vec1[0]; \
+                          (*(b+num+1)) = vec1[1]; \
+                          (*(b+num+2)) = vec1[2];
+
+#define BIDT(num) *jb++ = nx+num; *jb++ = nx+num+1; *jb++ = nx+num+2;
+
+    /* for atoms that lie outside the cell we need to add components 
+     * to the back-folded indices and also to the lattice vectors  */
+
+    while (1) {
+        type = *cint++;
+        ib[nint] = nb;      /* nint iterates over the rows of B */
+        j = jb;
+        if (type <= 0) return 0;
+        switch (type) {
+            case 1:
+                pad = 0;
+                p1 = NXYZ; p2 = NXYZ;
+                i1=p1; i2=p2;
+                stretch(x+p1, x+p2, b, b+3);
+                // atoms are the same in different cells 
+                // so we only set one
+                SETVEC(d1,0);
+                SETVEC(d2,3);
+                if (i1%nx==i2%nx) {
+                    SETB(0,zero); 
+                    SETB(3,zero);
+                    // pass on index of smallest number
+                    if (p2<p1) {p1 = p2;}
+                    BIDX(p1);
+                    pad -= 3;
+                }
+                else {
+                    BIDX(p1); BIDX(p2);
+                }
+                // set unit cell values
+                VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
+                z = i1/nx; /*p1*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADD(tx,tx, d1);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADD(ty,ty, d1);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADD(tz,tz, d1);}
+                z = i2/nx; /*p2*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADD(tx,tx,d2);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADD(ty,ty,d2);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADD(tz,tz,d2);}
+                if (tx != zero) {pad += 3; SETB(3+pad,tx); BIDT(0);}
+                if (ty != zero) {pad += 3; SETB(3+pad,ty); BIDT(3);}
+                if (tz != zero) {pad += 3; SETB(3+pad,tz); BIDT(6);}
+                break;
+            case 2: // bending angles
+                pad = 0;
+                p1 = NXYZ; p2 = NXYZ; p3 = NXYZ;
+                i1=p1; i2=p2; i3=p3;
+                bend(x+p1, x+p2, x+p3, b, b+3, b+6);
+                SETVEC(d1,0); SETVEC(d2,3); SETVEC(d3,6);
+                if (i1%nx==i2%nx && i2%nx==i3%nx) {
+                    SETB(0,zero); SETB(3,zero); SETB(6,zero);
+                    //pass on smallest index
+                    if (p2 < p1) {p1 = p2;} 
+                    if (p3 < p1) {p1 = p3;}
+                    BIDX(p1);
+                    pad -= 6;
+                }
+                else if (i1%nx==i2%nx || i1%nx==i3%nx || i2%nx==i3%nx ) {
+                    if (i1%nx==i2%nx) {
+                        VADD(dsum,d1,d2);
+                        SETB(0,dsum); SETB(3,d3); SETB(6,zero);
+                        if (p2 < p1) {p1 = p2;}
+                        BIDX(p1); BIDX(p3);
+                        pad -= 3;
+                    }
+                    if (i2%nx==i3%nx) {
+                        VADD(dsum,d2,d3);
+                        SETB(0,d1); SETB(3,dsum); SETB(6,zero);
+                        if (p3 < p2) {p3 = p2;}
+                        BIDX(p1); BIDX(p2);
+                        pad -= 3;
+                    }
+                    else {
+                        VADD(dsum,d1,d3);
+                        SETB(0,dsum); SETB(3,d2); SETB(6,zero);
+                        if (p3 < p1) {p3 = p1;}
+                        BIDX(p1); BIDX(p2);
+                        pad -= 3;
+                    }
+                }
+                else { //default, no duplicate atoms
+                    BIDX(p1); BIDX(p2); BIDX(p3);
+                }
+                VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
+                z = i1/nx; /*p1*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d1);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d1);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d1);}
+                z = i2/nx; /*p2*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d2);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d2);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d2);}
+                z = i3/nx; /*p3*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d3);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d3);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d3);}
+                if (tx != zero) {pad += 3; SETB(6+pad,tx); BIDT(0);}
+                if (ty != zero) {pad += 3; SETB(6+pad,ty); BIDT(3);}
+                if (tz != zero) {pad += 3; SETB(6+pad,tz); BIDT(6);}
+                break;
+            case 3: // torsions
+                pad = 0;
+                p1 = NXYZ; p2 = NXYZ; p3 = NXYZ; p4 = NXYZ;
+                i1=p1; i2=p2;i3=p3;i4=p4;
+                torsion(x+p1, x+p2, x+p3, x+p4, b, b+3, b+6, b+9);
+                SETVEC(d1,0);SETVEC(d2,3);SETVEC(d3,6);SETVEC(d4,9);
+                if (i1%nx==i2%nx && i2%nx==i3%nx && i3%nx==i4%nx) {
+                    // all indices are the same
+                    SETB(0,zero);SETB(3,zero);SETB(6,zero);SETB(9,zero);
+                    //pass on smallest index
+                    if (p2 < p1) {p1 = p2;}
+                    if (p3 < p2) {p1 = p3;}
+                    if (p4 < p3) {p1 = p4;}
+                    BIDX(p1);
+                    pad -= 9;
+                }
+                else if ( (i1%nx==i2%nx && i2%nx==i3%nx) || \
+                          (i1%nx==i2%nx && i2%nx==i4%nx) || \
+                          (i2%nx==i3%nx && i3%nx==i4%nx) || \
+                          (i1%nx==i3%nx && i3%nx==i4%nx) ) {
+                    // three indices are the same
+                    if (i1%nx==i2%nx && i2%nx==i3%nx) {
+                        VADD(dsum,d1,d2); VADD(dsum,dsum,d3);
+                        SETB(0,dsum); SETB(3,d4); SETB(6,zero); SETB(9,zero);
+                        if (p2 < p1) {p1 = p2;}
+                        if (p3 < p1) {p1 = p3;}
+                        BIDX(p1); BIDX(p4);
+                        pad -= 6;
+                    }
+                    if (i1%nx==i2%nx && i2%nx==i4%nx) {
+                        VADD(dsum,d1,d2); VADD(dsum,dsum,d4);
+                        SETB(0,dsum); SETB(3,d3); SETB(6,zero); SETB(9,zero);
+                        if (p2 < p1) {p1 = p2;}
+                        if (p4 < p1) {p1 = p4;}
+                        BIDX(p1); BIDX(p3);
+                        pad -= 6;
+                    }
+                    if (i2%nx==i3%nx && i3%nx==i4%nx) {
+                        VADD(dsum,d2,d3); VADD(dsum,dsum,d4);
+                        SETB(3,d1); SETB(0,dsum); SETB(6,zero); SETB(9,zero);
+                        if (p3 < p2) {p2 = p3;}
+                        if (p4 < p2) {p2 = p4;}
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                    else {
+                        VADD(dsum,d1,d3); VADD(dsum,dsum,d4);
+                        SETB(0,dsum); SETB(3,d2); SETB(6,zero); SETB(9,zero);
+                        if (p3 < p1) {p1 = p3;}
+                        if (p4 < p1) {p1 = p4;}
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                }
+                else if (i1%nx==i2%nx || i1%nx==i3%nx || i1%nx==i4%nx || \
+                         i2%nx==i3%nx || i2%nx==i4%nx || i3%nx==i4%nx ) {
+                    // two indices are the same
+                    if (i1%nx==i2%nx) {
+                        VADD(dsum,d1,d2);
+                        SETB(0,dsum); SETB(3,d3); SETB(6,d4); SETB(9,zero);
+                        if (p2 < p1) {p1 = p2;}
+                        BIDX(p1); BIDX(p3); BIDX(p4);
+                        pad -= 3;
+                    }
+                    if (i1%nx==i3%nx) {
+                        VADD(dsum,d1,d3);
+                        SETB(0,dsum); SETB(3,d2); SETB(6,d4); SETB(9,zero);
+                        if (p3 < p1) {p1 = p3;}
+                        BIDX(p1); BIDX(p3); BIDX(p4);
+                        pad -= 3;
+                    }
+                    if (i1%nx==i4%nx) {
+                        VADD(dsum,d1,d4);
+                        SETB(0,dsum); SETB(3,d2); SETB(6,d3); SETB(9,zero);
+                        if (p4 < p1) {p1 = p4;}
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                    if (i2%nx==i3%nx) {
+                        VADD(dsum,d2,d3);
+                        SETB(0,d1); SETB(3,dsum); SETB(6,d4); SETB(9,zero);
+                        if (p3 < p2) {p2 = p3;}
+                        BIDX(p1); BIDX(p2); BIDX(p4);
+                        pad -= 3;
+                    }
+                    if (i2%nx==i4%nx) {
+                        VADD(dsum,d2,d4);
+                        SETB(0,d1); SETB(3,dsum); SETB(6,d3); SETB(9,zero);
+                        if (p4 < p2) {p2 = p4;}
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                    else {
+                        VADD(dsum,d3,d4);
+                        SETB(0,d1); SETB(3,d2); SETB(6,dsum); SETB(9,zero);
+                        if (p4 < p3) {p3 = p4;}
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                }
+                else { //default, no duplicate atoms
+                    // no indices are the same
+                    BIDX(p1); BIDX(p2); BIDX(p3); BIDX(p4);
+                }
+                VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
+                z = i1/nx; /*p1*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d1);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d1);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d1);}
+                z = i2/nx; /*p2*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d2);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d2);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d2);}
+                z = i3/nx; /*p3*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d3);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d3);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d3);}
+                z = i4/nx; /*p4*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d4);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d4);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d4);}
+                if (tx != zero) {pad += 3; SETB(9+pad,tx); BIDT(0);}
+                if (ty != zero) {pad += 3; SETB(9+pad,ty); BIDT(3);}
+                if (tz != zero) {pad += 3; SETB(9+pad,tz); BIDT(6);}
+                break;
+            case 4:
+                pad = 0;
+                p1 = NXYZ; p2 = NXYZ; p3 = NXYZ; p4 = NXYZ;
+                i1=p1;i2=p2;i3=p3;i4=p4;
+                out_of_plane(x+p1, x+p2, x+p3, x+p4, b, b+3, b+6, b+9);
+                SETVEC(d1,0);SETVEC(d2,3);SETVEC(d3,6);SETVEC(d4,9);
+                if (i1%nx==i2%nx && i2%nx==i3%nx && i3%nx==i4%nx) {
+                    // all indices are the same
+                    SETB(0,zero);SETB(3,zero);SETB(6,zero);SETB(9,zero);
+                    //pass on smallest index
+                    if (p2 < p1) {p1 = p2;}
+                    if (p3 < p2) {p1 = p3;}
+                    if (p4 < p3) {p1 = p4;}
+                    BIDX(p1);
+                    pad -= 9;
+                }
+                else if ( (i1%nx==i2%nx && i2%nx==i3%nx) || \
+                          (i1%nx==i2%nx && i2%nx==i4%nx) || \
+                          (i2%nx==i3%nx && i3%nx==i4%nx) || \
+                          (i1%nx==i3%nx && i3%nx==i4%nx) ) {
+                    // three indices are the same
+                    if (i1%nx==i2%nx && i2%nx==i3%nx) {
+                        VADD(dsum,d1,d2); VADD(dsum,dsum,d3);
+                        SETB(0,dsum); SETB(3,d4); SETB(6,zero); SETB(9,zero);
+                        if (p2 < p1) {p1 = p2;}
+                        if (p3 < p1) {p1 = p3;}
+                        BIDX(p1); BIDX(p4);
+                        pad -= 6;
+                    }
+                    if (i1%nx==i2%nx && i2%nx==i4%nx) {
+                        VADD(dsum,d1,d2); VADD(dsum,dsum,d4);
+                        SETB(0,dsum); SETB(3,d3); SETB(6,zero); SETB(9,zero);
+                        if (p2 < p1) {p1 = p2;}
+                        if (p4 < p1) {p1 = p4;}
+                        BIDX(p1); BIDX(p3);
+                        pad -= 6;
+                    }
+                    if (i2%nx==i3%nx && i3%nx==i4%nx) {
+                        VADD(dsum,d2,d3); VADD(dsum,dsum,d4);
+                        SETB(3,d1); SETB(0,dsum); SETB(6,zero); SETB(9,zero);
+                        if (p3 < p2) {p2 = p3;}
+                        if (p4 < p2) {p2 = p4;}
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                    else {
+                        VADD(dsum,d1,d3); VADD(dsum,dsum,d4);
+                        SETB(0,dsum); SETB(3,d2); SETB(6,zero); SETB(9,zero);
+                        if (p3 < p1) {p1 = p3;}
+                        if (p4 < p1) {p1 = p4;}
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                }
+                else if (i1%nx==i2%nx || i1%nx==i3%nx || i1%nx==i4%nx || \
+                         i2%nx==i3%nx || i2%nx==i4%nx || i3%nx==i4%nx ) {
+                    // two indices are the same
+                    if (i1%nx==i2%nx) {
+                        VADD(dsum,d1,d2);
+                        SETB(0,dsum); SETB(3,d3); SETB(6,d4); SETB(9,zero);
+                        if (p2 < p1) {p1 = p2;}
+                        BIDX(p1); BIDX(p3); BIDX(p4);
+                        pad -= 3;
+                    }
+                    if (i1%nx==i3%nx) {
+                        VADD(dsum,d1,d3);
+                        SETB(0,dsum); SETB(3,d2); SETB(6,d4); SETB(9,zero);
+                        if (p3 < p1) {p1 = p3;}
+                        BIDX(p1); BIDX(p3); BIDX(p4);
+                        pad -= 3;
+                    }
+                    if (i1%nx==i4%nx) {
+                        VADD(dsum,d1,d4);
+                        SETB(0,dsum); SETB(3,d2); SETB(6,d3); SETB(9,zero);
+                        if (p4 < p1) {p1 = p4;}
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                    if (i2%nx==i3%nx) {
+                        VADD(dsum,d2,d3);
+                        SETB(0,d1); SETB(3,dsum); SETB(6,d4); SETB(9,zero);
+                        if (p3 < p2) {p2 = p3;}
+                        BIDX(p1); BIDX(p2); BIDX(p4);
+                        pad -= 3;
+                    }
+                    if (i2%nx==i4%nx) {
+                        VADD(dsum,d2,d4);
+                        SETB(0,d1); SETB(3,dsum); SETB(6,d3); SETB(9,zero);
+                        if (p4 < p2) {p2 = p4;}
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                    else {
+                        VADD(dsum,d3,d4);
+                        SETB(0,d1); SETB(3,d2); SETB(6,dsum); SETB(9,zero);
+                        if (p4 < p3) {p3 = p4;}
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                }
+                else { //default, no duplicate atoms
+                    // no indices are the same
+                    BIDX(p1); BIDX(p2); BIDX(p3); BIDX(p4);
+                }
+                VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
+                z = i1/nx; /*p1*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d1);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d1);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d1);}
+                z = i2/nx; /*p2*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d2);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d2);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d2);}
+                z = i3/nx; /*p3*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d3);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d3);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d3);}
+                z = i4/nx; /*p4*/
+                if ( z==1 || z==4 || z==5 || z==7) {VADDI(tx, d4);}
+                if ( z==2 || z==4 || z==6 || z==7) {VADDI(ty, d4);}
+                if ( z==3 || z==5 || z==6 || z==7) {VADDI(tz, d4);}
+                if (tx != zero) {pad += 3; SETB(9+pad,tx); BIDT(0);}
+                if (ty != zero) {pad += 3; SETB(9+pad,ty); BIDT(3);}
+                if (tz != zero) {pad += 3; SETB(9+pad,tz); BIDT(6);}
+                break;
+            default:
+                return 2;  /* unknown internal coordinate type */
+        }
+        n = 3*atoms_per_internal[type]+pad;
+        if (sort) bsort2(b, j, n); /* ensure that the column index is increasing */
+        b += n;
+        nb += n;
+        nint++;
+    }
+    return 1;  /* this point should not be reached! */
+
+#undef NXYZ
+#undef BIDX
+#undef SETVEC
+#undef SETB
 }
 
 /* }}} */
@@ -982,6 +1453,28 @@ THCTKFUN(_intcrd, Bmatrix_nnz)
 
 }
 
+THCTKDOC(_intcrd, Bmatrix_pbc_nnz) = "nnz, nint = Bmatrix_pbc_nnz(nx, cint)\n";
+
+THCTKFUN(_intcrd, Bmatrix_pbc_nnz)
+{
+
+    PyObject *input;
+    PyArrayObject *cint;
+    int nx, nnz, nint;
+
+    if (!PyArg_ParseTuple(args, "iO", &nx, &input)) return NULL;
+
+    cint = (PyArrayObject *)
+        PyArray_ContiguousFromObject(input, PyArray_INT, 1, 1);
+
+    if (cint == NULL) return NULL;
+
+    if (Bmatrix_pbc_nnz(nx, (int *) cint->data, &nint, &nnz)) return NULL;
+
+    return Py_BuildValue("ii", nnz, nint);
+
+}
+
 
 THCTKDOC(_intcrd, internals) = "c = internals(x, cint, c)\n";
 
@@ -1029,6 +1522,35 @@ THCTKFUN(_intcrd, Bmatrix)
 
     if (Bmatrix((double *) x->data, (int *) cint->data,
                 (double *) b->data, (int *) jb->data, (int *) ib->data, sort))
+        return NULL;
+
+    Py_INCREF(Py_None);
+    return Py_None;
+
+}
+
+THCTKDOC(_intcrd, Bmatrix_pbc) = "Bmatrix_pbc(nx, x, cint, b, jb, ib, sort)";
+
+THCTKFUN(_intcrd, Bmatrix_pbc)
+{
+
+    PyObject *input;
+    PyArrayObject *x, *cint, *b, *jb, *ib ;
+    int sort, nx;
+
+    if (!PyArg_ParseTuple(args, "iO!OO!O!O!i", &nx, &PyArray_Type, &x,
+        &input, &PyArray_Type, &b, &PyArray_Type, &jb,
+        &PyArray_Type, &ib, &sort))
+        return NULL;
+
+    cint = (PyArrayObject *)
+        PyArray_ContiguousFromObject(input, PyArray_INT, 1, 1);
+
+    if (cint == NULL) return NULL;
+
+    if (Bmatrix_pbc(nx, (double *) x->data, (int *) cint->data,
+                (double *) b->data, (int *) jb->data, (int *) ib->data,
+                sort))
         return NULL;
 
     Py_INCREF(Py_None);
@@ -1317,7 +1839,9 @@ static struct PyMethodDef _intcrd_methods[] = {
     THCTKDEF(_intcrd, symbolicAc)
     THCTKDEF(_intcrd, internals)
     THCTKDEF(_intcrd, Bmatrix)
+    THCTKDEF(_intcrd, Bmatrix_pbc)
     THCTKDEF(_intcrd, Bmatrix_nnz)
+    THCTKDEF(_intcrd, Bmatrix_pbc_nnz)
     {NULL, NULL, 0, NULL}
 };
 

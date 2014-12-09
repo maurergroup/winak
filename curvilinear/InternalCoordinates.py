@@ -1406,6 +1406,31 @@ class Periodic_icSystem(icSystem):
             ic.Btrans_p(self.Bnnz, self.n, self.nx+9, update, self.colperm,
                 self.B.x, self.B.j, self.B.i, self.Bt.x, self.Bt.j, self.Bt.i)
         return self.Bt
+   
+    #TO BE FIXED
+    def evalA(self, diag = 1, sort = 1, force = 0):
+        if not hasattr(self, 'A') or force == 1:
+            if not hasattr(self, 'colperm'):
+                nnz = self.nx + 9 + 9*(self.ci[-1]/2)
+                if (diag == 0): nnz += self.nx
+                aj = N.zeros(nnz, nxInt)
+                ai = N.zeros(self.nx+1, nxInt)
+                ic.conn2crd(self.natom, diag, self.cj, self.ci, aj, ai)
+            else:
+                aj, ai = ic.conn2crd_p(self.natom, diag, self.cj, self.ci,
+                                       self.colperm, sort)
+            self.Annz = ai[-1]
+            if diag:
+                self.A = CSRd(n=self.nx+9, nnz=self.Annz, i=ai, j=aj, type=nxFloat)
+            else:
+                self.A = CSR(n=self.nx+9, m=self.nx+9, nnz=self.Annz, i=ai, j=aj, type=nxFloat)
+        if hasattr(self.A, 'd'):
+            ic.BxBt_d(self.nx, self.Bt.x, self.Bt.j, self.Bt.i, self.Annz,
+                      self.A.x, self.A.j, self.A.i, self.A.d)
+        else:
+            ic.BxBt(self.nx, self.Bt.x, self.Bt.j, self.Bt.i,
+                    self.A.x, self.A.j, self.A.i, self.Annz, 0)
+        return self.A
 
     def connectivity(self):
         self.cj, self.ci = ic.symbolicAc(self.ic, 8*self.natom)

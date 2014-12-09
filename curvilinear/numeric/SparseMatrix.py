@@ -833,15 +833,18 @@ def eigB(B, k=None, S=None, sigma=None, which='LM'):
     """
 
     from scipy.sparse.linalg import eigs
-    from scipy.sparse import csr_matrix
-
-    bx, bj, bi = B.matrices()
+    from scipy.sparse import csc_matrix
+    from winak.curvilinear.numeric.csrVSmsr import csrcsc
+    
+    bx, bj, bi = csrcsc(B.n, B.m, B.x, B.j+1, B.i+1)
+    bj -= 1
+    bi -= 1
+    #CSR to CSC
     n, m = B.n, B.m
-    B = csr_matrix((bx, bj, bi),shape=(n, m))
+    B = csc_matrix((bx, bj, bi),shape=(n, m))
 
     if k is None:
         k = 6
-
     E, V = eigs(B, k, M=S, sigma=sigma, which=which)
     return E, V
 
@@ -849,15 +852,40 @@ def svdB(B, k=6, ncv=None, tol=0, which='LM'):
     """
     Calculates SVD decomposition
     """
-    from scipy.sparse.linalg import svds 
-    from scipy.sparse import csr_matrix
-
-    bx, bj, bi = B.matrices()
-    n, m = B.n, B.m
-    B = csr_matrix((bx, bj, bi),shape=(n, m))
+    from scipy.sparse import csc_matrix
+    from scipy.sparse.linalg import svds
+    #from sparsesvd import sparsesvd
+    from winak.curvilinear.numeric.csrVSmsr import csrcsc
     
-    u, s, vt = svds(B, k, ncv, tol, which)
-    return u, s, vt
+    bx, bj, bi = csrcsc(B.n, B.m, B.x, B.j+1, B.i+1)
+    bj -= 1
+    bi -= 1
+    n, m = B.n, B.m
+    B = csc_matrix((bx, bj, bi),shape=(n, m))
+    ut, s, vt = svds(B, k)
+    #ut, s, vt = sparsesvd(B, k)
+    return ut, s, vt
+
+def AdotB(A, B):
+    """
+    scipy algorithm to calculate AdotB
+    """
+
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.linalg import svds
+    from sparsesvd import sparsesvd
+    from winak.curvilinear.numeric.csrVSmsr import csrcsc
+    
+    ax, aj, ai = A.x, A.j, A.i
+    bx, bj, bi = B.x, B.j, B.i
+    An, Am = A.n, A.m
+    Bn, Bm = B.n, B.m
+    A = csr_matrix((ax, aj, ai),shape=(An, Am))
+    B = csr_matrix((bx, bj, bi),shape=(Bn, Bm))
+    
+    A.dot(B)
+    return CSR(n=An, nnz=A.nnz, x=A.data, j=A.indices, i=A.indptr, offset=0)
+
 
 def AmuB(A, B, Cnnz=None, job=1, offset=0):
     """
@@ -887,6 +915,7 @@ def AmuB(A, B, Cnnz=None, job=1, offset=0):
     cx = cx[:ci[-1]]
     cj = cj[:ci[-1]]
     return CSR(n=(len(ci)-1), nnz=len(cx), x=cx, j=cj, i=ci, offset=0)
+
 
 def AplsB(A, B, s=1, Cnnz=None, offset=0):
     """

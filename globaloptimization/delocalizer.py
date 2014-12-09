@@ -1,11 +1,13 @@
 import numpy as np
 from ase.atoms import Atoms
-from winak.curvilinear.InternalCoordinates import icSystem
+from winak.curvilinear.InternalCoordinates import icSystem, Periodic_icSystem
 from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
+from winak.curvilinear.InternalCoordinates import PeriodicValenceCoordinateGenerator as PVCG
+from winak.curvilinear.numeric.SparseMatrix import AmuB, svdB, eigB
 from scipy import linalg as la
 
 class Delocalizer:
-    def __init__(self,atoms_obj,weighted=False,icList=None, periodic=False):
+    def __init__(self,atoms_obj,weighted=False,icList=None, periodic=False, dense=False):
         """This generates the delocalized internals as described in the
         paper.
         atoms_obj: a properly initialized ase Atoms object (positions,
@@ -14,26 +16,39 @@ class Delocalizer:
         icList: if you want to supply your own icList, simply hand it over (iclist oder Leben!)
         """
         self.atoms_object = atoms_obj
-        self.x_ref=atoms_obj.get_positions()
+        self.x_ref=atoms_obj.positions
         self.masses  = atoms_obj.get_masses()
         self.atoms = atoms_obj.get_chemical_symbols()
+        self.cell = atoms_obj.get_cell()
         self.vk=None
         self.vc=None
         self.u2=None
+        self.dense = dense
+        self.periodic = periodic
         x0=self.x_ref.flatten()
+        self.natoms=len(self.masses)
         #VCG constructs primitive internals (bond length,bend,torsion,oop)
+        import gc
+        gc.collect()
         if icList is None:
-            self.vcg=VCG(atoms=self.atoms,masses=self.masses)
-            self.iclist=self.vcg(x0)
+            if periodic:
+                self.vcg=PVCG(atoms=self.atoms,masses=self.masses, cell=self.cell)
+                self.iclist=self.vcg(x0)
+            else:
+                self.vcg=VCG(atoms=self.atoms,masses=self.masses)
+                self.iclist=self.vcg(x0)
         else:
             self.iclist=icList
-        self.ic=icSystem(self.iclist,len(self.atoms),
-                          masses=self.masses,xyz=x0.copy())
+        if periodic:
+            self.ic=Periodic_icSystem(self.iclist, len(self.atoms), 
+                    masses=self.masses, xyz=x0, cell=self.cell)
+        else:
+            self.ic=icSystem(self.iclist,len(self.atoms),
+                              masses=self.masses,xyz=x0)
         self.ic.backIteration = self.ic.denseBackIteration
-        self.ic.evalA()
+        #no need to eval A
+        #self.ic.evalA()
         self.ic.evalB()
-
-        self.natoms=len(self.masses)
 
         #generate 1/M matrix for mass weighed internals
         #use with care!
@@ -52,12 +67,25 @@ class Delocalizer:
         #thctk uses sparce matrices
         #b matrix is defined as delta(q)=b*delta(x)
         #where q are primitive internals and x cartesian coords
-        self.b=self.ic.B.full()
-        self.g=np.dot(self.b,self.m)
-        self.g=np.dot(self.g,self.b.transpose())
+        if dense:
+            self.b=self.ic.B.full()
+            self.g=np.dot(self.b,self.m)
+            self.g=np.dot(self.g,self.b.transpose())
 
-        self.v2,self.ww,self.u=np.linalg.svd(self.g)
-        self.u = self.u[:3*len(self.atoms_object)-6]
+            v2, self.ww,self.u=np.linalg.svd(self.g)
+            self.u = self.u[:3*len(self.atoms_object)-6]
+        else:
+            if periodic:
+                k = 3*len(self.atoms_object)
+            else:
+                k = 3*len(self.atoms_object)-6
+            #Sparse algorithm
+            self.b = self.ic.B
+            bt = self.ic.evalBt(perm=0)
+            self.g = AmuB(self.b,bt)
+            v2, self.ww, self.u = svdB(self.g, k=k)
+            self.u =self.u[:k]
+
 
     def get_U(self):
         return self.u

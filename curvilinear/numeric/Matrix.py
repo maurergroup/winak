@@ -30,7 +30,7 @@ LA = importLinearAlgebra()
 
 SVD = LA.singular_value_decomposition
 
-def regularizedInverse(A, eps = 1e-12):
+def regularizedInverse(A, eps = 1e-15):
     # V, S, WT = N.linalg.svd(A, full_matrices = 0)
     V, S, WT = SVD(A)
     S2 = S*S
@@ -38,4 +38,3 @@ def regularizedInverse(A, eps = 1e-12):
     S /= S2
     Ainv = N.dot(V, S[:,NewAxis]*WT)
     return Ainv
-

@@ -220,6 +220,14 @@ class CSR:
             H[i,j] = h
         mat = H.to_csr()
         return mat
+    
+    def to_ll_mat(self):
+        n = self.n
+        nnz = self.nnz
+        H = spmatrix.ll_mat(n,n, nnz)
+        for i,j,h in self:
+            H[i,j] = h
+        return H 
 
     def commutator(self, x, y, commutatorFunction=comrz):
         """ if x and y vectors are complex, commutatorFunction
@@ -832,10 +840,11 @@ def eigB(B, k=None, S=None, sigma=None, which='LM'):
     uses scipy.sparse.linalg.eigs
     """
 
+    from pysparse.jdsym import jdsym 
+    from pysparse.precon import jacobi
     from scipy.sparse.linalg import eigs
     from scipy.sparse import csc_matrix
     from winak.curvilinear.numeric.csrVSmsr import csrcsc
-    
     bx, bj, bi = csrcsc(B.n, B.m, B.x, B.j+1, B.i+1)
     bj -= 1
     bi -= 1
@@ -845,7 +854,7 @@ def eigB(B, k=None, S=None, sigma=None, which='LM'):
 
     if k is None:
         k = 6
-    E, V = eigs(B, k, M=S, sigma=sigma, which=which)
+    E, V = eigs(B, k, M=S, sigma=sigma, which=which, tol=1e-12)
     return E, V
 
 def svdB(B, k=6, ncv=None, tol=0, which='LM'):
@@ -854,7 +863,6 @@ def svdB(B, k=6, ncv=None, tol=0, which='LM'):
     """
     from scipy.sparse import csc_matrix
     from scipy.sparse.linalg import svds
-    #from sparsesvd import sparsesvd
     from winak.curvilinear.numeric.csrVSmsr import csrcsc
     
     bx, bj, bi = csrcsc(B.n, B.m, B.x, B.j+1, B.i+1)
@@ -863,8 +871,21 @@ def svdB(B, k=6, ncv=None, tol=0, which='LM'):
     n, m = B.n, B.m
     B = csc_matrix((bx, bj, bi),shape=(n, m))
     ut, s, vt = svds(B, k)
-    #ut, s, vt = sparsesvd(B, k)
     return ut, s, vt
+    
+
+    V, S, WT = SVD(A)
+    S2 = S*S
+    S2 += eps*eps
+    S /= S2
+    Ainv = N.dot(V, S[:,NewAxis]*WT)
+    return Ainv
+
+#def sparseregularizedInverse(A, eps = 1e-12):
+    #V, S, WT = svdB(A)
+    #S2 = AmuB(S,S)
+    
+    
 
 def AdotB(A, B):
     """
@@ -903,7 +924,7 @@ def AmuB(A, B, Cnnz=None, job=1, offset=0):
       bi += 1
     an, am = A.shape
     bn, bm = B.shape
-    if am != bn: raise typeError, 'ncol(A) must be equal nrow(B)!'
+    if am != bn: raise TypeError, 'ncol(A) must be equal nrow(B)!'
     if Cnnz is None: Cnnz = an*bm+1
     cx, cj, ci, ierr = blassm.amub(bm, ax, aj, ai, bx, bj, bi, Cnnz, job=job)
     aj -= 1
@@ -914,8 +935,22 @@ def AmuB(A, B, Cnnz=None, job=1, offset=0):
     ci -= 1
     cx = cx[:ci[-1]]
     cj = cj[:ci[-1]]
-    return CSR(n=(len(ci)-1), nnz=len(cx), x=cx, j=cj, i=ci, offset=0)
+    return CSR(n=A.n, m=B.m , nnz=len(cx), x=cx, j=cj, i=ci, offset=0)
 
+def invA(A):
+    """
+    calculates inverse of sparse matrix
+    """
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.linalg import inv 
+    from sparsesvd import sparsesvd
+    
+    ax, aj, ai = A.x, A.j, A.i
+    An, Am = A.n, A.m
+    A = csr_matrix((ax, aj, ai),shape=(An, Am))
+    
+    A = inv(A) 
+    return CSR(n=An, nnz=A.nnz, x=A.data, j=A.indices, i=A.indptr, offset=0)
 
 def AplsB(A, B, s=1, Cnnz=None, offset=0):
     """

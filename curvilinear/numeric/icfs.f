@@ -235,10 +235,8 @@ c        Scale A and store in the lower triangular matrix L.
          end do
 
 c        Attempt an incomplete factorization.
-
          call dicf(n,nnz,l,ldiag,lcol_ptr,lrow_ind,p,info,
      +        iwa(1),iwa(n+1),iwa(2*n+1),wa1)
-
 c        If the factorization exists, then test for termination.
 c        Otherwise increment the shift.
 
@@ -430,6 +428,7 @@ c        Update column j using the previous columns.
 
          k = list(j)
          do while (k .ne. 0) 
+            write(*,*) 'k = ', k
             isk = indf(k)
             iek = col_ptr(k+1) - 1
 

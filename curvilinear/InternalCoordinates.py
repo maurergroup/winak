@@ -23,7 +23,7 @@ from winak.curvilinear.cICTools import normalizeIC, denseDampIC, sparseDampIC
 from winak.curvilinear.numeric._numeric import inv_L_x_cd, inv_Lt_x_cd, inv_LtL_x_cd, \
     colamd, daxpy_p
 from winak.curvilinear.numeric.SparseMatrix import spmatrix, CSR, CSRd
-from winak.curvilinear.numeric.icfs import dicfs
+from winak.curvilinear.numeric.icfs import dicfs, dicf
 from winak.curvilinear.numeric.Matrix import regularizedInverse
 from winak.curvilinear.numeric.Rotation import rigidBodySuperposition
 from winak.curvilinear.numeric.MyVector import Vector
@@ -580,7 +580,7 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
     does the same as VCG, but for a duplicated cell
     """
     def __init__(self, atoms, vdW = covalentRadius, masses = None, \
-            threshold = 0.5, cell = None ):
+            threshold = 0.5, cell = None):
 
         if cell is None:
             raise ValueError('unit cell needs to be given.')
@@ -609,6 +609,26 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
 
         xyz = N.reshape(coord,(-1,3))
         n = len(xyz)
+        
+        def fold_back(ind):
+            """
+            folds back a set of indices by 
+            """
+            for j in range(len(ind)):
+                ind[j] = ind[j]%n 
+            return ind
+        def fold_back2(ind):
+            """
+            folds back a set of indices by 
+            """
+            smallest_div = 7
+            for i in ind:
+                if i/n < smallest_div:
+                    smallest_div = i/n
+            for j in range(len(ind)):
+                ind[j] -= smallest_div*n 
+            return ind
+
         #duplicate coordinates
         xyz_pbc = N.empty([0,3])
         for vec in self.cell_indices:
@@ -619,57 +639,84 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
         #construct iclist
         IClist =  ValenceCoordinateGenerator.__call__(self, xyz_pbc, **kwargs)
        
-        #delete bonds which do not reach into unit cell
-        for bb,bond in reversed(list(enumerate(self.bonds))):
+        ###delete bonds which do not reach into unit cell
+        #ADDING CELL BONDS
+        bonds = []
+        self.bonds.append([(0, n),N.linalg.norm(self.cell[0])])    
+        self.bonds.append([(0, 2*n),N.linalg.norm(self.cell[1])])    
+        self.bonds.append([(0, 3*n),N.linalg.norm(self.cell[2])])    
+        #eliminate duplicate ones
+        for b,bond in enumerate(self.bonds):
             indices, b_len = bond
-            indices  = list(indices)
-            truth = [self.atom_indices[ii] == 0 for ii in indices]
-            if any(truth):
-                #backfolding indices
-                pass
-                #for i, ind in enumerate(indices):
-                    #ind -= int(n * self.atom_indices[ind])
-                    #indices[i] = ind
-                #self.bonds[bb] = (tuple(indices), b_len)
-            else:
-                del self.bonds[bb]
-        #delete bends which do not reach into unit cell
-        for bb, bend in reversed(list(enumerate(self.bends))):
-            indices = list(bend)
-            truth = [self.atom_indices[ii] == 0 for ii in indices]
-            if any(truth):
-                pass
-                #for i, ind in enumerate(indices):
-                    #ind -= int(n * self.atom_indices[ind])
-                    #indices[i] = ind
-                #self.bends[bb] = indices 
-            else:
-                del self.bends[bb]
-        #delete torsions which do not reach into unit cell
-        for bb, tor in reversed(list(enumerate(self.torsions))):
-            indices = list(tor)
-            truth = [self.atom_indices[ii] == 0 for ii in indices]
-            if any(truth):
-                pass
-                #for i, ind in enumerate(indices):
-                    #ind -= int(n * self.atom_indices[ind])
-                    #indices[i] = ind
-                #self.torsions[bb] = tuple(indices)
-            else:
-                del self.torsions[bb]
-        #delete oop angles which do not reach into unit cell
-        for bb, oop in reversed(list(enumerate(self.oops))):
-            indices = list(oop)
-            truth = [self.atom_indices[ii] == 0 for ii in indices]
-            if any(truth):
-                pass
-                #for i, ind in enumerate(indices):
-                    #ind -= int(n * self.atom_indices[ind])
-                    #indices[i] = ind
-                #self.oops[bb] = tuple(indices) 
-            else:
-                del self.oops[bb]
+            indices = list(indices)
+            #go through all other bonds and see if there are duplicates
+            take_it = True
+            for bb, bbond in enumerate(bonds):
+                tmp_ind, bb_len = bbond
+                tmp_ind = list(tmp_ind)
+                if tmp_ind == indices:
+                    take_it = False 
+                elif tmp_ind==fold_back2(indices):
+                    take_it = False
+                else:
+                    pass
+            if take_it:
+                bonds.append([tuple(fold_back2(indices)),b_len])
+        self.bonds = bonds
 
+        ##delete bends which do not reach into unit cell
+        bends = []
+        self.bends.append([n, 2*n, 0])    
+        self.bends.append([n, 3*n, 0])    
+        self.bends.append([2*n, 3*n, 0])    
+        for b, bend in enumerate(self.bends):
+            indices = list(bend)
+            take_it = True
+            for bb, bbend in enumerate(bends):
+                tmp_ind = bbend
+                if tmp_ind == indices:
+                    take_it = False 
+                elif tmp_ind==fold_back2(indices):
+                    take_it = False
+                else:
+                    pass
+            if take_it:
+                bends.append(fold_back2(indices))
+        self.bends = bends
+
+        ##delete torsions which do not reach into unit cell
+        torsions = []
+        for t, torsion in enumerate(self.torsions):
+            indices = list(torsion)
+            take_it = True
+            for tt, ttors in enumerate(torsions):
+                tmp_ind = ttors 
+                if tmp_ind == indices:
+                    take_it = False 
+                elif tmp_ind==fold_back2(indices):
+                    take_it = False
+                else:
+                    pass
+            if take_it:
+                torsions.append(fold_back2(indices))
+        self.torsions = torsions
+        ##delete oop angles which do not reach into unit cell
+        oops = []
+        for o, oop in enumerate(self.oops):
+            indices = list(oop)
+            take_it = True
+            for oo, ooop in enumerate(oops):
+                tmp_ind = ooop
+                if tmp_ind == indices:
+                    take_it = False 
+                elif tmp_ind==fold_back2(indices):
+                    take_it = False
+                else:
+                    pass
+            if take_it:
+                oops.append(fold_back2(indices))
+        self.oops = oops
+        
         return self.toIClist()
        
 
@@ -841,15 +888,16 @@ class icSystem:
         ic.Bmatrix(self.xyz, self.ic, self.B.x, self.B.j, self.B.i, sort)
         return self.B
 
-    def evalBt(self, update = 0, perm = 1):
+    def evalBt(self, update = 0, perm = 0):
         if not hasattr(self, 'Bt'):
-            self.Bt = CSR(n=self.nx, m=self.n, nnz=self.Bnnz, type = nxFloat)
-        if not hasattr(self, 'colperm') or not perm:
-            ic.Btrans(self.Bnnz, self.n, self.nx, update, self.B.x, self.B.j,
-                self.B.i, self.Bt.x, self.Bt.j, self.Bt.i)
-        else:
-            ic.Btrans_p(self.Bnnz, self.n, self.nx, update, self.colperm,
-                self.B.x, self.B.j, self.B.i, self.Bt.x, self.Bt.j, self.Bt.i)
+            self.Bt = self.B.transpose()
+            #self.Bt = CSR(n=self.nx, m=self.n, nnz=self.Bnnz, type = nxFloat)
+        #if not hasattr(self, 'colperm') or not perm:
+            #ic.Btrans(self.Bnnz, self.n, self.nx, update, self.B.x, self.B.j,
+                #self.B.i, self.Bt.x, self.Bt.j, self.Bt.i)
+        #else:
+            #ic.Btrans_p(self.Bnnz, self.n, self.nx, update, self.colperm,
+                #self.B.x, self.B.j, self.B.i, self.Bt.x, self.Bt.j, self.Bt.i)
         return self.Bt
 
     def colamd(self, inverse = 0):
@@ -860,74 +908,64 @@ class icSystem:
     def connectivity(self):
         self.cj, self.ci = ic.symbolicAc(self.ic, self.natom)
 
-    def evalA(self, diag = 1, sort = 1, force = 0):
+    def evalA(self, diag = 1, sort = 0 , force = 0):
         if not hasattr(self, 'A') or force == 1:
-            if not hasattr(self, 'colperm'):
-                nnz = self.nx + 9*(self.ci[-1]/2)
-                if (diag == 0): nnz += self.nx
-                aj = N.zeros(nnz, nxInt)
-                ai = N.zeros(self.nx+1, nxInt)
-                ic.conn2crd(self.natom, diag, self.cj, self.ci, aj, ai)
-            else:
-                aj, ai = ic.conn2crd_p(self.natom, diag, self.cj, self.ci,
-                                       self.colperm, sort)
-            self.Annz = ai[-1]
-            if diag:
-                self.A = CSRd(n=self.nx, nnz=self.Annz, i=ai, j=aj, type=nxFloat)
-            else:
-                self.A = CSR(n=self.nx, m=self.nx, nnz=self.Annz, i=ai, j=aj, type=nxFloat)
-        if hasattr(self.A, 'd'):
-            ic.BxBt_d(self.nx, self.Bt.x, self.Bt.j, self.Bt.i, self.Annz,
-                      self.A.x, self.A.j, self.A.i, self.A.d)
-        else:
-            ic.BxBt(self.nx, self.Bt.x, self.Bt.j, self.Bt.i,
-                    self.A.x, self.A.j, self.A.i, self.Annz, 0)
+            from winak.curvilinear.numeric.SparseMatrix import AmuB
+            self.A = AmuB(self.evalBt(perm=0),self.B)
+            #if not hasattr(self, 'colperm'):
+                #nnz = self.nx + 9*(self.ci[-1]/2)
+                #if (diag == 0): nnz += self.nx
+                #aj = N.zeros(nnz, nxInt)
+                #ai = N.zeros(self.nx+1, nxInt)
+                #ic.conn2crd(self.natom, diag, self.cj, self.ci, aj, ai)
+            #else:
+                #aj, ai = ic.conn2crd_p(self.natom, diag, self.cj, self.ci,
+                                       #self.colperm, sort)
+            #self.Annz = ai[-1]
+            #if diag:
+                #self.A = CSRd(n=self.nx, nnz=self.Annz, i=ai, j=aj, type=nxFloat)
+            #else:
+                #self.A = CSR(n=self.nx, m=self.nx, nnz=self.Annz, i=ai, j=aj, type=nxFloat)
+        #if hasattr(self.A, 'd'):
+            #ic.BxBt_d(self.nx, self.Bt.x, self.Bt.j, self.Bt.i, self.Annz,
+                      #self.A.x, self.A.j, self.A.i, self.A.d)
+        #else:
+            #ic.BxBt(self.nx, self.Bt.x, self.Bt.j, self.Bt.i,
+                    #self.A.x, self.A.j, self.A.i, self.Annz, 0)
         return self.A
 
-    def cholesky(self, p = 10, eps = 1.0e-6, fout = 1, lambd = 0):
+    def cholesky(self, p = 10, eps = 1.0e-6, fout = 1, lambd = 0.0001):
         A = self.A
-        n = len(A.d)
-        if lambd > 0:
-            d = A.d + lambd
-        else:
-            d = A.d
-        nnz = self.Annz + p*n
-        if not hasattr(self, 'L') or len(self.L.x) < nnz:
-            self.L = CSRd(n, nnz, type = nxTypecode(A.x))
-        L = self.L
-        one = N.asarray(1, nxTypecode(L.i))
-        if not hasattr(self, 'dbltmp'):
-            self.dbltmp = N.zeros(2*n, nxFloat)
-            self.inttmp = N.zeros(3*n, nxInt32)
-        alpha = eps
-        L.x, L.d, L.i, L.j, alpha, info = \
-            dicfs(A.x, d, A.i, A.j, L.x, L.d, L.i, L.j,
-                  self.inttmp, self.dbltmp[:n], self.dbltmp[n:],
-                  p = p, alpha = alpha, offset = 1-A.offset)
-        self.dicfs_alpha = alpha
-        if alpha > eps:
-            warnings.warn(
-                "dicfs needs larger than expected scaling alpha = %f" % alpha, 
-                Warning)
-        if fout:    # 1-based output
-            L.offset = 1
-        else:
-            L.i -= one
-            L.j -= one
-            L.offset = 0
-        return info
+        from scikits.sparse.cholmod import cholesky
+        from winak.curvilinear.numeric.csrVSmsr import csrcsc
+        from scipy.sparse import csc_matrix
+        bx, bj, bi = csrcsc(A.n, A.m, A.x, A.j+1, A.i+1)
+        bj -= 1
+        bi -= 1
+        AA = csc_matrix((bx, bj, bi),shape=(A.n, A.m))
+        try:
+            self.factor = cholesky(AA,lambd, mode='supernodal')
+        except:
+            raise RuntimeError('A is not positive definite. Increase lambd')
+        self.L = self.factor
+        #Lx, Lj, Li, Lnnz, (n, m) = L.data, L.indices, L.indptr, L.nnz, L.shape
+        #nnz = Lnnz
+        #if not hasattr(self, 'L') or len(self.L.x) < nnz:
+            #self.L = CSR(n=n, m=m, nnz=Lnnz, i=Li, j=Lj, type=nxFloat)
+            #self.L.x = Lx
+        return 1 
 
     def inverseL(self, r):
         L = self.L
-        return inv_L_x_cd(L.x, L.d, L.i, L.j, r, L.offset)
+        return self.L.solve_L(r)
 
     def inverseLt(self, r):
         L = self.L
-        return inv_Lt_x_cd(L.x, L.d, L.i, L.j, r, L.offset)
+        return self.L.solve_Lt(r)
 
     def inverseA(self, r):
         L = self.L
-        return inv_LtL_x_cd(L.x, L.d, L.i, L.j, r, L.offset)
+        return self.L.solve_A(r)
 
     def precon_transp(self, x, y = None):
         if y is None:
@@ -955,8 +993,8 @@ class icSystem:
         self.connectivity()
         self.evalB()
         self.evalBt(perm = 0)
-        self.colamd(inverse=1)
-        self.evalBt()
+        #self.colamd(inverse=1)
+        #self.evalBt()
 
     @staticmethod
     def _printWarning(i, b_i, warnType):
@@ -1160,10 +1198,9 @@ class icSystem:
 
         assert False, "This point shouldn't be reached, there is a bug."
 
-
     def sparseBackIteration(self, q, maxiter = 100, eps = 1e-6, initialize = 1,
             # iceps = 1e-6,  # old value (too small for RIIS)
-            iceps = 1e-4, icp = 10, iclambda = 0, maxStep = 0.5, warn = True,
+            iceps = 1e-4, icp = 10, iclambda = 0.0001, maxStep = 0.5, warn = True,
             RIIS = True, RIIS_start = 20, RIIS_maxLength = 6, RIIS_dim = 4, 
             dampingThreshold = 0.1, maxEps = 1e-6):
         """see: J. Chem. Phys. 113 (2000), 5598"""
@@ -1171,6 +1208,7 @@ class icSystem:
 
         if warn: printWarning = self._printWarning
         else:    printWarning = lambda *x: None
+        
 
         self.biInit()
         icArrays = self.tmp_icArrays
@@ -1180,7 +1218,7 @@ class icSystem:
 
         dq = self.tmp_q
         dx = self.tmp_x
-        xn = self.xyz
+        xn = N.concatenate([self.xyz,self.cell],axis=0)
         if initialize: self.initA()
 
         # we call it once here, so we just need to update the values in the loop
@@ -1200,12 +1238,10 @@ class icSystem:
         while 1:
             n += 1
             qn = self()
-
             if RIIS: 
                 if not RIIS_on and n >= RIIS_start:
                     RIIS_on = True
                     # print("Turning on RIIS in step %i" %n)
-
             dq = N.subtract(q, qn, dq)
 
             # check phase 
@@ -1227,14 +1263,14 @@ class icSystem:
             sparseDampIC(printWarning, qn, dq, self.B, dampingThreshold, 
                                                                     *icArrays)
 
-            Bt = self.evalBt(update=1)
+            Bt = self.evalBt(update=1, perm=0)
             self.evalA()
             info = self.cholesky(eps=iceps, p=icp, lambd=iclambda)
             if info < 0:
                 raise ArithmeticError(
                     'Incomplete Cholesky decomposition failed: ' + `info`)
 
-            dx = self.inverseA(Bt(dq, dx))
+            dx = self.inverseA(Bt(dq))
 
             # self.dx.append(dx.copy()) # for DEBUGGING
 
@@ -1253,7 +1289,7 @@ class icSystem:
                 # print "doing RIIS step"
                 xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
             else:
-                xn = daxpy_p(1, xn, dx, self.colperm, 0)
+                xn += dx
 
             norm = N.dot(dx, dx)
             self.convergence = n, N.sqrt(norm/self.nx)
@@ -1264,7 +1300,7 @@ class icSystem:
 
 
             if (norm < neps) and N.linalg.norm(dx, ord = N.inf) < maxEps:
-                # print 'Back iteration converged after %i steps.' %n
+                #print 'Back iteration converged after %i steps.' %n
                 return self.convergence
             elif n >= maxiter:
                 for i in range(len(self.xyz)//3):
@@ -1286,7 +1322,7 @@ class icSystem:
     bi = backIteration
 
     def internalGradient(self, gx, maxiter = 10, eps = 1e-6, initialize = 1,
-            iceps = 1e-6, icp = 10, iclambda = 0):
+            iceps = 1e-6, icp = 10, iclambda = 0.0001):
         """see: J. Chem. Phys. 113 (2000), 5598"""
         if not hasattr(self, 'tmp_q'): self.tmp_q = N.zeros(self.n, nxFloat)
         if not hasattr(self, 'tmp_x'): self.tmp_x = N.zeros(self.nx, nxFloat)
@@ -1296,14 +1332,14 @@ class icSystem:
         gi = self.gi
         if initialize: self.initA()
         B = self.evalB(sort=1)
-        B.permuted(self.colperm)
-        Bt = self.evalBt()
+        #B.permuted(self.colperm)
+        Bt = self.evalBt(perm=0)
         A = self.evalA()
         info = self.cholesky(eps=iceps, p=icp, lambd=iclambda)
         if info < 0:
             raise ArithmeticError('Incomplete Cholesky decomposition failed: '
                     + `info`)
-        N.put(x, self.colperm, gx)  # permute gx to match the Matrix A
+        #N.put(x, self.colperm, gx)  # permute gx to match the Matrix A
         g0 = copy(x)
         gi = B(self.inverseA(x), gi)
         n = 0
@@ -1369,7 +1405,7 @@ class Periodic_icSystem(icSystem):
             self.xyz_pbc = xyz_pbc
         if cell is not None:
             self.cell = N.ravel(cell.astype(nxFloat))
-        else: self.cell = cell
+        else: self.cell = cell.flatten()
         if masses is not None:
             if len(masses) != self.natom:
                 raise IndexError("Array dimension of masses does not match natom")
@@ -1387,50 +1423,14 @@ class Periodic_icSystem(icSystem):
         self.connectivity()
         self.evalB(sort= 1)
         self.evalBt(perm = 0)
-        self.colamd(inverse=1)
-        self.evalBt()
+        #self.colamd(inverse=1)
+        #self.evalBt()
     
     def evalB(self, sort = 0):
         if not hasattr(self, 'B'):
             self.B = CSR(n=self.n, m=self.nx+9, nnz=self.Bnnz, type = nxFloat)
         ic.Bmatrix_pbc(self.nx, self.xyz_pbc, self.ic, self.B.x, self.B.j, self.B.i, sort)
         return self.B
-
-    def evalBt(self, update = 0, perm = 1):
-        if not hasattr(self, 'Bt'):
-            self.Bt = CSR(n=self.nx+9, m=self.n, nnz=self.Bnnz, type = nxFloat)
-        if not hasattr(self, 'colperm') or not perm:
-            ic.Btrans(self.Bnnz, self.n, self.nx+9, update, self.B.x, self.B.j,
-                self.B.i, self.Bt.x, self.Bt.j, self.Bt.i)
-        else:
-            ic.Btrans_p(self.Bnnz, self.n, self.nx+9, update, self.colperm,
-                self.B.x, self.B.j, self.B.i, self.Bt.x, self.Bt.j, self.Bt.i)
-        return self.Bt
-   
-    #TO BE FIXED
-    def evalA(self, diag = 1, sort = 1, force = 0):
-        if not hasattr(self, 'A') or force == 1:
-            if not hasattr(self, 'colperm'):
-                nnz = self.nx + 9 + 9*(self.ci[-1]/2)
-                if (diag == 0): nnz += self.nx
-                aj = N.zeros(nnz, nxInt)
-                ai = N.zeros(self.nx+1, nxInt)
-                ic.conn2crd(self.natom, diag, self.cj, self.ci, aj, ai)
-            else:
-                aj, ai = ic.conn2crd_p(self.natom, diag, self.cj, self.ci,
-                                       self.colperm, sort)
-            self.Annz = ai[-1]
-            if diag:
-                self.A = CSRd(n=self.nx+9, nnz=self.Annz, i=ai, j=aj, type=nxFloat)
-            else:
-                self.A = CSR(n=self.nx+9, m=self.nx+9, nnz=self.Annz, i=ai, j=aj, type=nxFloat)
-        if hasattr(self.A, 'd'):
-            ic.BxBt_d(self.nx, self.Bt.x, self.Bt.j, self.Bt.i, self.Annz,
-                      self.A.x, self.A.j, self.A.i, self.A.d)
-        else:
-            ic.BxBt(self.nx, self.Bt.x, self.Bt.j, self.Bt.i,
-                    self.A.x, self.A.j, self.A.i, self.Annz, 0)
-        return self.A
 
     def connectivity(self):
         self.cj, self.ci = ic.symbolicAc(self.ic, 8*self.natom)
@@ -1451,7 +1451,7 @@ class Periodic_icSystem(icSystem):
         
         if not hasattr(self, 'crd'): self.crd = N.zeros(self.n, nxFloat)
         return ic.internals(xyz_pbc, self.ic, self.crd)
-
+    
     def biInit(self):
         if not hasattr(self, 'tmp_cell'): self.tmp_cell = N.zeros(9, nxFloat)
         icSystem.biInit(self)
@@ -1497,14 +1497,11 @@ class Periodic_icSystem(icSystem):
 
         dq = self.tmp_q
         dx = self.tmp_x
-        dc = self.tmp_cell
-        xn = self.xyz
-        cn = self.cell
+        xn = N.concatenate([self.xyz, self.cell], axis=0)
         n = 0
         nScalings = 0 
         neps = eps*eps*self.nx
         xList = [] # geoms for RIIS
-        cList = [] # cells for RIIS
         dxList = [] # error vectors for RIIS
         RIIS_on = False
 
@@ -1528,7 +1525,6 @@ class Periodic_icSystem(icSystem):
                 if not RIIS_on and n >= RIIS_start:
                     RIIS_on = True
                     # print("Turning on RIIS in step %i" %n)
-
             # check phase 
             if torsions is not None: dq = ic.dphi_mod_2pi(dq, torsions)
 
@@ -1551,46 +1547,37 @@ class Periodic_icSystem(icSystem):
             A = N.dot(N.transpose(B), B)
             self.Ainv = regularizedInverse(A, eps = inveps)
             #this dx is the displacement vector in x and the 3 lattice vectors
-            tmp = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
-            dx = tmp [:-9]
-            dc = tmp [-9:]
+            dx = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
             # self.dx.append(dx.copy()) # for DEBUGGING
 
             if RIIS and n >= RIIS_start - RIIS_maxLength:
                 dxList.append(dx.copy().reshape((-1,3))) # store dx for RIIS
-                dcList.append(dc.copy().reshape((-1,3))) # store dc for RIIS
                 if len(xList) > 0:
                     xList.append(
                         rigidBodySuperposition(
                             xn.reshape((-1,3)), xList[-1]
                                 )[0]
                             )
-                    cList.append(
-                        rigidBodySuperposition(
-                            cn.reshape((-1,3)), cList[-1]
-                                )[0]
-                            )
                 else: 
                     xList.append(xn.reshape((-1,3)))
-                    cList.append(cn.reshape((-1,3)))
 
             if RIIS_on:
                 xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
-                cn[:] = doRIIS(cList, dcList, dim = RIIS_dim)
+                self.xyz = xn[:-9]
+                self.cell = xn[-9:]
             else:
                 xn += dx
-                cn += dc
+                self.xyz = xn[:-9]
+                self.cell = xn[-9:]
 
-            norm = N.dot(tmp, tmp)
+            norm = N.dot(dx, dx)
             self.convergence = n, N.sqrt(norm/(self.nx+9))
             # remove old data not needed anymore for RIIS
             if len(xList) >= RIIS_maxLength:
                 dxList = dxList[-RIIS_maxLength:]
-                dcList = dcList[-RIIS_maxLength:]
                 xList = xList[-RIIS_maxLength:]
-                cList = cList[-RIIS_maxLength:]
 
-            if (norm < neps) and N.linalg.norm(tmp, ord = N.inf) < maxEps:
+            if (norm < neps) and N.linalg.norm(dx, ord = N.inf) < maxEps:
                 return self.convergence
             elif n >= maxiter:
                 for i in range(len(self.xyz)//3):
@@ -1608,6 +1595,136 @@ class Periodic_icSystem(icSystem):
 
         assert False, "This point shouldn't be reached, there is a bug."
 
+    def sparseBackIteration(self, q, maxiter = 100, eps = 1e-6, initialize = 1,
+             #iceps = 1e-6,  # old value (too small for RIIS)
+            iceps = 1e-4, icp = 10, iclambda = 0.0001, maxStep = 0.5, warn = True,
+            RIIS = True, RIIS_start = 20, RIIS_maxLength = 6, RIIS_dim = 4, 
+            dampingThreshold = 0.1, maxEps = 1e-6):
+        """see: J. Chem. Phys. 113 (2000), 5598"""
+        assert isinstance(maxStep, float)
+
+        if warn: printWarning = self._printWarning
+        else:    printWarning = lambda *x: None
+
+        self.biInit()
+        icArrays = self.tmp_icArrays
+
+        # self.q = q # DEBUGGING
+        # self.dx = [] # DEBUGGING
+
+        dq = self.tmp_q
+        dx = self.tmp_x
+        dc = self.tmp_cell
+        dx = N.concatenate([self.tmp_x, self.tmp_cell], axis=0)
+        xn = N.concatenate([self.xyz, self.cell], axis=0)
+        #xn = self.xyz
+        #cn = self.cell
+        if initialize:self.initA()
+
+        # we call it once here, so we just need to update the values in the loop
+        self.evalBt(perm=0)   
+        n = 0
+        nScalings = 0 
+        neps = eps*eps*self.nx
+        xList = [] # geoms for RIIS
+        dxList = [] # error vectors for RIIS
+        RIIS_on = False
+
+        normalizeIC(q, *icArrays)
+
+        if self.torsions is not None: torsions = self.torsions
+        else:                         torsions = None
+
+        while 1:
+            n += 1
+            qn = self()
+
+            if RIIS: 
+                if not RIIS_on and n >= RIIS_start:
+                    RIIS_on = True
+                    # print("Turning on RIIS in step %i" %n)
+
+            dq = N.subtract(q, qn, dq)
+
+            # check phase 
+            if torsions is not None: dq = ic.dphi_mod_2pi(dq, torsions)
+
+            # step width control
+            dqMax = N.max(N.abs(dq))
+            if dqMax > maxStep:
+                # print("scaling step %i" %n)
+                nScalings += 1
+                dq *= maxStep/dqMax
+
+            self.evalB()
+
+            # check all coordinates, if they are close to a singularity
+            # i.e. stretches -> 0. , bends -> pi, bends of tors -> 0, pi
+            # out of plains -> -pi/2, pi/2 or bends of out of plains -> 0., pi
+            # If they get close, damp them away with 
+            sparseDampIC(printWarning, qn, dq, self.B, dampingThreshold, 
+                                                                    *icArrays)
+
+            Bt = self.evalBt(update=1, perm=0)
+            self.evalA()
+            info = self.cholesky(eps=iceps, p=icp, lambd=iclambda)
+            if info < 0:
+                raise ArithmeticError(
+                    'Incomplete Cholesky decomposition failed: ' + `info`)
+
+            dx = self.inverseA(Bt(dq))
+            # self.dx.append(dx.copy()) # for DEBUGGING
+
+            if RIIS and n >= RIIS_start - RIIS_maxLength:
+                dxList.append(dx.copy().reshape((-1,3))) # store dx for RIIS
+                if len(xList) > 0:
+                    xList.append(
+                        rigidBodySuperposition(
+                            xn.reshape((-1,3)), xList[-1]
+                                )[0]
+                            )
+                else: 
+                    xList.append(xn.reshape((-1,3)))
+
+            if RIIS_on:
+                # print "doing RIIS step"
+                xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
+                self.xyz = xn[:-9]
+                self.cell = xn[-9:]
+            else:
+                xn += dx 
+                self.xyz = xn[:-9]
+                self.cell = xn[-9:]
+            
+            norm = N.dot(dx, dx)
+            self.convergence = n, N.sqrt(norm/self.nx+9)
+            # remove old data not needed anymore for RIIS
+            if len(xList) >= RIIS_maxLength:
+                dxList = dxList[-RIIS_maxLength:]
+                xList = xList[-RIIS_maxLength:]
+
+
+            if (norm < neps) and N.linalg.norm(dx, ord = N.inf) < maxEps:
+                # print 'Back iteration converged after %i steps.' %n
+                return self.convergence
+            elif n >= maxiter:
+                for i in range(len(self.xyz)//3):
+                    ii = i*3
+                    for j in range(i):
+                        jj = j*3
+                        d = N.linalg.norm(xn[ii:ii+3] - xn[jj:jj+3])
+                        if d < 1.0:
+                            warnings.warn(
+                                "WARNING: Nuclear fusion of atoms " + 
+                                "%i and %i is imminent (distance " %(i, j) +
+                                "is %1.2f)." %d, Warning)
+                print("Made %i steps and scaled %i of them" %(n, nScalings))
+                raise ValueError('No convergence!')
+
+        assert False, "This point shouldn't be reached, there is a bug."
+    
+    backIteration = sparseBackIteration
+    bi = backIteration
 
 def doRIIS(x, e, dim = 3):
     """
@@ -1637,6 +1754,8 @@ def doRIIS(x, e, dim = 3):
         eps = s[dim] # eps is determined by the singular values 
         s2 = s*s 
         s2 += eps*eps
+        print 's ',s
+        print 's2 ',s2
         s /= s2
         Mi = N.dot(U, s[:,N.newaxis]*VT) # regularized inverse
         w = N.dot(Mi, b) # approximate weights

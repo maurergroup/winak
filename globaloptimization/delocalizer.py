@@ -3,11 +3,13 @@ from ase.atoms import Atoms
 from winak.curvilinear.InternalCoordinates import icSystem, Periodic_icSystem
 from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
 from winak.curvilinear.InternalCoordinates import PeriodicValenceCoordinateGenerator as PVCG
-from winak.curvilinear.numeric.SparseMatrix import AmuB, svdB, eigB
+from winak.curvilinear.numeric.SparseMatrix import AmuB, svdB, eigB, CSR
+from scipy.sparse import csr_matrix
 from scipy import linalg as la
 
 class Delocalizer:
-    def __init__(self,atoms_obj,weighted=False,icList=None, periodic=False, dense=False):
+    def __init__(self,atoms_obj,weighted=True,icList=None, periodic=False, 
+            dense=False, normalized=False, threshold=0.5):
         """This generates the delocalized internals as described in the
         paper.
         atoms_obj: a properly initialized ase Atoms object (positions,
@@ -25,66 +27,95 @@ class Delocalizer:
         self.u2=None
         self.dense = dense
         self.periodic = periodic
+        self.normalized = normalized
+        self.weighted = weighted
         x0=self.x_ref.flatten()
         self.natoms=len(self.masses)
         #VCG constructs primitive internals (bond length,bend,torsion,oop)
-        import gc
-        gc.collect()
         if icList is None:
             if periodic:
-                self.vcg=PVCG(atoms=self.atoms,masses=self.masses, cell=self.cell)
+                self.vcg=PVCG(atoms=self.atoms,masses=self.masses, cell=self.cell, \
+                        threshold=threshold)
                 self.iclist=self.vcg(x0)
             else:
-                self.vcg=VCG(atoms=self.atoms,masses=self.masses)
+                self.vcg=VCG(atoms=self.atoms,masses=self.masses, \
+                        threshold=threshold)
                 self.iclist=self.vcg(x0)
         else:
             self.iclist=icList
+
+        self.initIC()
+        self.evalG()
+        if normalized:
+            self.normalize_U()
+
+    def initIC(self):
+        periodic = self.periodic
+        dense = self.dense
+        x0 = self.x_ref.flatten()
         if periodic:
             self.ic=Periodic_icSystem(self.iclist, len(self.atoms), 
                     masses=self.masses, xyz=x0, cell=self.cell)
         else:
             self.ic=icSystem(self.iclist,len(self.atoms),
                               masses=self.masses,xyz=x0)
-        self.ic.backIteration = self.ic.denseBackIteration
-        #no need to eval A
-        #self.ic.evalA()
-        self.ic.evalB()
+        if dense:
+            self.ic.backIteration = self.ic.denseBackIteration
+        else:
+            self.ic.backIteration = self.ic.sparseBackIteration
 
+    def evalG(self):
+        dense = self.dense
+        periodic = self.periodic
+        weighted = self.weighted
+        normalized = self.normalized
+
+        if periodic:
+            self.m=np.eye(3*self.natoms+9)
+        else:
+            self.m=np.eye(3*self.natoms)
         #generate 1/M matrix for mass weighed internals
         #use with care!
         if weighted:
-            self.m=[]
             for i in range(self.natoms):
-                mtemp=1/self.masses[i]
+                mtemp=1./self.masses[i]
                 for j in range(3):
-                    mrow=np.zeros(self.natoms*3)
-                    mrow[i*3+j]=mtemp
-                    self.m.append(mrow.copy())
-            self.m=np.asarray(self.m)
+                    self.m[i*3+j,i*3+j]=mtemp
+            if periodic:
+                mtemp = self.masses.sum()
+                for i in range(1,10):
+                    self.m[-i,-i]=1./mtemp
+        if periodic:
+            k = 3*self.natoms
         else:
-            self.m=np.identity(self.natoms*3)
-
-        #thctk uses sparce matrices
+            k = 3*self.natoms-6
+        if dense:
+            pass
+        else:
+            M = self.m
+            self.m = csr_matrix(self.m)
+            self.m = CSR(n = self.m.shape[0], m = self.m.shape[0],
+                    nnz = self.m.nnz, i= self.m.indptr,
+                    j=self.m.indices, x= self.m.data)
         #b matrix is defined as delta(q)=b*delta(x)
         #where q are primitive internals and x cartesian coords
         if dense:
-            self.b=self.ic.B.full()
-            self.g=np.dot(self.b,self.m)
-            self.g=np.dot(self.g,self.b.transpose())
-
-            v2, self.ww,self.u=np.linalg.svd(self.g)
-            self.u = self.u[:3*len(self.atoms_object)-6]
+            b=self.ic.B.full()
+            g=np.dot(b,self.m)
+            g=np.dot(g,b.transpose())
+            v2, self.ww,self.u=np.linalg.svd(g)
+            self.uu =self.u.copy()
+            self.u = self.u[:k]
+            self.ww = self.ww[:k]
         else:
-            if periodic:
-                k = 3*len(self.atoms_object)
-            else:
-                k = 3*len(self.atoms_object)-6
             #Sparse algorithm
-            self.b = self.ic.B
-            bt = self.ic.evalBt(perm=0)
-            self.g = AmuB(self.b,bt)
-            v2, self.ww, self.u = svdB(self.g, k=k)
-            self.u =self.u[:k]
+            g = AmuB(self.ic.B,self.m)
+            g = AmuB(g, self.ic.Bt)
+            #g = AmuB(self.ic.B, self.ic.Bt)
+            self.v2, self.ww, self.u = svdB(g, k=k)
+            self.ww = self.ww[:k][::-1]
+            self.uu =self.u.copy()
+            self.u =self.u[:k][::-1]
 
 
     def get_U(self):
@@ -102,6 +133,21 @@ class Delocalizer:
             e.append(d)
         self.constrain(e)
 
+    def normalize_U(self, v=None):
+        #TESTING
+        if v is None:
+            u = self.uu
+        else:
+            u = v
+        mu = np.dot(u, u.transpose())
+        vv, ee, uu = np.linalg.svd(mu)
+        if self.periodic:
+            self.u = uu[:3*self.natoms] 
+        else:
+            self.u = uu[:3*self.natoms-6]
+        #for i, vec in enumerate(self.u):
+            #norm = np.linalg.norm(vec)*np.sqrt(self.ww[i])
+            #u[i,:] /= norm
 
     def constrain(self,constraint):
         alright=True

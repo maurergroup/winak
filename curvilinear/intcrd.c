@@ -661,6 +661,28 @@ int conn2crd(int natom, int diag, const int *cj, const int *ci,
 
 /* }}} */
 
+/* {{{ qr_solve */
+/*THCTK_PRIVATE*/
+/*int qr_solve(double const int *cint, int *nint, int *nnz) {*/
+
+    /*int type, n;*/
+
+    /**nint = 0;*/
+    /**nnz = 0;*/
+
+    /*while (1) {*/
+        /*type = *cint++;*/
+        /*if (type > NINTERNALS) return 1;    [> unknown internal coordinate type <]*/
+        /*if (type <= 0) return 0;            [> end of list, everything went fine <]*/
+        /*n = atoms_per_internal[type];*/
+        /*cint += n;*/
+        /*(*nnz) += 3*n;*/
+        /*(*nint)++;*/
+    /*}*/
+/*}*/
+
+/* }}} */
+
 /* {{{ Bmatrix_nnz */
 
 THCTK_PRIVATE
@@ -701,7 +723,9 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
     while (1) {
         type = *cint++;
         if (type > NINTERNALS) return 1;    /* unknown internal coordinate type */
-        if (type <= 0) return 0;            /* end of list, everything went fine */
+        if (type <= 0) {
+            return 0;            /* end of list, everything went fine */
+        }
         n = atoms_per_internal[type];
         //every type gets 3*n elements
         nnzsum = 0; nnzsum += 3*n;
@@ -718,6 +742,9 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
                 if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
                 if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
                 if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if (txset) {nnzsum += 3;}
+                if (tyset) {nnzsum += 3;}
+                if (tzset) {nnzsum += 3;}
                 break;
             case 2:
                 i1 = (*cint++)-1; i2 = (*cint++)-1; i3 = (*cint++)-1;
@@ -736,6 +763,9 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
                 if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
                 if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
                 if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if (txset) {nnzsum += 3;}
+                if (tyset) {nnzsum += 3;}
+                if (tzset) {nnzsum += 3;}
                 break;
             case 3:
                 i1 = (*cint++)-1; i2 = (*cint++)-1; i3 = (*cint++)-1; i4 = (*cint++)-1;
@@ -767,6 +797,9 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
                 if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
                 if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
                 if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if (txset) {nnzsum += 3;}
+                if (tyset) {nnzsum += 3;}
+                if (tzset) {nnzsum += 3;}
                 break;
             case 4:
                 i1 = (*cint++)-1; i2 = (*cint++)-1; i3 = (*cint++)-1; i4 = (*cint++)-1;
@@ -798,13 +831,13 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
                 if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
                 if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
                 if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if (txset) {nnzsum += 3;}
+                if (tyset) {nnzsum += 3;}
+                if (tzset) {nnzsum += 3;}
                 break;
             default:
                 break;
         }
-        if (txset) {nnzsum += 3;}
-        if (tyset) {nnzsum += 3;}
-        if (tzset) {nnzsum += 3;}
         /*cint += n; */
         (*nnz) += nnzsum;
         (*nint)++;
@@ -889,7 +922,7 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                           vec1[2]= (*(b+num+2));
 #define SETB(num, vec1)   (*(b+num+0)) = vec1[0]; \
                           (*(b+num+1)) = vec1[1]; \
-                          (*(b+num+2)) = vec1[2];
+                          (*(b+num+2)) = vec1[2]; \
 
 #define BIDT(num) *jb++ = nx+num; *jb++ = nx+num+1; *jb++ = nx+num+2;
 
@@ -954,7 +987,7 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                         BIDX(p1); BIDX(p3);
                         pad -= 3;
                     }
-                    if (i2%nx==i3%nx) {
+                    else if (i2%nx==i3%nx) {
                         VADD(dsum,d2,d3);
                         SETB(0,d1); SETB(3,dsum);
                         BIDX(p1); BIDX(p2);
@@ -1016,25 +1049,25 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                         BIDX(p1); BIDX(p4);
                         pad -= 6;
                     }
-                    if (i1%nx==i2%nx && i2%nx==i4%nx) {
+                    else if (i1%nx==i2%nx && i2%nx==i4%nx) {
                         VADD(dsum,d1,d2); VADD(dsum,dsum,d4);
                         SETB(0,dsum); SETB(3,d3);
                         BIDX(p1); BIDX(p3);
                         pad -= 6;
                     }
-                    if (i2%nx==i3%nx && i3%nx==i4%nx) {
+                    else if (i2%nx==i3%nx && i3%nx==i4%nx) {
                         VADD(dsum,d2,d3); VADD(dsum,dsum,d4);
                         SETB(3,d1); SETB(0,dsum);
                         BIDX(p1); BIDX(p2);
                         pad -= 6;
                     }
-                    if (i1%nx==i3%nx && i3%nx==i4%nx) {
+                    else if (i1%nx==i3%nx && i3%nx==i4%nx) {
                         VADD(dsum,d1,d3); VADD(dsum,dsum,d4);
                         SETB(0,dsum); SETB(3,d2);
                         BIDX(p1); BIDX(p2);
                         pad -= 6;
                     }
-                    if (i1%nx==i2%nx && i3%nx==i4%nx) {
+                    else if (i1%nx==i2%nx && i3%nx==i4%nx) {
                         VADD(dsum,d1,d2);
                         SETB(0,dsum); 
                         VADD(dsum,d3,d4);
@@ -1042,7 +1075,7 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                         BIDX(p1); BIDX(p3);
                         pad -= 6;
                     }
-                    if (i1%nx==i3%nx && i2%nx==i4%nx) {
+                    else if (i1%nx==i3%nx && i2%nx==i4%nx) {
                         VADD(dsum,d1,d3);
                         SETB(0,dsum); 
                         VADD(dsum,d2,d4);
@@ -1050,7 +1083,7 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                         BIDX(p1); BIDX(p2);
                         pad -= 6;
                     }
-                    if (i1%nx==i4%nx && i2%nx==i3%nx) {
+                    else  { //(i1%nx==i4%nx && i2%nx==i3%nx) {
                         VADD(dsum,d1,d4);
                         SETB(0,dsum); 
                         VADD(dsum,d2,d3);
@@ -1068,25 +1101,25 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                         BIDX(p1); BIDX(p3); BIDX(p4);
                         pad -= 3;
                     }
-                    if (i1%nx==i3%nx) {
+                    else if (i1%nx==i3%nx) {
                         VADD(dsum,d1,d3);
                         SETB(0,dsum); SETB(3,d2); SETB(6,d4);
                         BIDX(p1); BIDX(p3); BIDX(p4);
                         pad -= 3;
                     }
-                    if (i1%nx==i4%nx) {
+                    else if (i1%nx==i4%nx) {
                         VADD(dsum,d1,d4);
                         SETB(0,dsum); SETB(3,d2); SETB(6,d3);
                         BIDX(p1); BIDX(p2); BIDX(p3);
                         pad -= 3;
                     }
-                    if (i2%nx==i3%nx) {
+                    else if (i2%nx==i3%nx) {
                         VADD(dsum,d2,d3);
                         SETB(0,d1); SETB(3,dsum); SETB(6,d4);
                         BIDX(p1); BIDX(p2); BIDX(p4);
                         pad -= 3;
                     }
-                    if (i2%nx==i4%nx) {
+                    else if (i2%nx==i4%nx) {
                         VADD(dsum,d2,d4);
                         SETB(0,d1); SETB(3,dsum); SETB(6,d3);
                         BIDX(p1); BIDX(p2); BIDX(p3);
@@ -1153,25 +1186,25 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                         BIDX(p1); BIDX(p4);
                         pad -= 6;
                     }
-                    if (i1%nx==i2%nx && i2%nx==i4%nx) {
+                    else if (i1%nx==i2%nx && i2%nx==i4%nx) {
                         VADD(dsum,d1,d2); VADD(dsum,dsum,d4);
                         SETB(0,dsum); SETB(3,d3);
                         BIDX(p1); BIDX(p3);
                         pad -= 6;
                     }
-                    if (i2%nx==i3%nx && i3%nx==i4%nx) {
+                    else if (i2%nx==i3%nx && i3%nx==i4%nx) {
                         VADD(dsum,d2,d3); VADD(dsum,dsum,d4);
                         SETB(3,d1); SETB(0,dsum);
                         BIDX(p1); BIDX(p2);
                         pad -= 6;
                     }
-                    if (i1%nx==i3%nx && i3%nx==i4%nx) {
+                    else if (i1%nx==i3%nx && i3%nx==i4%nx) {
                         VADD(dsum,d1,d3); VADD(dsum,dsum,d4);
                         SETB(0,dsum); SETB(3,d2);
                         BIDX(p1); BIDX(p2);
                         pad -= 6;
                     }
-                    if (i1%nx==i2%nx && i3%nx==i4%nx) {
+                    else if (i1%nx==i2%nx && i3%nx==i4%nx) {
                         VADD(dsum,d1,d2);
                         SETB(0,dsum); 
                         VADD(dsum,d3,d4);
@@ -1179,7 +1212,7 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                         BIDX(p1); BIDX(p3);
                         pad -= 6;
                     }
-                    if (i1%nx==i3%nx && i2%nx==i4%nx) {
+                    else if (i1%nx==i3%nx && i2%nx==i4%nx) {
                         VADD(dsum,d1,d3);
                         SETB(0,dsum); 
                         VADD(dsum,d2,d4);
@@ -1187,7 +1220,7 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                         BIDX(p1); BIDX(p2);
                         pad -= 6;
                     }
-                    if (i1%nx==i4%nx && i2%nx==i3%nx) {
+                    else { //(i1%nx==i4%nx && i2%nx==i3%nx) {
                         VADD(dsum,d1,d4);
                         SETB(0,dsum); 
                         VADD(dsum,d2,d3);
@@ -1205,25 +1238,25 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                         BIDX(p1); BIDX(p3); BIDX(p4);
                         pad -= 3;
                     }
-                    if (i1%nx==i3%nx) {
+                    else if (i1%nx==i3%nx) {
                         VADD(dsum,d1,d3);
                         SETB(0,dsum); SETB(3,d2); SETB(6,d4);
                         BIDX(p1); BIDX(p3); BIDX(p4);
                         pad -= 3;
                     }
-                    if (i1%nx==i4%nx) {
+                    else if (i1%nx==i4%nx) {
                         VADD(dsum,d1,d4);
                         SETB(0,dsum); SETB(3,d2); SETB(6,d3);
                         BIDX(p1); BIDX(p2); BIDX(p3);
                         pad -= 3;
                     }
-                    if (i2%nx==i3%nx) {
+                    else if (i2%nx==i3%nx) {
                         VADD(dsum,d2,d3);
                         SETB(0,d1); SETB(3,dsum); SETB(6,d4);
                         BIDX(p1); BIDX(p2); BIDX(p4);
                         pad -= 3;
                     }
-                    if (i2%nx==i4%nx) {
+                    else if (i2%nx==i4%nx) {
                         VADD(dsum,d2,d4);
                         SETB(0,d1); SETB(3,dsum); SETB(6,d3);
                         BIDX(p1); BIDX(p2); BIDX(p3);
@@ -1497,6 +1530,102 @@ int BxBt(int n, const vtype *b, const int *jb, const int *ib,
 
 /* }}} */
 
+/* {{{ BtxB */
+
+THCTK_PRIVATE
+int BtxB(int n, const vtype *b, const int *jb, const int *ib,
+    vtype *a, int *ja, int* ia, int *nnz, int flag) {
+
+    /*
+     * This routine computes the symmetric (mxm) normal matrix G corresponding
+     * to a sparse rectangular (nxm) matrix B given in CSR format with column
+     * indices in increasing order. Formally:
+     *          A = B^T B
+     * The upper triangle of G is returned in ordered CSR format.
+     */
+
+    int i, j, ip, ibeg=0, iend=0, jp, jend;
+    vtype sum;
+
+    if (flag == 0) {
+        /* we know the structure of G and only update the numerical values */
+        int k;
+        for (k=0, i=-1; k < *nnz; k++) { /* iterate over the elements of G */
+            j = ja[k];
+            while (k >= *ia) { /* did we reach a new row? */
+                ia++;
+                i++;
+                ibeg = ib[i];
+                iend = ib[i+1];
+            }
+            ip = ibeg;
+            sum = 0; /* accumulate the dot product of rows i and j */
+            if (i == j) {   /* diagonal element */
+                while (ip < iend) {
+                    register vtype t = b[ip++];
+                    sum += t*t;
+                }
+            } else {
+                jp = ib[j];
+                jend = ib[j+1];
+                while (ip < iend && jp < jend) {
+                    /* compute the intersection of column indices */
+                    if      (jb[ip] > jb[jp])   jp++;
+                    else if (jb[ip] < jb[jp])   ip++;
+                    else                        sum += b[ip++] * b[jp++];
+                }
+            }
+            *a++ = sum;
+        }
+    } else {
+        /* for (flag == 1) only nnz and the row indices are determined */
+        *nnz = 0;
+        for (i=0; i<n; i++) {
+            ibeg = ib[i];
+            iend = ib[i+1];
+            *ia++ = *nnz;    /* start a new row */
+
+            ip = ibeg;       /* compute the diagonal element */
+            sum = 0;
+            while (ip < iend) {
+                register vtype t = b[ip++];
+                sum += t*t;
+            }
+            if (sum) {
+                if (flag != 1) {
+                    *a++ = sum;
+                    *ja++ = i;
+                }
+                (*nnz)++;
+            }
+
+            for (j=i+1; j<n; j++) {   /* compute the strict upper triangle */
+                jend = ib[j+1];
+                ip = ibeg;
+                jp = ib[j];
+                sum = 0; /* accumulate the dot product of rows i and j */
+                while (ip < iend && jp < jend) {
+                    /* compute the intersection of column indices */
+                    if      (jb[ip] > jb[jp])   jp++;
+                    else if (jb[ip] < jb[jp])   ip++;
+                    else                        sum += b[ip++] * b[jp++];
+                }
+                if (sum) {
+                    if (flag != 1) {
+                        *a++ = sum;
+                        *ja++ = j;
+                    }
+                    (*nnz)++;
+                }
+            }
+        }
+        *ia = *nnz;
+    }
+
+    return 0;
+}
+
+/* }}} */
 /* }}} */
 
 /* {{{ python interface */
@@ -1846,6 +1975,33 @@ THCTKFUN(_intcrd, BxBt)
 
 }
 
+THCTKDOC(_intcrd, BtxB) =
+"BtxB(n, b, jb, ib, a, ja, ia, nnz, flag)\n\n"
+"This routine computes the symmetric (mxm) normal matrix G corresponding\n"
+"to a sparse rectangular (nxm) matrix B given in CSR format with column\n"
+"indices in increasing order. Formally:\n"
+"         A = B^T B\n"
+"The upper triangle of G is returned in ordered CSR format.";
+
+THCTKFUN(_intcrd, BtxB)
+{
+
+    PyArrayObject *b, *jb, *ib, *a, *ja, *ia;
+    int n, nnz, flag;
+
+    if (!PyArg_ParseTuple(args, "iO!O!O!O!O!O!ii", &n,
+        &PyArray_Type, &b, &PyArray_Type, &jb, &PyArray_Type, &ib,
+        &PyArray_Type, &a, &PyArray_Type, &ja, &PyArray_Type, &ia,
+        &nnz, &flag))
+        return NULL;
+
+    if ( BtxB(n, (double *) b->data, (int *) jb->data, (int *) ib->data,
+                 (double *) a->data, (int *) ja->data, (int *) ia->data,
+                 &nnz, flag) ) return NULL;
+
+    return Py_BuildValue("i", nnz);
+
+}
 
 
 THCTKDOC(_intcrd, dphi_mod_2pi) =
@@ -1903,6 +2059,7 @@ THCTKFUN(_intcrd, dphi_mod_2pi)
 static struct PyMethodDef _intcrd_methods[] = {
     THCTKDEF(_intcrd, dphi_mod_2pi)
     THCTKDEF(_intcrd, BxBt)
+    THCTKDEF(_intcrd, BtxB)
     THCTKDEF(_intcrd, BxBt_d)
     THCTKDEF(_intcrd, Btrans)
     THCTKDEF(_intcrd, Btrans_p)

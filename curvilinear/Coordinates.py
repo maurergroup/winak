@@ -695,18 +695,18 @@ class DelocalizedCoordinates(InternalEckartFrameCoordinates):
             tries=1
             fac=0.01
             while not worked:
-                try:
+                #try:
                     ss=N.zeros(len(self.s))
                     ss[i]=fac
                     dd=(self.getX(ss)-self.x0).reshape(-1,3)
                     dd/=N.max(N.abs(dd))
                     w.append(dd)
                     worked=True
-                except:
-                    tries+=1
-                    fac*=2
-                    if tries>40:
-                        raise ValueError('NO convergence')
+                #except:
+                    #tries+=1
+                    #fac*=2
+                    #if tries>40:
+                        #raise ValueError('NO convergence')
         w=N.asarray(w)
         return w
 
@@ -1299,20 +1299,20 @@ class PeriodicCoordinates(InternalCoordinates):
         for i in range(0,len(ss)):
             worked=False
             tries=1
-            fac=0.0001
+            fac=0.001
             while not worked:
-                try:
+                #try:
                     ss=N.zeros(len(self.s))
                     ss[i]=fac
                     dd=(self.getX(ss)-self.x0).reshape(-1,3)
                     dd/=N.max(N.abs(dd))
                     w.append(dd)
                     worked=True
-                except:
-                    tries+=1
-                    fac*=2
-                    if tries>40:
-                        raise ValueError('NO convergence after 40 tries')
+                #except:
+                    #tries+=1
+                    #fac*=2
+                    #if tries>40:
+                        #raise ValueError('NO convergence after 40 tries')
         vectmp=w[0:6]
         del w[0:6]
         for vtmp in vectmp:

@@ -10,34 +10,35 @@ from ase.lattice.cubic import FaceCenteredCubic as fcc
 from ase.lattice.surface import fcc100, fcc111
 import numpy as np
 
-#system = fcc(directions=[[1,0,0], [0,1,0], [0,0,1]],
-            #size=(1,1,1), symbol='Pd' )
 system = fcc100('Pd', (2,2,2), a=3.94, vacuum=10.)
 
-
-#system.cell[1,1] = 10
-
 natoms =len(system) 
-
+np.set_printoptions(threshold=np.nan)
 import time
 start=time.time()
 print start
-print 'periodic'
 
-d = Delocalizer(system, periodic=True, dense=False, weighted=True)
-print time.time() - start
+d = Delocalizer(system, periodic=True, dense=False, weighted=False, \
+                add_cartesians = True)
+
+print 'timing 1 ',time.time() - start
 
 coords = PC(d.x_ref.flatten(),d.masses,unit=1.0,atoms=d.atoms,ic=d.ic, Li=d.get_U(),
-        biArgs={'iclambda':1e-6, 'RIIS': False, 'maxiter': 500})
+        biArgs={'iclambda':1e-8, 'RIIS': True, 'maxiter': 100, 'eps': 1e-6, 'maxEps':1e-6})
 
-end = time.time()
-print end-start
+print len(d.ww)
+print d.ww
+
+print 'timing 2 ', time.time() - start
 
 coords.write_jmol('s2.jmol')
 
-view(system)
-coords.s[:]= 5.0
+print 'timing 3', time.time() - start
+
+print 'c0 ',coords.cell
+X0 = system.positions.flatten()
+coords.s[:]= 100.0
 X1 = coords.getX()
-system.positions = coords.x.reshape(-1,3)
-system.cell = coords.cell.reshape(-1,3)
-view(system)
+print 'c ',coords.cell
+print 'x ',X1-X0
+print 's ',coords.getS(X1)

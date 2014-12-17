@@ -4,12 +4,13 @@ from winak.curvilinear.InternalCoordinates import icSystem, Periodic_icSystem
 from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
 from winak.curvilinear.InternalCoordinates import PeriodicValenceCoordinateGenerator as PVCG
 from winak.curvilinear.numeric.SparseMatrix import AmuB, svdB, eigB, CSR
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, csc_matrix
 from scipy import linalg as la
+from scikits.sparse.cholmod import cholesky
 
 class Delocalizer:
     def __init__(self,atoms_obj,weighted=True,icList=None, periodic=False, 
-            dense=False, normalized=False, threshold=0.5):
+            dense=False, threshold=0.5, add_cartesians = True):
         """This generates the delocalized internals as described in the
         paper.
         atoms_obj: a properly initialized ase Atoms object (positions,
@@ -27,27 +28,26 @@ class Delocalizer:
         self.u2=None
         self.dense = dense
         self.periodic = periodic
-        self.normalized = normalized
         self.weighted = weighted
         x0=self.x_ref.flatten()
         self.natoms=len(self.masses)
+        self.add_cartesians = add_cartesians
+
         #VCG constructs primitive internals (bond length,bend,torsion,oop)
         if icList is None:
             if periodic:
                 self.vcg=PVCG(atoms=self.atoms,masses=self.masses, cell=self.cell, \
-                        threshold=threshold)
+                        threshold=threshold, add_cartesians=add_cartesians)
                 self.iclist=self.vcg(x0)
             else:
                 self.vcg=VCG(atoms=self.atoms,masses=self.masses, \
-                        threshold=threshold)
+                        threshold=threshold, add_cartesians=add_cartesians)
                 self.iclist=self.vcg(x0)
         else:
             self.iclist=icList
 
         self.initIC()
         self.evalG()
-        if normalized:
-            self.normalize_U()
 
     def initIC(self):
         periodic = self.periodic
@@ -64,16 +64,15 @@ class Delocalizer:
         else:
             self.ic.backIteration = self.ic.sparseBackIteration
 
-    def evalG(self):
+    def evalG(self, c=0):
         dense = self.dense
         periodic = self.periodic
         weighted = self.weighted
-        normalized = self.normalized
 
         if periodic:
-            self.m=np.eye(3*self.natoms+9)
+            self.m=np.eye(3*self.natoms+9-c)
         else:
-            self.m=np.eye(3*self.natoms)
+            self.m=np.eye(3*self.natoms-c)
         #generate 1/M matrix for mass weighed internals
         #use with care!
         if weighted:
@@ -86,9 +85,9 @@ class Delocalizer:
                 for i in range(1,10):
                     self.m[-i,-i]=1./mtemp
         if periodic:
-            k = 3*self.natoms
+            k = 3*self.natoms - c
         else:
-            k = 3*self.natoms-6
+            k = 3*self.natoms-6 - c
         if dense:
             pass
         else:
@@ -101,42 +100,146 @@ class Delocalizer:
         #where q are primitive internals and x cartesian coords
         if dense:
             b=self.ic.B.full()
-            g=np.dot(b,self.m)
-            g=np.dot(g,b.transpose())
-            v2, self.ww,self.u=np.linalg.svd(g)
-            self.uu =self.u.copy()
-            self.u = self.u[:k]
-            self.ww = self.ww[:k]
-        else:
-            #Sparse algorithm
-            g = AmuB(self.ic.B,self.m)
-            g = AmuB(g, self.ic.Bt)
-            #g = AmuB(self.ic.B, self.ic.Bt)
-            self.v2, self.ww, self.u = svdB(g, k=k)
-            self.ww = self.ww[:k][::-1]
-            self.uu =self.u.copy()
-            self.u =self.u[:k][::-1]
+            
+            #Baker
+            if self.weighted:
+                g=np.dot(b,self.m)
+                g=np.dot(g,b.transpose())
+                v2, self.ww,self.u=np.linalg.svd(g)
+                self.u = self.u[:k][::-1]
+                self.ww = self.ww[:k][::-1]
+            else:
+                #calculate approximate eigenvalues
+                #if normalized:
+                    #approx. prediag of G gives eigenvalues l with 
+                    #which we scale BtXlXB
+                
+                #g = np.dot(b,b.transpose())
+                #not_converged = True
+                #eigs = np.diag(g)
+                #i = 0
+                #g = csc_matrix(g)
+                #while not_converged:
+                    #factor = cholesky(g)
+                    #L = factor.L()
+                    #g = L.transpose().dot(L)
+                    #new_eigs = np.diag(g)
+                    #conv = [np.abs(e-ne)<0.01 for e,ne in zip(eigs,new_eigs)]
+                    #eigs = new_eigs.copy()
+                    #i += 1
+                    #if np.all(conv):
+                        #not_converged=False
+                #print eigs , i
+                #raise SystemExit()
 
+                mm = np.eye(self.n)
+
+                #Andzelm
+                f = np.dot(b.transpose(), mm)
+                f = np.dot(f, b)
+                
+                
+                s2, self.ww, s = np.linalg.svd(f)
+                ww = 1./(np.sqrt(self.ww[:k]))
+                self.ww = self.ww[:k][::-1]
+                ww = np.diag(ww)
+                s = (s[:k]).transpose()
+                self.u = np.dot(b, np.dot(s, ww)).transpose()[::-1]
+        else:
+            import time
+            print time.time()
+            #Sparse algorithm
+            if self.weighted:
+                #do Baker
+                g = AmuB(self.ic.B,self.m)
+                g = AmuB(g, self.ic.Bt)
+                print 'after AmuB ', time.time()
+                self.ww, self.u = eigB(g, k=k)
+                self.ww = np.real(self.ww[:k])
+                self.u = np.real(self.u.transpose()[:k])
+                print 'after SVD ', time.time()
+            else:
+                #do Andzelm
+                b = self.ic.B
+                bt = self.ic.Bt
+                f = AmuB(bt, b)
+                print 'after AmuB ', time.time()
+                s2, self.ww, s = svdB(f, k=k)
+                print 'after SVD ', time.time()
+                ww = 1./(np.sqrt(self.ww[:k]))
+                ww = np.diag(ww)
+                s = (s[:k]).transpose()
+                ss = np.dot(s,ww)
+                self.u = np.dot(b.full(), ss).transpose()
 
     def get_U(self):
         return self.u
 
-    def get_constrainedU(self):
+    def get_constrained_U(self):
         return self.u2
 
-    def constrainStretches(self):
+    def constrainStretches(self, stretch_list = None):
         str=self.ic.getStretchBendTorsOop()[0][0]#all stretches
+        if stretch_list is None:
+            stretch_list = str
+        else:
+            stretch_list = list(stretch_list)
         e=[]
-        for i in str:
+        #we know stretches come first in the B matrix
+        for i in stretch_list:
             d=np.zeros(len(self.ic))
+            #d=self.ic.B.full()[:,i]
             d[i]=1
             e.append(d)
-        self.constrain(e)
+        return e
+    
+    def constrainStretches2(self, stretch_list = None):
+        str=self.ic.getStretchBendTorsOop()[0][0]#all stretches
+        if stretch_list is None:
+            stretch_list = str
+        else:
+            stretch_list = list(stretch_list)
+        e=[]
+        #we know stretches come first in the B matrix
+        for i in stretch_list:
+            d=self.ic.B.full()[:,i]
+            e.append(d)
+        return e
+
+    def constrainCell(self):
+        #the last 3 stretches and the last three bends are special 
+        #cell DoFs
+        e = []
+        na = self.natoms
+        SBTOC = self.ic.getStretchBendTorsOopCart()
+        stretch_ind, bend_ind = SBTOC[0][0],SBTOC[0][1]
+        for s in stretch_ind[-3:]:
+            d=np.zeros(len(self.ic))
+            d[s]=1
+            e.append(d)
+        for s in bend_ind[-3:]:
+            d=np.zeros(len(self.ic))
+            d[s]=1
+            e.append(d)
+        return e
+
+    def constrainAtoms(self, atom_list):
+        atom_list = list(atom_list)
+        SBTOC = self.ic.getStretchBendTorsOopCart()[0]
+        sbto_sum = 0
+        for i in range(4):
+            sbto_sum += len(SBTOC[i])
+        e = []
+        for c, xyz in atom_list:
+            d = np.zeros(len(self.ic))
+            d[sbto_sum+xyz*self.natoms+c] = 1
+            e.append(d)
+        return e
 
     def normalize_U(self, v=None):
         #TESTING
         if v is None:
-            u = self.uu
+            u = self.u
         else:
             u = v
         mu = np.dot(u, u.transpose())
@@ -149,34 +252,73 @@ class Delocalizer:
             #norm = np.linalg.norm(vec)*np.sqrt(self.ww[i])
             #u[i,:] /= norm
 
-    def constrain(self,constraint):
-        alright=True
-        if isinstance(constraint, (list, tuple)):
-            for i in constraint:
-                if len(i)!=len(self.u[0]):
-                    alright=False
-        elif len(constraint)!=len(self.u[0]):
-            alright=False
-        else:
-            temp=constraint
-            constraint=[]
-            constraint.append(temp)
-        if alright:
-            c=[]
-            for i in range(len(constraint)):
-                c.append(np.zeros(len(constraint[0])))
-                for j in self.u:
-                    c[i]+=np.dot(constraint[i],j)*j
-            t=np.append(c,self.u)
-            t=np.reshape(t,(len(self.u)+len(c),len(constraint[0])))
-            self.vk=[]
-            for i in range(len(t)):
-                self.vk.append(t[i])
-                for j in range(0,i):
-                    self.vk[i]-=np.dot(t[i],self.vk[j])*self.vk[j]
-            self.vkold=np.asarray(self.vk)
+    def constrain2(self,constraints):
 
-            self.vk=np.asarray(self.vk[len(c):len(self.vk)])
+        u = self.u.copy()
+        b = self.ic.B.full().transpose()
+        for i,row in enumerate(b):
+            tmp = row
+            for c in constraints:
+                tmp -= (np.dot(tmp, c) * c) / np.dot(c,c)
+            b[i] = tmp 
+        #b = b[:,4:] 
+        #self.ic.n = self.ic.n - 4
+        #self.ic.ic = self.ic.ic[4*3:]
+        #here we need to fix iclist or initialize a new ic system
+        from scipy.sparse import csr_matrix
+        print b.shape
+        B = csr_matrix(b.transpose())
+        B = CSR(n = B.shape[0], m = B.shape[1],
+                nnz = B.nnz, i= B.indptr,
+                j=B.indices, x= B.data)
+        self.ic.Bnnz = B.nnz
+        self.ic.B = B
+        del self.ic.Bt
+        self.ic.evalBt()
+        self.evalG(c=0)
+        print len(self.ic)
+        self.u2 = self.u
+        print self.u2.shape
+        #print self.ic.Bnnz, self.ic.n
+        #print self.ic()
+        #print self.u.shape
+        #raise SystemExit()
 
-            u2t=self.vkold[:3*self.natoms-6]
-            self.u2=u2t
+    def constrain(self,constraints):
+        u = self.u
+        #a number of constraint vectors
+        #is projected onto the active coord. space
+        n_constr = len(constraints)
+        nn = len(u) - n_constr
+        c = []
+        #for coord in u:
+            #tmp = coord.copy()
+            #for con in constraints:
+                #tmp -= np.dot(coord, con) * con
+            #tmp /= np.linalg.norm(tmp)
+            #c.append(tmp)
+
+        #for con in constraints:
+            #tmp = con
+            #tmp = np.zeros_like(con)
+            #for coord in u:
+                #tmp += np.dot(coord, con) * coord
+            ##tmp /= np.linalg.norm(tmp)
+            #c.append(tmp)
+            #print np.linalg.norm(c[0])
+
+        constraints = np.array(constraints)
+        constraints = np.dot(u.transpose(),np.dot(u, constraints.transpose())).transpose()
+        c = list(constraints)
+        for coord in u:
+            c.append(coord)
+        c[0] /= np.linalg.norm(c[0])
+        u2 = [c[0]]
+        for vec in c[1:]:
+            tmp = vec
+            for v2 in u2:
+                tmp = tmp - (np.dot(tmp,v2)/np.dot(v2,v2)) * v2
+            tmp /= np.linalg.norm(tmp)
+            u2.append(tmp)
+        self.u2 = np.array(u2[:nn])
+

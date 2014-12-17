@@ -317,7 +317,7 @@ def icMMTK(obj, offset=1, dihedrals=1, impropers=0, debug=0):
 class ValenceCoordinateGenerator:
 
     def __init__(self, atoms, vdW = covalentRadius, masses = None, 
-                                                            threshold = 0.5): 
+                threshold = 0.5, add_cartesians = False): 
         """
         Parameters:
         'threshold'       Threshold to determine bonds.
@@ -329,6 +329,7 @@ class ValenceCoordinateGenerator:
         self.count = N.zeros(self.n, nxInt) 
         self.threshold = float(threshold)
         self.setvdW(vdW)
+        self.add_cartesians = add_cartesians
         if masses is None:
             masses = N.array([mass[string.capitalize(i)] for i in atoms])
         assert len(atoms) == len(masses)
@@ -348,6 +349,14 @@ class ValenceCoordinateGenerator:
         result = self.valenceBonds(coord)
         result = self.valenceAngles(bendThreshold=bendThreshold, 
                 torsionThreshold=torsionThreshold, oopThreshold=oopThreshold)
+        self.carts = []
+        if self.add_cartesians:
+            for i in range(len(self.atoms)):
+                self.carts.append([i, 0])
+            for i in range(len(self.atoms)):
+                self.carts.append([i, 1])
+            for i in range(len(self.atoms)):
+                self.carts.append([i, 2])
         return self.toIClist()
 
     def valenceBonds(self, coord):
@@ -467,6 +476,13 @@ class ValenceCoordinateGenerator:
             intcrd += [3, i+1, j+1, k+1, l+1],
         for i, j, k, l in self.oops:
             intcrd += [4, i+1, j+1, k+1, l+1],
+        for i,j in self.carts:
+            if j==0:
+                intcrd += [5, i+1],
+            elif j==1:
+                intcrd += [6, i+1],
+            else:
+                intcrd += [7, i+1],
         self.LIST = copy(intcrd)
         intcrd.append([0,])
         return N.concatenate(intcrd)
@@ -580,7 +596,7 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
     does the same as VCG, but for a duplicated cell
     """
     def __init__(self, atoms, vdW = covalentRadius, masses = None, \
-            threshold = 0.5, cell = None):
+            threshold = 0.5, add_cartesians = False, cell = None):
 
         if cell is None:
             raise ValueError('unit cell needs to be given.')
@@ -593,14 +609,14 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
             [1,1,0],[1,0,1],[0,1,1],[1,1,1]
             ])
         self.atom_indices = N.zeros(len(atoms)) 
+        self.add_cartesians = add_cartesians
         for i in range(1,8):
             atoms_pbc = N.concatenate([atoms_pbc, atoms])
             masses_pbc = N.concatenate([masses_pbc, masses])
             self.atom_indices = N.concatenate([self.atom_indices, N.ones(len(atoms))*i])
         #we duplicate the system according to periodicity
         ValenceCoordinateGenerator.__init__(self, atoms_pbc, vdW, \
-                masses_pbc, threshold)
-
+                masses_pbc, threshold, add_cartesians)
         
     def __call__(self,coord, **kwargs):
         """
@@ -614,21 +630,12 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
             """
             folds back a set of indices by 
             """
-            for j in range(len(ind)):
-                ind[j] = ind[j]%n 
+            ii = [i/n for i in ind]
+            div = min(ii)
+            for j,jj in enumerate(ind):
+                ind[j] -= div*n 
             return ind
-        def fold_back2(ind):
-            """
-            folds back a set of indices by 
-            """
-            smallest_div = 7
-            for i in ind:
-                if i/n < smallest_div:
-                    smallest_div = i/n
-            for j in range(len(ind)):
-                ind[j] -= smallest_div*n 
-            return ind
-
+        
         #duplicate coordinates
         xyz_pbc = N.empty([0,3])
         for vec in self.cell_indices:
@@ -639,86 +646,129 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
         #construct iclist
         IClist =  ValenceCoordinateGenerator.__call__(self, xyz_pbc, **kwargs)
        
-        ###delete bonds which do not reach into unit cell
-        #ADDING CELL BONDS
-        bonds = []
+        for b, bond in reversed(list(enumerate(self.bonds))):
+            indices, b_len = bond
+            indices  = list(indices)
+            truth = [self.atom_indices[ii] == 0 for ii in indices]
+            if any(truth):
+                pass
+            else:
+                del self.bonds[b]
+        for b, bend in reversed(list(enumerate(self.bends))):
+            indices = list(bend)
+            truth = [self.atom_indices[ii] == 0 for ii in indices]
+            if any(truth):
+                pass
+            else:
+                del self.bends[b]
+        for b, tors in reversed(list(enumerate(self.torsions))):
+            indices = list(tors)
+            truth = [self.atom_indices[ii] == 0 for ii in indices]
+            if any(truth):
+                pass
+            else:
+                del self.torsions[b]
+        for b, oop in reversed(list(enumerate(self.oops))):
+            indices = list(oop)
+            truth = [self.atom_indices[ii] == 0 for ii in indices]
+            if any(truth):
+                pass
+            else:
+                del self.oops[b]
+        ###ADDING CELL DoFs
         self.bonds.append([(0, n),N.linalg.norm(self.cell[0])])    
         self.bonds.append([(0, 2*n),N.linalg.norm(self.cell[1])])    
         self.bonds.append([(0, 3*n),N.linalg.norm(self.cell[2])])    
-        #eliminate duplicate ones
-        for b,bond in enumerate(self.bonds):
-            indices, b_len = bond
-            indices = list(indices)
-            #go through all other bonds and see if there are duplicates
-            take_it = True
-            for bb, bbond in enumerate(bonds):
-                tmp_ind, bb_len = bbond
-                tmp_ind = list(tmp_ind)
-                if tmp_ind == indices:
-                    take_it = False 
-                elif tmp_ind==fold_back2(indices):
-                    take_it = False
-                else:
-                    pass
-            if take_it:
-                bonds.append([tuple(fold_back2(indices)),b_len])
-        self.bonds = bonds
-
-        ##delete bends which do not reach into unit cell
-        bends = []
         self.bends.append([n, 2*n, 0])    
         self.bends.append([n, 3*n, 0])    
         self.bends.append([2*n, 3*n, 0])    
-        for b, bend in enumerate(self.bends):
-            indices = list(bend)
-            take_it = True
-            for bb, bbend in enumerate(bends):
-                tmp_ind = bbend
-                if tmp_ind == indices:
-                    take_it = False 
-                elif tmp_ind==fold_back2(indices):
-                    take_it = False
-                else:
-                    pass
-            if take_it:
-                bends.append(fold_back2(indices))
-        self.bends = bends
-
-        ##delete torsions which do not reach into unit cell
-        torsions = []
-        for t, torsion in enumerate(self.torsions):
-            indices = list(torsion)
-            take_it = True
-            for tt, ttors in enumerate(torsions):
-                tmp_ind = ttors 
-                if tmp_ind == indices:
-                    take_it = False 
-                elif tmp_ind==fold_back2(indices):
-                    take_it = False
-                else:
-                    pass
-            if take_it:
-                torsions.append(fold_back2(indices))
-        self.torsions = torsions
-        ##delete oop angles which do not reach into unit cell
-        oops = []
-        for o, oop in enumerate(self.oops):
-            indices = list(oop)
-            take_it = True
-            for oo, ooop in enumerate(oops):
-                tmp_ind = ooop
-                if tmp_ind == indices:
-                    take_it = False 
-                elif tmp_ind==fold_back2(indices):
-                    take_it = False
-                else:
-                    pass
-            if take_it:
-                oops.append(fold_back2(indices))
-        self.oops = oops
         
-        return self.toIClist()
+
+        ####delete bonds which do not reach into unit cell
+        ##ADDING CELL BONDS
+        #self.bonds.append([(0, n),N.linalg.norm(self.cell[0])])    
+        #self.bonds.append([(0, 2*n),N.linalg.norm(self.cell[1])])    
+        #self.bonds.append([(0, 3*n),N.linalg.norm(self.cell[2])])    
+        #bonds = []
+        ##eliminate duplicate ones
+        #for b,bond in enumerate(self.bonds):
+            #indices, b_len = bond
+            #indices = list(indices)
+            ##go through all other bonds and see if there are duplicates
+            #take_it = True
+            #for bb, bbond in enumerate(bonds):
+                #tmp_ind, bb_len = bbond
+                #tmp_ind = list(tmp_ind)
+                #if tmp_ind == indices:
+                    #take_it = False 
+                #elif tmp_ind==fold_back(indices):
+                    #take_it = False
+                #else:
+                    #pass
+            #if take_it:
+                #bonds.append([tuple(fold_back(indices)),b_len])
+        #self.bonds = bonds
+
+        ####delete bends which do not reach into unit cell
+        #self.bends.append([n, 2*n, 0])    
+        #self.bends.append([n, 3*n, 0])    
+        #self.bends.append([2*n, 3*n, 0])    
+        #bends = []
+        #for b, bend in enumerate(self.bends):
+            #indices = list(bend)
+            #take_it = True
+            #for bb, bbend in enumerate(bends):
+                #tmp_ind = bbend
+                #if tmp_ind == indices:
+                    #take_it = False 
+                #elif tmp_ind==fold_back(indices):
+                    #take_it = False
+                #else:
+                    #pass
+            #if take_it:
+                #bends.append(fold_back(indices))
+        #self.bends = bends
+
+        ####delete torsions which do not reach into unit cell
+        #torsions = []
+        #for t, torsion in enumerate(self.torsions):
+            #indices = list(torsion)
+            #take_it = True
+            #for tt, ttors in enumerate(torsions):
+                #tmp_ind = ttors 
+                #if tmp_ind == indices:
+                    #take_it = False 
+                #elif tmp_ind==fold_back(indices):
+                    #take_it = False
+                #else:
+                    #pass
+            #if take_it:
+                #torsions.append(fold_back(indices))
+        #self.torsions = torsions
+        ####delete oop angles which do not reach into unit cell
+        #oops = []
+        #for o, oop in enumerate(self.oops):
+            #indices = list(oop)
+            #take_it = True
+            #for oo, ooop in enumerate(oops):
+                #tmp_ind = ooop
+                #if tmp_ind == indices:
+                    #take_it = False 
+                #elif tmp_ind==fold_back(indices):
+                    #take_it = False
+                #else:
+                    #pass
+            #if take_it:
+                #oops.append(fold_back(indices))
+        #self.oops = oops
+        for c, cart in reversed(list(enumerate(self.carts))):
+            indices = list(cart)
+            if self.atom_indices[indices[0]] == 0:
+                pass
+            else:
+                del self.carts[c]
        
+        return self.toIClist()
 
 class icSystem:
 
@@ -727,7 +777,7 @@ class icSystem:
             intcrd = list(intcrd)
             intcrd.append(0)
         self.ic = N.array(intcrd).astype(nxInt32)
-        self.atoms_in_type = (2, 3, 4, 4)
+        self.atoms_in_type = (2, 3, 4, 4, 1, 1, 1)
         self.natom = natom
         #get Bmatrix dimensions and number of DoFs Bmatrix has n times Bnnz
         self.Bnnz, self.n = ic.Bmatrix_nnz(self.ic)
@@ -776,6 +826,18 @@ class icSystem:
                 s.append('%3i oop.(%3i, %3i, %3i, %3i) = % 6.5f' 
                     %(ind, ic[i+1], ic[i+2], ic[i+3], ic[i+4], internals[ind]) )
                 i += 5
+            elif ic[i] == 5:
+                s.append('%1i cart x(%3i) = % 6.5f' 
+                    %(ind, ic[i+1], internals[ind]) )
+                i += 2
+            elif ic[i] == 6:
+                s.append('%3i cart y(%3i) = % 6.5f' 
+                    %(ind, ic[i+1], internals[ind]) )
+                i += 2
+            elif ic[i] == 7:
+                s.append('%3i cart z(%3i) = % 6.5f' 
+                    %(ind, ic[i+1], internals[ind]) )
+                i += 2
             else:
                 break
             ind += 1
@@ -798,7 +860,7 @@ class icSystem:
         Return a tuple, where each element is a list containing the indices
         of the internal coordinates stretch, bend, torsion and oop. 
         """
-        stretch = []; bend = []; tors = []; oop = []
+        stretch = []; bend = []; tors = []; oop = []; atoms=[]
         icList = []; 
         i = 0
         ic = self.ic
@@ -821,13 +883,60 @@ class icSystem:
                 oop.append(index)     
                 icList.append(ic[i+1:i+5])
                 i += 5
+            elif ic[i] == 5 or ic[i] == 6 or ic[i] ==7:
+                atoms.append(index)
+                icList.append(ic[i+1:i+2])
+                i += 2
             else: break
             index += 1
         stretchBendTorsOop = (
             N.array(stretch, dtype = N.int32), 
             N.array(bend, dtype = N.int32), 
             N.array(tors, dtype = N.int32), 
-            N.array(oop, dtype = N.int32), 
+            N.array(oop, dtype = N.int32),
+            )
+        return (stretchBendTorsOop, icList)
+    
+    def getStretchBendTorsOopCart(self):
+        """
+        Return a tuple, where each element is a list containing the indices
+        of the internal coordinates stretch, bend, torsion and oop. 
+        """
+        stretch = []; bend = []; tors = []; oop = []; atoms=[]
+        icList = []; 
+        i = 0
+        ic = self.ic
+        index = 0
+        while i < len(ic):
+            if ic[i] == 0: break
+            elif ic[i] == 1: 
+                stretch.append(index) 
+                icList.append(ic[i+1:i+3])
+                i += 3
+            elif ic[i] == 2: 
+                bend.append(index)    
+                icList.append(ic[i+1:i+4])
+                i += 4
+            elif ic[i] == 3: 
+                tors.append(index)    
+                icList.append(ic[i+1:i+5])
+                i += 5
+            elif ic[i] == 4: 
+                oop.append(index)     
+                icList.append(ic[i+1:i+5])
+                i += 5
+            elif ic[i] == 5 or ic[i] == 6 or ic[i] == 7:
+                atoms.append(index)
+                icList.append(ic[i+1:i+2])
+                i += 2
+            else: break
+            index += 1
+        stretchBendTorsOop = (
+            N.array(stretch, dtype = N.int32), 
+            N.array(bend, dtype = N.int32), 
+            N.array(tors, dtype = N.int32), 
+            N.array(oop, dtype = N.int32),
+            N.array(atoms, dtype = N.int32)
             )
         return (stretchBendTorsOop, icList)
 
@@ -1218,7 +1327,7 @@ class icSystem:
 
         dq = self.tmp_q
         dx = self.tmp_x
-        xn = N.concatenate([self.xyz,self.cell],axis=0)
+        xn = self.xyz
         if initialize: self.initA()
 
         # we call it once here, so we just need to update the values in the loop
@@ -1373,7 +1482,7 @@ class Periodic_icSystem(icSystem):
             intcrd = list(intcrd)
             intcrd.append(0)
         self.ic = N.array(intcrd).astype(nxInt32)
-        self.atoms_in_type = (2, 3, 4, 4)
+        self.atoms_in_type = (2, 3, 4, 4, 1, 1, 1)
         self.natom = natom
         self.nx = 0
         if xyz is not None:
@@ -1383,10 +1492,11 @@ class Periodic_icSystem(icSystem):
                 raise IndexError("Array dimension of xyz does not match natom")
         else: self.xyz = xyz
         self.cell = cell
+        self.celli = N.linalg.inv(cell)
         
         #get Bmatrix dimensions and number of DoFs Bmatrix has n times Bnnz
         # we add the three cell vectors as 9 rows at the end of the B matrix
-        self.Bnnz, self.n = ic.Bmatrix_pbc_nnz(self.nx, self.ic)
+        self.Bnnz, self.n = ic.Bmatrix_pbc2_nnz(self.nx, self.ic)
         self.cell_indices = N.array([
             [0,0,0],[1,0,0],[0,1,0],[0,0,1],
             [1,1,0],[1,0,1],[0,1,1],[1,1,1]
@@ -1405,7 +1515,8 @@ class Periodic_icSystem(icSystem):
             self.xyz_pbc = xyz_pbc
         if cell is not None:
             self.cell = N.ravel(cell.astype(nxFloat))
-        else: self.cell = cell.flatten()
+        else: self.cell = N.ravel(N.eye(3).astype(nxFloat))
+        self.celli = N.ravel(self.celli.astype(nxFloat))
         if masses is not None:
             if len(masses) != self.natom:
                 raise IndexError("Array dimension of masses does not match natom")
@@ -1429,7 +1540,8 @@ class Periodic_icSystem(icSystem):
     def evalB(self, sort = 0):
         if not hasattr(self, 'B'):
             self.B = CSR(n=self.n, m=self.nx+9, nnz=self.Bnnz, type = nxFloat)
-        ic.Bmatrix_pbc(self.nx, self.xyz_pbc, self.ic, self.B.x, self.B.j, self.B.i, sort)
+        ic.Bmatrix_pbc2(self.nx, self.xyz_pbc, self.ic, self.cell, self.celli, 
+               self.B.x, self.B.j, self.B.i, sort)
         return self.B
 
     def connectivity(self):
@@ -1447,10 +1559,10 @@ class Periodic_icSystem(icSystem):
             trans = N.dot(vec,cell)
             xyz_tmp = xyz + trans
             xyz_pbc = N.concatenate([xyz_pbc, xyz_tmp]) 
+        self.ic = N.ravel(self.ic.astype(nxInt32))
         xyz_pbc = N.ravel(xyz_pbc.astype(nxFloat))
-        
         if not hasattr(self, 'crd'): self.crd = N.zeros(self.n, nxFloat)
-        return ic.internals(xyz_pbc, self.ic, self.crd)
+        return ic.internals_pbc(xyz_pbc, self.celli, self.ic, self.crd)
     
     def biInit(self):
         if not hasattr(self, 'tmp_cell'): self.tmp_cell = N.zeros(9, nxFloat)
@@ -1497,7 +1609,8 @@ class Periodic_icSystem(icSystem):
 
         dq = self.tmp_q
         dx = self.tmp_x
-        xn = N.concatenate([self.xyz, self.cell], axis=0)
+        fracs = N.dot(self.xyz.reshape(-1,3),self.celli.reshape(-1,3)).flatten()
+        xn = N.concatenate([fracs, self.cell], axis=0)
         n = 0
         nScalings = 0 
         neps = eps*eps*self.nx
@@ -1563,13 +1676,14 @@ class Periodic_icSystem(icSystem):
 
             if RIIS_on:
                 xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
-                self.xyz = xn[:-9]
+                self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
                 self.cell = xn[-9:]
+                self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             else:
                 xn += dx
-                self.xyz = xn[:-9]
+                self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
                 self.cell = xn[-9:]
-
+                self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             norm = N.dot(dx, dx)
             self.convergence = n, N.sqrt(norm/(self.nx+9))
             # remove old data not needed anymore for RIIS
@@ -1614,11 +1728,9 @@ class Periodic_icSystem(icSystem):
 
         dq = self.tmp_q
         dx = self.tmp_x
-        dc = self.tmp_cell
+        fracs = N.dot(self.xyz.reshape(-1,3),self.celli.reshape(-1,3)).flatten()
+        xn = N.concatenate([fracs, self.cell], axis=0)
         dx = N.concatenate([self.tmp_x, self.tmp_cell], axis=0)
-        xn = N.concatenate([self.xyz, self.cell], axis=0)
-        #xn = self.xyz
-        #cn = self.cell
         if initialize:self.initA()
 
         # we call it once here, so we just need to update the values in the loop
@@ -1638,14 +1750,14 @@ class Periodic_icSystem(icSystem):
         while 1:
             n += 1
             qn = self()
-
+            #print 'qn ', qn
+            #print len(qn)
             if RIIS: 
                 if not RIIS_on and n >= RIIS_start:
                     RIIS_on = True
                     # print("Turning on RIIS in step %i" %n)
 
             dq = N.subtract(q, qn, dq)
-
             # check phase 
             if torsions is not None: dq = ic.dphi_mod_2pi(dq, torsions)
 
@@ -1671,7 +1783,6 @@ class Periodic_icSystem(icSystem):
             if info < 0:
                 raise ArithmeticError(
                     'Incomplete Cholesky decomposition failed: ' + `info`)
-
             dx = self.inverseA(Bt(dq))
             # self.dx.append(dx.copy()) # for DEBUGGING
 
@@ -1689,14 +1800,17 @@ class Periodic_icSystem(icSystem):
             if RIIS_on:
                 # print "doing RIIS step"
                 xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
-                self.xyz = xn[:-9]
+                self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
                 self.cell = xn[-9:]
+                self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             else:
                 xn += dx 
-                self.xyz = xn[:-9]
+                self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
                 self.cell = xn[-9:]
+                self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             
             norm = N.dot(dx, dx)
+            #print norm
             self.convergence = n, N.sqrt(norm/self.nx+9)
             # remove old data not needed anymore for RIIS
             if len(xList) >= RIIS_maxLength:
@@ -1754,8 +1868,6 @@ def doRIIS(x, e, dim = 3):
         eps = s[dim] # eps is determined by the singular values 
         s2 = s*s 
         s2 += eps*eps
-        print 's ',s
-        print 's2 ',s2
         s /= s2
         Mi = N.dot(U, s[:,N.newaxis]*VT) # regularized inverse
         w = N.dot(Mi, b) # approximate weights

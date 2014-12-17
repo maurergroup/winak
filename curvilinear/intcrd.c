@@ -73,9 +73,9 @@ struct ijarray { int *i, *j; };
                         (y)[1]+=(a)*(x)[1]; \
                         (y)[2]+=(a)*(x)[2];
 
-#define NINTERNALS      4
+#define NINTERNALS      7
 
-static int atoms_per_internal[NINTERNALS+1] = {0, 2, 3, 4, 4};
+static int atoms_per_internal[NINTERNALS+1] = {0, 2, 3, 4, 4, 1, 1, 1};
 
 #ifndef THCTK_INTERFACE
 void printv(const vec a) { printf("%f %f %f\n", a[0], a[1], a[2]); }
@@ -154,6 +154,18 @@ double torsion_val(const vec a1, const vec a2, const vec a3, const vec a4) {
     return acos(ct);
 }
 
+THCTK_PRIVATE
+double cart_val(const vec a1, const int i) {
+
+    return a1[i];
+}
+
+THCTK_PRIVATE
+double cart_val2(const vec a1,const vec h) {
+
+    return a1[0]*h[0]+a1[1]*h[1]+a1[2]*h[2];
+}
+
 #if 0
 THCTK_PRIVATE
 double dihedral5_val(const vec a1, const vec a2, const vec a3, const vec a4,
@@ -177,7 +189,6 @@ int internals(const vtype *x, const int *cint, double *c) {
      */
 
 #define PXYZ    (x+3*((*cint++)-1))
-
     while (1) {
         register int type = *cint++;
         if (type <= 0) return 0;
@@ -198,6 +209,18 @@ int internals(const vtype *x, const int *cint, double *c) {
                 p1 = PXYZ; p2 = PXYZ; p3 = PXYZ; p4 = PXYZ;
                 *c++ = out_of_plane_val(p1, p2, p3, p4);
                 break;
+            case 5:
+                p1 = PXYZ;
+                *c++ = cart_val(p1, 0);
+                break;
+            case 6:
+                p1 = PXYZ;
+                *c++ = cart_val(p1, 1);
+                break;
+            case 7:
+                p1 = PXYZ;
+                *c++ = cart_val(p1, 2);
+                break;
             default:
                 return 2;  /* unknown internal coordinate type */
         }
@@ -209,6 +232,59 @@ int internals(const vtype *x, const int *cint, double *c) {
 
 
 /* }}} */
+
+THCTK_PRIVATE
+int internals_pbc(const vtype *x, const vtype *h, const int *cint, double *c) {
+
+    const vtype *p1, *p2, *p3, *p4;
+    /* We have to assign to these pointers to ensure the correct ordering of
+     * coordinates in the function arguments.
+     * ANSI C does not specify the order of evaluation for function arguments!
+     */
+
+#define PXYZ    (x+3*((*cint++)-1))
+    while (1) {
+        register int type = *cint++;
+        if (type <= 0) return 0;
+        switch (type) {
+            case 1:
+                p1 = PXYZ; p2 = PXYZ;
+                *c++ = stretch_val(p1, p2);
+                break;
+            case 2:
+                p1 = PXYZ; p2 = PXYZ; p3 = PXYZ;
+                *c++ = bend_val(p1, p2, p3);
+                break;
+            case 3:
+                p1 = PXYZ; p2 = PXYZ; p3 = PXYZ; p4 = PXYZ;
+                *c++ = torsion_val(p1, p2, p3, p4);
+                break;
+            case 4:
+                p1 = PXYZ; p2 = PXYZ; p3 = PXYZ; p4 = PXYZ;
+                *c++ = out_of_plane_val(p1, p2, p3, p4);
+                break;
+            case 5:
+                p1 = PXYZ;
+                *c++ = cart_val2(p1, h);
+                break;
+            case 6:
+                p1 = PXYZ;
+                *c++ = cart_val2(p1, h+3);
+                break;
+            case 7:
+                p1 = PXYZ;
+                *c++ = cart_val2(p1, h+6);
+                break;
+            default:
+                return 2;  /* unknown internal coordinate type */
+        }
+    }
+    return 1;  /* this point should not be reached! */
+
+#undef PXYZ
+}
+/* }}} */
+
 
 /* {{{ B-matrix elements */
 
@@ -698,8 +774,8 @@ int Bmatrix_nnz(const int *cint, int *nint, int *nnz) {
         if (type > NINTERNALS) return 1;    /* unknown internal coordinate type */
         if (type <= 0) return 0;            /* end of list, everything went fine */
         n = atoms_per_internal[type];
-        cint += n;
         (*nnz) += 3*n;
+        cint += n;
         (*nint)++;
     }
 }
@@ -835,6 +911,105 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
                 if (tyset) {nnzsum += 3;}
                 if (tzset) {nnzsum += 3;}
                 break;
+            case 5:
+                i1 = (*cint++)-1;
+                break;
+            case 6:
+                i1 = (*cint++)-1;
+                break;
+            case 7:
+                i1 = (*cint++)-1;
+                break;
+            default:
+                break;
+        }
+        /*cint += n; */
+        (*nnz) += nnzsum;
+        (*nint)++;
+    }
+}
+
+/* }}} */
+
+/* {{{ Bmatrix_pbc2_nnz */
+
+THCTK_PRIVATE
+int Bmatrix_pbc2_nnz(int nx, const int *cint, int *nint, int *nnz) {
+
+    int type, n, na;
+    int i1, i2, i3, i4, nnzsum;
+
+    *nint = 0;
+    *nnz = 0;
+
+    na = nx/3;
+
+    while (1) {
+        type = *cint++;
+        if (type > NINTERNALS) return 1;    /* unknown internal coordinate type */
+        if (type <= 0) {
+            return 0;            /* end of list, everything went fine */
+        }
+        n = atoms_per_internal[type];
+        //every type gets 3*n elements
+        nnzsum = 0; nnzsum += 3*n;
+        switch (type) {
+            case 1:
+                i1 = (*cint++)-1; i2 = (*cint++)-1;
+                if (i1%na==i2%na) {nnzsum-=3;}
+                nnzsum += 9;
+                break;
+            case 2:
+                i1 = (*cint++)-1; i2 = (*cint++)-1; i3 = (*cint++)-1;
+                if (i1%na==i2%na && i2%na==i3%na) {nnzsum -= 6;}
+                else if (i1%na==i2%na || i2%na==i3%na || i1%na==i3%na) {nnzsum -= 3;}
+                else {  } //nothing
+                nnzsum += 9;
+                break;
+            case 3:
+                i1 = (*cint++)-1; i2 = (*cint++)-1; i3 = (*cint++)-1; i4 = (*cint++)-1;
+                if (i1%na==i2%na && i2%na==i3%na && i3%na==i4%na) {nnzsum -= 9;}
+                else if ( (i1%na==i2%na && i2%na==i3%na) || \
+                          (i1%na==i2%na && i2%na==i4%na) || \
+                          (i2%na==i3%na && i3%na==i4%na) || \
+                          (i1%na==i3%na && i3%na==i4%na) || \
+                          (i1%na==i2%na && i3%na==i4%na) || \
+                          (i1%na==i3%na && i2%na==i4%na) || \
+                          (i1%na==i4%na && i2%na==i3%na) \
+                          ) {nnzsum -= 6;}
+                else if (i1%na==i2%na || i1%na==i3%na || i1%na==i4%na || \
+                    i2%na==i3%na || i2%na==i4%na || i3%na==i4%na ) {nnzsum -= 3;}
+                else { } //nothing
+                nnzsum += 9;
+                break;
+            case 4:
+                i1 = (*cint++)-1; i2 = (*cint++)-1; i3 = (*cint++)-1; i4 = (*cint++)-1;
+                if (i1%na==i2%na && i2%na==i3%na && i3%na==i4%na) {nnzsum -= 9;}
+                else if ( (i1%na==i2%na && i2%na==i3%na) || \
+                          (i1%na==i2%na && i2%na==i4%na) || \
+                          (i2%na==i3%na && i3%na==i4%na) || \
+                          (i1%na==i3%na && i3%na==i4%na) || \
+                          (i1%na==i2%na && i3%na==i4%na) || \
+                          (i1%na==i3%na && i2%na==i4%na) || \
+                          (i1%na==i4%na && i2%na==i3%na) \
+                          ) {nnzsum -= 6;}
+                else if (i1%na==i2%na || i1%na==i3%na || i1%na==i4%na || \
+                    i2%na==i3%na || i2%na==i4%na || i3%na==i4%na ) {nnzsum -= 3;}
+                else {} //nothing
+                nnzsum += 9;
+                break;
+            case 5:
+                i1 = (*cint++)-1;
+                nnzsum += 9;
+                break;
+            case 6:
+                i1 = (*cint++)-1;
+                nnzsum += 9;
+                break;
+            case 7:
+                i1 = (*cint++)-1;
+                nnzsum += 9;
+                break;
             default:
                 break;
         }
@@ -883,6 +1058,24 @@ int Bmatrix(const vtype *x, const int *cint, vtype *b, int *jb, int *ib,
                 p1 = NXYZ; p2 = NXYZ; p3 = NXYZ; p4 = NXYZ;
                 out_of_plane(x+p1, x+p2, x+p3, x+p4, b, b+3, b+6, b+9);
                 BIDX(p1); BIDX(p2); BIDX(p3); BIDX(p4);
+                break;
+            case 5:
+                /* adding single atoms for cart. constraints */
+                p1 = NXYZ; 
+                *(b+0) = 1.0; *(b+1) = 0.0; *(b+2) = 0.0; 
+                BIDX(p1); 
+                break;
+            case 6:
+                /* adding single atoms for cart. constraints */
+                p1 = NXYZ; 
+                *(b+0) = 0.0; *(b+1) = 1.0; *(b+2) = 0.0; 
+                BIDX(p1); 
+                break;
+            case 7:
+                /* adding single atoms for cart. constraints */
+                p1 = NXYZ; 
+                *(b+0) = 0.0; *(b+1) = 0.0; *(b+2) = 1.0; 
+                BIDX(p1); 
                 break;
             default:
                 return 2;  /* unknown internal coordinate type */
@@ -1296,6 +1489,24 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                 if (tyset) {pad += 3; SETB(9+pad,ty); BIDT(3);}
                 if (tzset) {pad += 3; SETB(9+pad,tz); BIDT(6);}
                 break;
+            case 5:
+                /* adding single atoms for cart. constraints */
+                pad = 0; p1 = NXYZ; 
+                *(b+0) = 1.0; *(b+1) = 0.0; *(b+2) = 0.0; 
+                BIDX(p1); 
+                break;
+            case 6:
+                /* adding single atoms for cart. constraints */
+                pad = 0; p1 = NXYZ; 
+                *(b+0) = 0.0; *(b+1) = 1.0; *(b+2) = 0.0; 
+                BIDX(p1); 
+                break;
+            case 7:
+                /* adding single atoms for cart. constraints */
+                pad = 0; p1 = NXYZ; 
+                *(b+0) = 0.0; *(b+1) = 0.0; *(b+2) = 1.0; 
+                BIDX(p1); 
+                break;
             default:
                 return 2;  /* unknown internal coordinate type */
         }
@@ -1311,6 +1522,461 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
 #undef BIDX
 #undef SETVEC
 #undef SETB
+}
+
+/* }}} */
+THCTK_PRIVATE
+int Bmatrix_pbc2(int nx, const vtype *x, const vtype *h, const vtype *hi, \
+        const int *cint, vtype *b, int *jb, int *ib, int sort) {
+
+    int type, nint = 0, n, *j;
+    int p1, p2, p3, p4, nb = 0, pad = 0;
+    int i1, i2, i3, i4;
+    vec dsum, d1, d2, d3, d4, f1, f2, f3, f4, tmp, zero, tx, ty, tz;
+    zero[0]=0.0; zero[1]=0.0, zero[2]=0.0;
+
+
+#define NXYZ    (3*((*cint++)-1))
+#define BIDX(p) *jb++ = p%nx; *jb++ = (++p)%nx; *jb++ = (++p)%nx;
+
+#define SETVEC(vec1, num) vec1[0]= (*(b+num+0)); \
+                          vec1[1]= (*(b+num+1)); \
+                          vec1[2]= (*(b+num+2));
+#define SETB(num, vec1)   (*(b+num+0)) = vec1[0]; \
+                          (*(b+num+1)) = vec1[1]; \
+                          (*(b+num+2)) = vec1[2]; 
+#define SETBH(num, vec1)  (*(b+num+0)) = vec1[0]*(*(h+0))+vec1[1]*(*(h+1))+vec1[2]*(*(h+2)); \
+                          (*(b+num+1)) = vec1[0]*(*(h+3))+vec1[1]*(*(h+4))+vec1[2]*(*(h+5)); \
+                          (*(b+num+2)) = vec1[0]*(*(h+6))+vec1[1]*(*(h+7))+vec1[2]*(*(h+8)); 
+#define BIDT(num) *jb++ = nx+num; *jb++ = nx+num+1; *jb++ = nx+num+2;
+#define CALCF(pos, vec2)   vec2[0] = (*(pos+0))*(*(hi+0))+(*(pos+1))*(*(hi+1))+(*(pos+2))*(*(hi+2)); \
+                           vec2[1] = (*(pos+0))*(*(hi+3))+(*(pos+1))*(*(hi+4))+(*(pos+2))*(*(hi+5)); \
+                           vec2[2] = (*(pos+0))*(*(hi+6))+(*(pos+1))*(*(hi+7))+(*(pos+2))*(*(hi+8)); 
+
+#define AXPY2(a,vec1,vec2) vec2[0] = a*vec1[0]; \
+                           vec2[1] = a*vec1[1]; \
+                           vec2[2] = a*vec1[2];
+    /* for atoms that lie outside the cell we need to add components 
+     * to the back-folded indices and also to the lattice vectors  */
+
+    while (1) {
+        type = *cint++;
+        ib[nint] = nb;      /* nint iterates over the rows of B */
+        j = jb;
+        if (type <= 0) {
+            return 0;
+        }
+        switch (type) {
+            case 1:
+                pad = 0;
+                p1 = NXYZ; p2 = NXYZ;
+                i1=p1; i2=p2;
+                stretch(x+p1, x+p2, d1, d2);
+                CALCF(x+p1,f1); CALCF(x+p2,f2);
+                // atoms are the same in different cells 
+                // so we only set one
+                if (i1%nx==i2%nx) {
+                    SETBH(0,zero); 
+                    // pass on index of smallest number
+                    BIDX(p1);
+                    pad -= 3;
+                }
+                else {
+                    SETBH(0,d1);SETBH(3,d2); 
+                    BIDX(p1); BIDX(p2);
+                }
+                // set unit cell values
+                VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
+                AXPY2(f1[0],d1,tmp);VADD(tx,tx,tmp);
+                AXPY2(f1[1],d1,tmp);VADD(ty,ty,tmp);
+                AXPY2(f1[2],d1,tmp);VADD(tz,tz,tmp);
+                AXPY2(f2[0],d2,tmp);VADD(tx,tx,tmp);
+                AXPY2(f2[1],d2,tmp);VADD(ty,ty,tmp);
+                AXPY2(f2[2],d2,tmp);VADD(tz,tz,tmp);
+                pad += 3; SETB(3+pad,tx); BIDT(0);
+                pad += 3; SETB(3+pad,ty); BIDT(3);
+                pad += 3; SETB(3+pad,tz); BIDT(6);
+                break;
+            case 2: // bending angles
+                pad = 0;
+                p1 = NXYZ; p2 = NXYZ; p3 = NXYZ;
+                i1=p1; i2=p2; i3=p3;
+                bend(x+p1, x+p2, x+p3, d1, d2, d3);
+                CALCF(x+p1,f1); CALCF(x+p2,f2); CALCF(x+p3,f3);
+                if (i1%nx==i2%nx && i2%nx==i3%nx) {
+                    SETBH(0,zero);
+                    //pass on smallest index
+                    BIDX(p1);
+                    pad -= 6;
+                }
+                else if (i1%nx==i2%nx || i1%nx==i3%nx || i2%nx==i3%nx ) {
+                    if (i1%nx==i2%nx) {
+                        VADD(dsum,d1,d2);
+                        SETBH(0,dsum); SETBH(3,d3);
+                        BIDX(p1); BIDX(p3);
+                        pad -= 3;
+                    }
+                    else if (i2%nx==i3%nx) {
+                        VADD(dsum,d2,d3);
+                        SETBH(0,d1); SETBH(3,dsum);
+                        BIDX(p1); BIDX(p2);
+                        pad -= 3;
+                    }
+                    else {
+                        VADD(dsum,d1,d3);
+                        SETBH(0,dsum); SETBH(3,d2);
+                        BIDX(p1); BIDX(p2);
+                        pad -= 3;
+                    }
+                }
+                else { //default, no duplicate atoms
+                    SETBH(0,d1); SETBH(3,d2); SETBH(6,d3);
+                    BIDX(p1); BIDX(p2); BIDX(p3);
+                }
+                VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
+                AXPY2(f1[0],d1,tmp);VADD(tx,tx,tmp);
+                AXPY2(f1[1],d1,tmp);VADD(ty,ty,tmp);
+                AXPY2(f1[2],d1,tmp);VADD(tz,tz,tmp);
+                AXPY2(f2[0],d2,tmp);VADD(tx,tx,tmp);
+                AXPY2(f2[1],d2,tmp);VADD(ty,ty,tmp);
+                AXPY2(f2[2],d2,tmp);VADD(tz,tz,tmp);
+                AXPY2(f3[0],d3,tmp);VADD(tx,tx,tmp);
+                AXPY2(f3[1],d3,tmp);VADD(ty,ty,tmp);
+                AXPY2(f3[2],d3,tmp);VADD(tz,tz,tmp);
+                pad += 3; SETB(6+pad,tx); BIDT(0);
+                pad += 3; SETB(6+pad,ty); BIDT(3);
+                pad += 3; SETB(6+pad,tz); BIDT(6);
+                break;
+            case 3: // torsions
+                pad = 0;
+                p1 = NXYZ; p2 = NXYZ; p3 = NXYZ; p4 = NXYZ;
+                i1=p1; i2=p2;i3=p3;i4=p4;
+                torsion(x+p1, x+p2, x+p3, x+p4, d1, d2, d3, d4);
+                CALCF(x+p1,f1); CALCF(x+p2,f2); CALCF(x+p3,f3); CALCF(x+p4,f4);
+                if (i1%nx==i2%nx && i2%nx==i3%nx && i3%nx==i4%nx) {
+                    // all indices are the same
+                    SETBH(0,zero);
+                    //pass on smallest index
+                    BIDX(p1);
+                    pad -= 9;
+                }
+                else if ( (i1%nx==i2%nx && i2%nx==i3%nx) || \
+                          (i1%nx==i2%nx && i2%nx==i4%nx) || \
+                          (i2%nx==i3%nx && i3%nx==i4%nx) || \
+                          (i1%nx==i3%nx && i3%nx==i4%nx) || \
+                          (i1%nx==i2%nx && i3%nx==i4%nx) || \
+                          (i1%nx==i3%nx && i2%nx==i4%nx) || \
+                          (i1%nx==i4%nx && i2%nx==i3%nx) \
+                          ) {
+                    // three indices are the same
+                    if (i1%nx==i2%nx && i2%nx==i3%nx) {
+                        VADD(dsum,d1,d2); VADD(dsum,dsum,d3);
+                        SETBH(0,dsum); SETBH(3,d4);
+                        BIDX(p1); BIDX(p4);
+                        pad -= 6;
+                    }
+                    else if (i1%nx==i2%nx && i2%nx==i4%nx) {
+                        VADD(dsum,d1,d2); VADD(dsum,dsum,d4);
+                        SETBH(0,dsum); SETBH(3,d3);
+                        BIDX(p1); BIDX(p3);
+                        pad -= 6;
+                    }
+                    else if (i2%nx==i3%nx && i3%nx==i4%nx) {
+                        VADD(dsum,d2,d3); VADD(dsum,dsum,d4);
+                        SETBH(3,d1); SETBH(0,dsum);
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                    else if (i1%nx==i3%nx && i3%nx==i4%nx) {
+                        VADD(dsum,d1,d3); VADD(dsum,dsum,d4);
+                        SETBH(0,dsum); SETBH(3,d2);
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                    else if (i1%nx==i2%nx && i3%nx==i4%nx) {
+                        VADD(dsum,d1,d2);
+                        SETBH(0,dsum); 
+                        VADD(dsum,d3,d4);
+                        SETBH(3,dsum);
+                        BIDX(p1); BIDX(p3);
+                        pad -= 6;
+                    }
+                    else if (i1%nx==i3%nx && i2%nx==i4%nx) {
+                        VADD(dsum,d1,d3);
+                        SETBH(0,dsum); 
+                        VADD(dsum,d2,d4);
+                        SETBH(3,dsum);
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                    else  { //(i1%nx==i4%nx && i2%nx==i3%nx) {
+                        VADD(dsum,d1,d4);
+                        SETBH(0,dsum); 
+                        VADD(dsum,d2,d3);
+                        SETBH(3,dsum);
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                }
+                else if (i1%nx==i2%nx || i1%nx==i3%nx || i1%nx==i4%nx || \
+                         i2%nx==i3%nx || i2%nx==i4%nx || i3%nx==i4%nx ) {
+                    // two indices are the same
+                    if (i1%nx==i2%nx) {
+                        VADD(dsum,d1,d2);
+                        SETBH(0,dsum); SETBH(3,d3); SETBH(6,d4);
+                        BIDX(p1); BIDX(p3); BIDX(p4);
+                        pad -= 3;
+                    }
+                    else if (i1%nx==i3%nx) {
+                        VADD(dsum,d1,d3);
+                        SETBH(0,dsum); SETBH(3,d2); SETBH(6,d4);
+                        BIDX(p1); BIDX(p3); BIDX(p4);
+                        pad -= 3;
+                    }
+                    else if (i1%nx==i4%nx) {
+                        VADD(dsum,d1,d4);
+                        SETBH(0,dsum); SETBH(3,d2); SETBH(6,d3);
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                    else if (i2%nx==i3%nx) {
+                        VADD(dsum,d2,d3);
+                        SETBH(0,d1); SETBH(3,dsum); SETBH(6,d4);
+                        BIDX(p1); BIDX(p2); BIDX(p4);
+                        pad -= 3;
+                    }
+                    else if (i2%nx==i4%nx) {
+                        VADD(dsum,d2,d4);
+                        SETBH(0,d1); SETBH(3,dsum); SETBH(6,d3);
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                    else {
+                        VADD(dsum,d3,d4);
+                        SETBH(0,d1); SETBH(3,d2); SETBH(6,dsum);
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                }
+                else { //default, no duplicate atoms
+                    // no indices are the same
+                    SETBH(0,d1); SETBH(3,d2); SETBH(6,d3); SETBH(9,d4);
+                    BIDX(p1); BIDX(p2); BIDX(p3); BIDX(p4);
+                }
+                VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
+                AXPY2(f1[0],d1,tmp);VADD(tx,tx,tmp);
+                AXPY2(f1[1],d1,tmp);VADD(ty,ty,tmp);
+                AXPY2(f1[2],d1,tmp);VADD(tz,tz,tmp);
+                AXPY2(f2[0],d2,tmp);VADD(tx,tx,tmp);
+                AXPY2(f2[1],d2,tmp);VADD(ty,ty,tmp);
+                AXPY2(f2[2],d2,tmp);VADD(tz,tz,tmp);
+                AXPY2(f3[0],d3,tmp);VADD(tx,tx,tmp);
+                AXPY2(f3[1],d3,tmp);VADD(ty,ty,tmp);
+                AXPY2(f3[2],d3,tmp);VADD(tz,tz,tmp);
+                AXPY2(f4[0],d4,tmp);VADD(tx,tx,tmp);
+                AXPY2(f4[1],d4,tmp);VADD(ty,ty,tmp);
+                AXPY2(f4[2],d4,tmp);VADD(tz,tz,tmp);
+                pad += 3; SETB(9+pad,tx); BIDT(0);
+                pad += 3; SETB(9+pad,ty); BIDT(3);
+                pad += 3; SETB(9+pad,tz); BIDT(6);
+                break;
+            case 4:
+                pad = 0;
+                p1 = NXYZ; p2 = NXYZ; p3 = NXYZ; p4 = NXYZ;
+                i1=p1;i2=p2;i3=p3;i4=p4;
+                out_of_plane(x+p1, x+p2, x+p3, x+p4, d1, d2, d3, d4);
+                CALCF(x+p1,f1); CALCF(x+p2,f2); CALCF(x+p3,f3); CALCF(x+p4,f4);
+                if (i1%nx==i2%nx && i2%nx==i3%nx && i3%nx==i4%nx) {
+                    // all indices are the same
+                    SETBH(0,zero);
+                    //pass on smallest index
+                    BIDX(p1);
+                    pad -= 9;
+                }
+                else if ( (i1%nx==i2%nx && i2%nx==i3%nx) || \
+                          (i1%nx==i2%nx && i2%nx==i4%nx) || \
+                          (i2%nx==i3%nx && i3%nx==i4%nx) || \
+                          (i1%nx==i3%nx && i3%nx==i4%nx) || \
+                          (i1%nx==i2%nx && i3%nx==i4%nx) || \
+                          (i1%nx==i3%nx && i2%nx==i4%nx) || \
+                          (i1%nx==i4%nx && i2%nx==i3%nx) \
+                          ) {
+                    // three indices are the same
+                    if (i1%nx==i2%nx && i2%nx==i3%nx) {
+                        VADD(dsum,d1,d2); VADD(dsum,dsum,d3);
+                        SETBH(0,dsum); SETBH(3,d4);
+                        BIDX(p1); BIDX(p4);
+                        pad -= 6;
+                    }
+                    else if (i1%nx==i2%nx && i2%nx==i4%nx) {
+                        VADD(dsum,d1,d2); VADD(dsum,dsum,d4);
+                        SETBH(0,dsum); SETBH(3,d3);
+                        BIDX(p1); BIDX(p3);
+                        pad -= 6;
+                    }
+                    else if (i2%nx==i3%nx && i3%nx==i4%nx) {
+                        VADD(dsum,d2,d3); VADD(dsum,dsum,d4);
+                        SETBH(3,d1); SETBH(0,dsum);
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                    else if (i1%nx==i3%nx && i3%nx==i4%nx) {
+                        VADD(dsum,d1,d3); VADD(dsum,dsum,d4);
+                        SETBH(0,dsum); SETBH(3,d2);
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                    else if (i1%nx==i2%nx && i3%nx==i4%nx) {
+                        VADD(dsum,d1,d2);
+                        SETBH(0,dsum); 
+                        VADD(dsum,d3,d4);
+                        SETBH(3,dsum);
+                        BIDX(p1); BIDX(p3);
+                        pad -= 6;
+                    }
+                    else if (i1%nx==i3%nx && i2%nx==i4%nx) {
+                        VADD(dsum,d1,d3);
+                        SETBH(0,dsum); 
+                        VADD(dsum,d2,d4);
+                        SETBH(3,dsum);
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                    else { //(i1%nx==i4%nx && i2%nx==i3%nx) {
+                        VADD(dsum,d1,d4);
+                        SETBH(0,dsum); 
+                        VADD(dsum,d2,d3);
+                        SETBH(3,dsum);
+                        BIDX(p1); BIDX(p2);
+                        pad -= 6;
+                    }
+                }
+                else if (i1%nx==i2%nx || i1%nx==i3%nx || i1%nx==i4%nx || \
+                         i2%nx==i3%nx || i2%nx==i4%nx || i3%nx==i4%nx ) {
+                    // two indices are the same
+                    if (i1%nx==i2%nx) {
+                        VADD(dsum,d1,d2);
+                        SETBH(0,dsum); SETBH(3,d3); SETBH(6,d4);
+                        BIDX(p1); BIDX(p3); BIDX(p4);
+                        pad -= 3;
+                    }
+                    else if (i1%nx==i3%nx) {
+                        VADD(dsum,d1,d3);
+                        SETBH(0,dsum); SETBH(3,d2); SETBH(6,d4);
+                        BIDX(p1); BIDX(p3); BIDX(p4);
+                        pad -= 3;
+                    }
+                    else if (i1%nx==i4%nx) {
+                        VADD(dsum,d1,d4);
+                        SETBH(0,dsum); SETBH(3,d2); SETBH(6,d3);
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                    else if (i2%nx==i3%nx) {
+                        VADD(dsum,d2,d3);
+                        SETBH(0,d1); SETBH(3,dsum); SETBH(6,d4);
+                        BIDX(p1); BIDX(p2); BIDX(p4);
+                        pad -= 3;
+                    }
+                    else if (i2%nx==i4%nx) {
+                        VADD(dsum,d2,d4);
+                        SETBH(0,d1); SETBH(3,dsum); SETBH(6,d3);
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                    else {
+                        VADD(dsum,d3,d4);
+                        SETBH(0,d1); SETBH(3,d2); SETBH(6,dsum);
+                        BIDX(p1); BIDX(p2); BIDX(p3);
+                        pad -= 3;
+                    }
+                }
+                else { //default, no duplicate atoms
+                    // no indices are the same
+                    SETBH(0,d1); SETBH(3,d2); SETBH(6,d3); SETBH(9,d4);
+                    BIDX(p1); BIDX(p2); BIDX(p3); BIDX(p4);
+                }
+                VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
+                AXPY2(f1[0],d1,tmp);VADD(tx,tx,tmp);
+                AXPY2(f1[1],d1,tmp);VADD(ty,ty,tmp);
+                AXPY2(f1[2],d1,tmp);VADD(tz,tz,tmp);
+                AXPY2(f2[0],d2,tmp);VADD(tx,tx,tmp);
+                AXPY2(f2[1],d2,tmp);VADD(ty,ty,tmp);
+                AXPY2(f2[2],d2,tmp);VADD(tz,tz,tmp);
+                AXPY2(f3[0],d3,tmp);VADD(tx,tx,tmp);
+                AXPY2(f3[1],d3,tmp);VADD(ty,ty,tmp);
+                AXPY2(f3[2],d3,tmp);VADD(tz,tz,tmp);
+                AXPY2(f4[0],d4,tmp);VADD(tx,tx,tmp);
+                AXPY2(f4[1],d4,tmp);VADD(ty,ty,tmp);
+                AXPY2(f4[2],d4,tmp);VADD(tz,tz,tmp);
+                pad += 3; SETB(9+pad,tx); BIDT(0);
+                pad += 3; SETB(9+pad,ty); BIDT(3);
+                pad += 3; SETB(9+pad,tz); BIDT(6);
+                break;
+            case 5:
+                /* adding single atoms for cart. constraints */
+                pad = 0; p1 = NXYZ; 
+                CALCF(x+p1,f1);
+                tmp[0]=(*(h+0)); tmp[1]=(*(h+1)); tmp[2]=(*(h+2)); 
+                SETBH(0,tmp);
+                BIDX(p1); 
+                /*VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);*/
+                /*AXPY2(f1[0],d1,tmp);VADD(tx,tx,tmp);*/
+                /*AXPY2(f1[1],d1,tmp);VADD(ty,ty,tmp);*/
+                /*AXPY2(f1[2],d1,tmp);VADD(tz,tz,tmp);*/
+                /*pad += 3; SETB(pad,tx); BIDT(0);*/
+                /*pad += 3; SETB(pad,ty); BIDT(3);*/
+                /*pad += 3; SETB(pad,tz); BIDT(6);*/
+                break;
+            case 6:
+                /* adding single atoms for cart. constraints */
+                pad = 0; p1 = NXYZ; 
+                CALCF(x+p1,f1);
+                tmp[0]=(*(h+3)); tmp[1]=(*(h+4)); tmp[2]=(*(h+5)); 
+                SETBH(0,tmp);
+                BIDX(p1); 
+                /*VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);*/
+                /*AXPY2(f1[0],d1,tmp);VADD(tx,tx,tmp);*/
+                /*AXPY2(f1[1],d1,tmp);VADD(ty,ty,tmp);*/
+                /*AXPY2(f1[2],d1,tmp);VADD(tz,tz,tmp);*/
+                /*pad += 3; SETB(pad,tx); BIDT(0);*/
+                /*pad += 3; SETB(pad,ty); BIDT(3);*/
+                /*pad += 3; SETB(pad,tz); BIDT(6);*/
+                break;
+            case 7:
+                /* adding single atoms for cart. constraints */
+                pad = 0; p1 = NXYZ; 
+                CALCF(x+p1,f1);
+                tmp[0]=(*(h+6)); tmp[1]=(*(h+7)); tmp[2]=(*(h+8)); 
+                SETBH(0,tmp);
+                BIDX(p1); 
+                /*VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);*/
+                /*AXPY2(f1[0],d1,tmp);VADD(tx,tx,tmp);*/
+                /*AXPY2(f1[1],d1,tmp);VADD(ty,ty,tmp);*/
+                /*AXPY2(f1[2],d1,tmp);VADD(tz,tz,tmp);*/
+                /*pad += 3; SETB(pad,tx); BIDT(0);*/
+                /*pad += 3; SETB(pad,ty); BIDT(3);*/
+                /*pad += 3; SETB(pad,tz); BIDT(6);*/
+                break;
+            default:
+                return 2;  /* unknown internal coordinate type */
+        }
+        n = 3*atoms_per_internal[type]+pad;
+        if (sort) bsort2(b, j, n); /* ensure that the column index is increasing */
+        b += n;
+        nb += n;
+        nint++;
+    }
+    return 1;  /* this point should not be reached! */
+
+#undef NXYZ
+#undef BIDX
+#undef SETVEC
+#undef SETB
+#undef SETBH
+#undef BIDT
+#undef CALCF
+#undef AXPY2
 }
 
 /* }}} */
@@ -1677,6 +2343,29 @@ THCTKFUN(_intcrd, Bmatrix_pbc_nnz)
 }
 
 
+THCTKDOC(_intcrd, Bmatrix_pbc2_nnz) = "nnz, nint = Bmatrix_pbc2_nnz(nx, cint)\n";
+
+THCTKFUN(_intcrd, Bmatrix_pbc2_nnz)
+{
+
+    PyObject *input;
+    PyArrayObject *cint;
+    int nx, nnz, nint;
+
+    if (!PyArg_ParseTuple(args, "iO", &nx, &input)) return NULL;
+
+    cint = (PyArrayObject *)
+        PyArray_ContiguousFromObject(input, PyArray_INT, 1, 1);
+
+    if (cint == NULL) return NULL;
+
+    if (Bmatrix_pbc2_nnz(nx, (int *) cint->data, &nint, &nnz)) return NULL;
+
+    return Py_BuildValue("ii", nnz, nint);
+
+}
+
+
 THCTKDOC(_intcrd, internals) = "c = internals(x, cint, c)\n";
 
 THCTKFUN(_intcrd, internals)
@@ -1693,7 +2382,33 @@ THCTKFUN(_intcrd, internals)
 
     if (cint == NULL) return NULL;
 
+
     if (internals((double *) x->data, (int *) cint->data,
+                  (double *) c->data)) return NULL;
+
+    Py_INCREF(c);
+    return (PyObject *) c;
+
+}
+
+THCTKDOC(_intcrd, internals_pbc) = "c = internals_pbc(x, h, cint, c)\n";
+
+THCTKFUN(_intcrd, internals_pbc)
+{
+
+    PyObject *input;
+    PyArrayObject *x, *h, *cint, *c;
+
+    if (!PyArg_ParseTuple(args, "O!O!OO!", &PyArray_Type, &x, &PyArray_Type, &h,
+        &input, &PyArray_Type, &c)) return NULL;
+
+    cint = (PyArrayObject *)
+        PyArray_ContiguousFromObject(input, PyArray_INT, 1, 1);
+
+    if (cint == NULL) return NULL;
+
+
+    if (internals_pbc((double *) x->data, (double *) h->data, (int *) cint->data,
                   (double *) c->data)) return NULL;
 
     Py_INCREF(c);
@@ -1751,6 +2466,35 @@ THCTKFUN(_intcrd, Bmatrix_pbc)
 
     if (Bmatrix_pbc(nx, (double *) x->data, (int *) cint->data,
                 (double *) b->data, (int *) jb->data, (int *) ib->data,
+                sort))
+        return NULL;
+
+    Py_INCREF(Py_None);
+    return Py_None;
+
+}
+
+THCTKDOC(_intcrd, Bmatrix_pbc2) = "Bmatrix_pbc2(nx, x, h, h2, cint, b, jb, ib, sort)";
+
+THCTKFUN(_intcrd, Bmatrix_pbc2)
+{
+
+    PyObject *input;
+    PyArrayObject *x, *h, *h2, *cint, *b, *jb, *ib ;
+    int sort, nx;
+
+    if (!PyArg_ParseTuple(args, "iO!OO!O!O!O!O!i", &nx, &PyArray_Type, &x,
+        &input, &PyArray_Type, &h, &PyArray_Type, &h2, &PyArray_Type, &b, &PyArray_Type, &jb,
+        &PyArray_Type, &ib, &sort))
+        return NULL;
+
+    cint = (PyArrayObject *)
+        PyArray_ContiguousFromObject(input, PyArray_INT, 1, 1);
+
+    if (cint == NULL) return NULL;
+
+    if ( Bmatrix_pbc2(nx, (double *) x->data, (double *) h->data, (double *) h2->data, 
+                (int *) cint->data, (double *) b->data, (int *) jb->data, (int *) ib->data,
                 sort))
         return NULL;
 
@@ -2067,10 +2811,13 @@ static struct PyMethodDef _intcrd_methods[] = {
     THCTKDEF(_intcrd, conn2crd_p)
     THCTKDEF(_intcrd, symbolicAc)
     THCTKDEF(_intcrd, internals)
+    THCTKDEF(_intcrd, internals_pbc)
     THCTKDEF(_intcrd, Bmatrix)
     THCTKDEF(_intcrd, Bmatrix_pbc)
+    THCTKDEF(_intcrd, Bmatrix_pbc2)
     THCTKDEF(_intcrd, Bmatrix_nnz)
     THCTKDEF(_intcrd, Bmatrix_pbc_nnz)
+    THCTKDEF(_intcrd, Bmatrix_pbc2_nnz)
     {NULL, NULL, 0, NULL}
 };
 

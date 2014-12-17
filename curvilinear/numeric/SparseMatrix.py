@@ -854,7 +854,7 @@ def eigB(B, k=None, S=None, sigma=None, which='LM'):
 
     if k is None:
         k = 6
-    E, V = eigs(B, k, M=S, sigma=sigma, which=which, tol=1e-12)
+    E, V = eigs(B, k, M=S, sigma=sigma, which=which, tol=0)
     return E, V
 
 def svdB(B, k=6, ncv=None, tol=0, which='LM'):
@@ -872,14 +872,6 @@ def svdB(B, k=6, ncv=None, tol=0, which='LM'):
     B = csc_matrix((bx, bj, bi),shape=(n, m))
     ut, s, vt = svds(B, k)
     return ut, s, vt
-    
-
-    V, S, WT = SVD(A)
-    S2 = S*S
-    S2 += eps*eps
-    S /= S2
-    Ainv = N.dot(V, S[:,NewAxis]*WT)
-    return Ainv
 
 #def sparseregularizedInverse(A, eps = 1e-12):
     #V, S, WT = svdB(A)

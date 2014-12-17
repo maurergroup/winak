@@ -1548,10 +1548,12 @@ int Bmatrix_pbc2(int nx, const vtype *x, const vtype *h, const vtype *hi, \
 #define SETBH(num, vec1)  (*(b+num+0)) = vec1[0]*(*(h+0))+vec1[1]*(*(h+1))+vec1[2]*(*(h+2)); \
                           (*(b+num+1)) = vec1[0]*(*(h+3))+vec1[1]*(*(h+4))+vec1[2]*(*(h+5)); \
                           (*(b+num+2)) = vec1[0]*(*(h+6))+vec1[1]*(*(h+7))+vec1[2]*(*(h+8)); 
+
 #define BIDT(num) *jb++ = nx+num; *jb++ = nx+num+1; *jb++ = nx+num+2;
-#define CALCF(pos, vec2)   vec2[0] = (*(pos+0))*(*(hi+0))+(*(pos+1))*(*(hi+1))+(*(pos+2))*(*(hi+2)); \
-                           vec2[1] = (*(pos+0))*(*(hi+3))+(*(pos+1))*(*(hi+4))+(*(pos+2))*(*(hi+5)); \
-                           vec2[2] = (*(pos+0))*(*(hi+6))+(*(pos+1))*(*(hi+7))+(*(pos+2))*(*(hi+8)); 
+
+#define CALCF(pos, vec2)   vec2[0] = (*(x+pos+0))*(*(hi+0))+(*(x+pos+1))*(*(hi+1))+(*(x+pos+2))*(*(hi+2)); \
+                           vec2[1] = (*(x+pos+0))*(*(hi+3))+(*(x+pos+1))*(*(hi+4))+(*(x+pos+2))*(*(hi+5)); \
+                           vec2[2] = (*(x+pos+0))*(*(hi+6))+(*(x+pos+1))*(*(hi+7))+(*(x+pos+2))*(*(hi+8)); 
 
 #define AXPY2(a,vec1,vec2) vec2[0] = a*vec1[0]; \
                            vec2[1] = a*vec1[1]; \
@@ -1572,7 +1574,7 @@ int Bmatrix_pbc2(int nx, const vtype *x, const vtype *h, const vtype *hi, \
                 p1 = NXYZ; p2 = NXYZ;
                 i1=p1; i2=p2;
                 stretch(x+p1, x+p2, d1, d2);
-                CALCF(x+p1,f1); CALCF(x+p2,f2);
+                CALCF(p1,f1); CALCF(p2,f2);
                 // atoms are the same in different cells 
                 // so we only set one
                 if (i1%nx==i2%nx) {
@@ -1602,7 +1604,7 @@ int Bmatrix_pbc2(int nx, const vtype *x, const vtype *h, const vtype *hi, \
                 p1 = NXYZ; p2 = NXYZ; p3 = NXYZ;
                 i1=p1; i2=p2; i3=p3;
                 bend(x+p1, x+p2, x+p3, d1, d2, d3);
-                CALCF(x+p1,f1); CALCF(x+p2,f2); CALCF(x+p3,f3);
+                CALCF(p1,f1); CALCF(p2,f2); CALCF(p3,f3);
                 if (i1%nx==i2%nx && i2%nx==i3%nx) {
                     SETBH(0,zero);
                     //pass on smallest index
@@ -1652,7 +1654,7 @@ int Bmatrix_pbc2(int nx, const vtype *x, const vtype *h, const vtype *hi, \
                 p1 = NXYZ; p2 = NXYZ; p3 = NXYZ; p4 = NXYZ;
                 i1=p1; i2=p2;i3=p3;i4=p4;
                 torsion(x+p1, x+p2, x+p3, x+p4, d1, d2, d3, d4);
-                CALCF(x+p1,f1); CALCF(x+p2,f2); CALCF(x+p3,f3); CALCF(x+p4,f4);
+                CALCF(p1,f1); CALCF(p2,f2); CALCF(p3,f3); CALCF(p4,f4);
                 if (i1%nx==i2%nx && i2%nx==i3%nx && i3%nx==i4%nx) {
                     // all indices are the same
                     SETBH(0,zero);
@@ -1785,7 +1787,7 @@ int Bmatrix_pbc2(int nx, const vtype *x, const vtype *h, const vtype *hi, \
                 p1 = NXYZ; p2 = NXYZ; p3 = NXYZ; p4 = NXYZ;
                 i1=p1;i2=p2;i3=p3;i4=p4;
                 out_of_plane(x+p1, x+p2, x+p3, x+p4, d1, d2, d3, d4);
-                CALCF(x+p1,f1); CALCF(x+p2,f2); CALCF(x+p3,f3); CALCF(x+p4,f4);
+                CALCF(p1,f1); CALCF(p2,f2); CALCF(p3,f3); CALCF(p4,f4);
                 if (i1%nx==i2%nx && i2%nx==i3%nx && i3%nx==i4%nx) {
                     // all indices are the same
                     SETBH(0,zero);
@@ -1916,8 +1918,8 @@ int Bmatrix_pbc2(int nx, const vtype *x, const vtype *h, const vtype *hi, \
             case 5:
                 /* adding single atoms for cart. constraints */
                 pad = 0; p1 = NXYZ; 
-                CALCF(x+p1,f1);
-                tmp[0]=(*(h+0)); tmp[1]=(*(h+1)); tmp[2]=(*(h+2)); 
+                CALCF(p1,f1);
+                tmp[0]=(*(h+0)); tmp[1]=(*(h+1)); tmp[2]=(*(h+2));
                 SETBH(0,tmp);
                 BIDX(p1); 
                 /*VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);*/
@@ -1931,7 +1933,7 @@ int Bmatrix_pbc2(int nx, const vtype *x, const vtype *h, const vtype *hi, \
             case 6:
                 /* adding single atoms for cart. constraints */
                 pad = 0; p1 = NXYZ; 
-                CALCF(x+p1,f1);
+                CALCF(p1,f1);
                 tmp[0]=(*(h+3)); tmp[1]=(*(h+4)); tmp[2]=(*(h+5)); 
                 SETBH(0,tmp);
                 BIDX(p1); 
@@ -1946,7 +1948,7 @@ int Bmatrix_pbc2(int nx, const vtype *x, const vtype *h, const vtype *hi, \
             case 7:
                 /* adding single atoms for cart. constraints */
                 pad = 0; p1 = NXYZ; 
-                CALCF(x+p1,f1);
+                CALCF(p1,f1);
                 tmp[0]=(*(h+6)); tmp[1]=(*(h+7)); tmp[2]=(*(h+8)); 
                 SETBH(0,tmp);
                 BIDX(p1); 

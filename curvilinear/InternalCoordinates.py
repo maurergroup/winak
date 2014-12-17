@@ -1263,7 +1263,6 @@ class icSystem:
             self.Ainv = regularizedInverse(A, eps = inveps)
 
             dx[:] = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
-
             # self.dx.append(dx.copy()) # for DEBUGGING
 
             if RIIS and n >= RIIS_start - RIIS_maxLength:
@@ -1281,7 +1280,7 @@ class icSystem:
                 xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
             else:
                 xn += dx
-
+                
             norm = N.dot(dx, dx)
             self.convergence = n, N.sqrt(norm/self.nx)
             # remove old data not needed anymore for RIIS
@@ -1379,7 +1378,7 @@ class icSystem:
                 raise ArithmeticError(
                     'Incomplete Cholesky decomposition failed: ' + `info`)
 
-            dx = self.inverseA(Bt(dq))
+            dx = self.inverseA(Bt(dq)).flatten()
 
             # self.dx.append(dx.copy()) # for DEBUGGING
 
@@ -1537,11 +1536,20 @@ class Periodic_icSystem(icSystem):
         #self.colamd(inverse=1)
         #self.evalBt()
     
-    def evalB(self, sort = 0):
+    def evalB(self, col_c=[],row_c=[], sort = 0):
         if not hasattr(self, 'B'):
             self.B = CSR(n=self.n, m=self.nx+9, nnz=self.Bnnz, type = nxFloat)
         ic.Bmatrix_pbc2(self.nx, self.xyz_pbc, self.ic, self.cell, self.celli, 
                self.B.x, self.B.j, self.B.i, sort)
+      
+        for c in col_c:
+            for i in range(len(self.B.x)):
+                if self.B.j[i] == c:
+                    self.B.x[i] = 0.0
+       
+        for c in row_c:
+            self.B.x[self.B.i[c]:self.B.i[c+1]]
+
         return self.B
 
     def connectivity(self):
@@ -1572,7 +1580,8 @@ class Periodic_icSystem(icSystem):
     def denseBackIteration(self, q, maxiter = 200, eps = 1e-5, initialize = 1,
             inveps = 1e-9, maxStep = 0.5, warn = True, 
             RIIS = True, RIIS_start = 20, RIIS_maxLength = 6, RIIS_dim = 4, 
-            restart = True, dampingThreshold = 0.1, maxEps = 1e-5, 
+            restart = True, dampingThreshold = 0.1, maxEps = 1e-5,
+            col_constraints = [], row_constraints=[]
             ):
         """
         Find Cartesian coordinates belonging to the set of internal coordinates
@@ -1622,7 +1631,8 @@ class Periodic_icSystem(icSystem):
 
         if self.torsions is not None: torsions = N.asarray(self.torsions, 
                                                             dtype = N.int32)
-        else:                         torsions = None
+        else:
+            torsions = None
 
         while 1:
             n += 1
@@ -1648,7 +1658,7 @@ class Periodic_icSystem(icSystem):
                 nScalings += 1
                 dq *= maxStep/dqMax
 
-            B = self.evalB().full()
+            B = self.evalB(col_constraints,row_constraints).full()
             # self.Bfull = B # DEBUGGING
 
             # check all coordinates, if they are close to a singularity
@@ -1713,7 +1723,8 @@ class Periodic_icSystem(icSystem):
              #iceps = 1e-6,  # old value (too small for RIIS)
             iceps = 1e-4, icp = 10, iclambda = 0.0001, maxStep = 0.5, warn = True,
             RIIS = True, RIIS_start = 20, RIIS_maxLength = 6, RIIS_dim = 4, 
-            dampingThreshold = 0.1, maxEps = 1e-6):
+            dampingThreshold = 0.1, maxEps = 1e-6,
+            col_constraints = [], row_constraints=[]):
         """see: J. Chem. Phys. 113 (2000), 5598"""
         assert isinstance(maxStep, float)
 
@@ -1768,7 +1779,7 @@ class Periodic_icSystem(icSystem):
                 nScalings += 1
                 dq *= maxStep/dqMax
 
-            self.evalB()
+            self.evalB(col_constraints, row_constraints)
 
             # check all coordinates, if they are close to a singularity
             # i.e. stretches -> 0. , bends -> pi, bends of tors -> 0, pi
@@ -1808,7 +1819,8 @@ class Periodic_icSystem(icSystem):
                 self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
                 self.cell = xn[-9:]
                 self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
-            
+            #print self.xyz
+            #print self.cell
             norm = N.dot(dx, dx)
             #print norm
             self.convergence = n, N.sqrt(norm/self.nx+9)
@@ -1826,7 +1838,7 @@ class Periodic_icSystem(icSystem):
                     ii = i*3
                     for j in range(i):
                         jj = j*3
-                        d = N.linalg.norm(xn[ii:ii+3] - xn[jj:jj+3])
+                        d = N.linalg.norm(self.xyz[ii:ii+3] - self.xyz[jj:jj+3])
                         if d < 1.0:
                             warnings.warn(
                                 "WARNING: Nuclear fusion of atoms " + 

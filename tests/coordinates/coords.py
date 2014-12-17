@@ -20,25 +20,29 @@ d=Delocalizer(m, icList=iclist, periodic=False, dense=True, weighted=True)#, wei
 
 coords=DC(d.x_ref.flatten(), d.masses, internal=True, atoms=d.atoms, \
         ic=d.ic, L=None, Li=None,u=d.get_U())#, biArgs={'iclambda' :0.0001})
-coords.write_jmol('dol') #delocalizing out loud
+#coords.write_jmol('dol') #delocalizing out loud
 
-coords.s[:] =  2.000
-coords.s2x()
-X1 = coords.x
-print coords.getS(X1)
-print X1
+#coords.s[:] =  2.000
+#coords.s2x()
+#X1 = coords.x
+#print coords.getS(X1)
+#print X1
 
 #SPARSE
-d=Delocalizer(m, icList=iclist, periodic=False, dense=False, weighted=False)#, weighted=True)
+d=Delocalizer(m, icList=iclist, periodic=False, dense=False, weighted=True)#, weighted=True)
 
 coords=DC(d.x_ref.flatten(), d.masses, internal=True, atoms=d.atoms, \
-        ic=d.ic, L=None, Li=None,u=d.get_U(), biArgs={'iclambda':0.000001})
-coords.write_jmol('dol2') #delocalizing out loud
+        ic=d.ic, L=None, Li=None,u=d.get_U(), biArgs={'iclambda':0.0001})
+#coords.write_jmol('dol2') #delocalizing out loud
 
-coords.s[:] =  2.000
-coords.s2x()
-X2 = coords.x
-print coords.getS(X2)
-print X2
-print '-----'
-print X1-X2
+#coords.s[:] =  2.000
+#coords.s2x()
+#X2 = coords.x
+#print coords.getS(X2)
+#print X2
+#print '--'
+#print X1-X2
+
+#view(m)
+#m.positions = coords.x.reshape(-1,3)
+#view(m)

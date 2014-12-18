@@ -683,7 +683,6 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
         self.bends.append([n, 3*n, 0])    
         self.bends.append([2*n, 3*n, 0])    
         
-
         ####delete bonds which do not reach into unit cell
         ##ADDING CELL BONDS
         #self.bonds.append([(0, n),N.linalg.norm(self.cell[0])])    
@@ -995,6 +994,7 @@ class icSystem:
         if not hasattr(self, 'B'):
             self.B = CSR(n=self.n, m=self.nx, nnz=self.Bnnz, type = nxFloat)
         ic.Bmatrix(self.xyz, self.ic, self.B.x, self.B.j, self.B.i, sort)
+       
         return self.B
 
     def evalBt(self, update = 0, perm = 0):
@@ -1174,7 +1174,7 @@ class icSystem:
             inveps = 1e-9, maxStep = 0.5, warn = True, 
             RIIS = True, RIIS_start = 20, RIIS_maxLength = 6, RIIS_dim = 4, 
             restart = True, dampingThreshold = 0.1, maxEps = 1e-5, 
-            ):
+            col_constraints=[], row_constraints=[]):
         """
         Find Cartesian coordinates belonging to the set of internal coordinates
         'q' in an iterative way. 
@@ -1251,6 +1251,17 @@ class icSystem:
                 dq *= maxStep/dqMax
 
             B = self.evalB().full()
+            
+            Bcs = B[row_constraints]
+            for j,row in enumerate(B):
+                tmp = N.zeros_like(row)
+                for c in range(len(row_constraints)):
+                    tmp += N.dot(row,Bcs[c])*Bcs[c] /N.dot(Bcs[c],Bcs[c])
+                B[j] -= tmp
+            
+            for c in col_constraints:
+                B[:,c] = 0.0
+            
             # self.Bfull = B # DEBUGGING
 
             # check all coordinates, if they are close to a singularity
@@ -1310,7 +1321,8 @@ class icSystem:
             # iceps = 1e-6,  # old value (too small for RIIS)
             iceps = 1e-4, icp = 10, iclambda = 0.0001, maxStep = 0.5, warn = True,
             RIIS = True, RIIS_start = 20, RIIS_maxLength = 6, RIIS_dim = 4, 
-            dampingThreshold = 0.1, maxEps = 1e-6):
+            dampingThreshold = 0.1, maxEps = 1e-6,
+            col_constraints = [], row_constraints=[]):
         """see: J. Chem. Phys. 113 (2000), 5598"""
         assert isinstance(maxStep, float)
 
@@ -1495,7 +1507,8 @@ class Periodic_icSystem(icSystem):
         
         #get Bmatrix dimensions and number of DoFs Bmatrix has n times Bnnz
         # we add the three cell vectors as 9 rows at the end of the B matrix
-        self.Bnnz, self.n = ic.Bmatrix_pbc2_nnz(self.nx, self.ic)
+        #self.Bnnz, self.n = ic.Bmatrix_pbc2_nnz(self.nx, self.ic)
+        self.Bnnz, self.n = ic.Bmatrix_pbc_nnz(self.nx, self.ic)
         self.cell_indices = N.array([
             [0,0,0],[1,0,0],[0,1,0],[0,0,1],
             [1,1,0],[1,0,1],[0,1,1],[1,1,1]
@@ -1536,19 +1549,12 @@ class Periodic_icSystem(icSystem):
         #self.colamd(inverse=1)
         #self.evalBt()
     
-    def evalB(self, col_c=[],row_c=[], sort = 0):
+    def evalB(self, sort = 0):
         if not hasattr(self, 'B'):
             self.B = CSR(n=self.n, m=self.nx+9, nnz=self.Bnnz, type = nxFloat)
-        ic.Bmatrix_pbc2(self.nx, self.xyz_pbc, self.ic, self.cell, self.celli, 
+        #ic.Bmatrix_pbc2(self.nx, self.xyz_pbc, self.ic, self.cell, self.celli, 
+        ic.Bmatrix_pbc(self.nx, self.xyz_pbc, self.ic, 
                self.B.x, self.B.j, self.B.i, sort)
-      
-        for c in col_c:
-            for i in range(len(self.B.x)):
-                if self.B.j[i] == c:
-                    self.B.x[i] = 0.0
-       
-        for c in row_c:
-            self.B.x[self.B.i[c]:self.B.i[c+1]]
 
         return self.B
 
@@ -1570,7 +1576,8 @@ class Periodic_icSystem(icSystem):
         self.ic = N.ravel(self.ic.astype(nxInt32))
         xyz_pbc = N.ravel(xyz_pbc.astype(nxFloat))
         if not hasattr(self, 'crd'): self.crd = N.zeros(self.n, nxFloat)
-        return ic.internals_pbc(xyz_pbc, self.celli, self.ic, self.crd)
+        #return ic.internals_pbc(xyz_pbc, self.celli, self.ic, self.crd)
+        return ic.internals(xyz_pbc, self.ic, self.crd)
     
     def biInit(self):
         if not hasattr(self, 'tmp_cell'): self.tmp_cell = N.zeros(9, nxFloat)
@@ -1618,8 +1625,9 @@ class Periodic_icSystem(icSystem):
 
         dq = self.tmp_q
         dx = self.tmp_x
-        fracs = N.dot(self.xyz.reshape(-1,3),self.celli.reshape(-1,3)).flatten()
-        xn = N.concatenate([fracs, self.cell], axis=0)
+        #fracs = N.dot(self.xyz.reshape(-1,3),self.celli.reshape(-1,3)).flatten()
+        #xn = N.concatenate([fracs, self.cell], axis=0)
+        xn = N.concatenate([self.xyz, self.cell], axis=0)
         n = 0
         nScalings = 0 
         neps = eps*eps*self.nx
@@ -1658,7 +1666,8 @@ class Periodic_icSystem(icSystem):
                 nScalings += 1
                 dq *= maxStep/dqMax
 
-            B = self.evalB(col_constraints,row_constraints).full()
+            B = self.B.full()
+
             # self.Bfull = B # DEBUGGING
 
             # check all coordinates, if they are close to a singularity
@@ -1670,7 +1679,21 @@ class Periodic_icSystem(icSystem):
             A = N.dot(N.transpose(B), B)
             self.Ainv = regularizedInverse(A, eps = inveps)
             #this dx is the displacement vector in x and the 3 lattice vectors
+            
+            #TODO here we should zero the dqs corresponding to constraints in row_constr
+            
             dx = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
+            
+            #imposing internal constraints
+            for i,c in enumerate(row_constraints): 
+                e = N.zeros(self.n)
+                e[c] = 1.0
+                tmp = N.dot(self.Ainv, N.dot(N.transpose(B), e))
+                dx -= N.dot(dx, tmp) * tmp
+            #imposing cartesian constraints
+            for c in col_constraints:
+                dx[c] = 0.0
+
             # self.dx.append(dx.copy()) # for DEBUGGING
 
             if RIIS and n >= RIIS_start - RIIS_maxLength:
@@ -1686,12 +1709,14 @@ class Periodic_icSystem(icSystem):
 
             if RIIS_on:
                 xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
-                self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
+                self.xyz = xn[:-9]
+                #self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
                 self.cell = xn[-9:]
                 self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             else:
                 xn += dx
-                self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
+                self.xyz = xn[:-9]
+                #self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
                 self.cell = xn[-9:]
                 self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             norm = N.dot(dx, dx)
@@ -1739,8 +1764,9 @@ class Periodic_icSystem(icSystem):
 
         dq = self.tmp_q
         dx = self.tmp_x
-        fracs = N.dot(self.xyz.reshape(-1,3),self.celli.reshape(-1,3)).flatten()
-        xn = N.concatenate([fracs, self.cell], axis=0)
+        #fracs = N.dot(self.xyz.reshape(-1,3),self.celli.reshape(-1,3)).flatten()
+        #xn = N.concatenate([fracs, self.cell], axis=0)
+        xn = N.concatenate([self.xyz, self.cell], axis=0)
         dx = N.concatenate([self.tmp_x, self.tmp_cell], axis=0)
         if initialize:self.initA()
 
@@ -1779,7 +1805,7 @@ class Periodic_icSystem(icSystem):
                 nScalings += 1
                 dq *= maxStep/dqMax
 
-            self.evalB(col_constraints, row_constraints)
+            self.evalB()
 
             # check all coordinates, if they are close to a singularity
             # i.e. stretches -> 0. , bends -> pi, bends of tors -> 0, pi
@@ -1811,12 +1837,14 @@ class Periodic_icSystem(icSystem):
             if RIIS_on:
                 # print "doing RIIS step"
                 xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
-                self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
+                #self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
+                self.xyz = xn[:-9]
                 self.cell = xn[-9:]
                 self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             else:
                 xn += dx 
-                self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
+                self.xyz = xn[:-9]
+                #self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
                 self.cell = xn[-9:]
                 self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             #print self.xyz

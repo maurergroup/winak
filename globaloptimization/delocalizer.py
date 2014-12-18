@@ -32,7 +32,8 @@ class Delocalizer:
         x0=self.x_ref.flatten()
         self.natoms=len(self.masses)
         self.add_cartesians = add_cartesians
-
+        self.constraints_int = []
+        self.constraints_cart = []
         #VCG constructs primitive internals (bond length,bend,torsion,oop)
         if icList is None:
             if periodic:
@@ -88,6 +89,8 @@ class Delocalizer:
             k = 3*self.natoms - c
         else:
             k = 3*self.natoms-6 - c
+        if self.add_cartesians:
+            k += 6
         if dense:
             pass
         else:
@@ -109,35 +112,28 @@ class Delocalizer:
                 self.u = self.u[:k][::-1]
                 self.ww = self.ww[:k][::-1]
             else:
-                #calculate approximate eigenvalues
-                #if normalized:
-                    #approx. prediag of G gives eigenvalues l with 
-                    #which we scale BtXlXB
-                
-                #g = np.dot(b,b.transpose())
+                #g = np.dot(b.transpose(),b)
                 #not_converged = True
                 #eigs = np.diag(g)
                 #i = 0
                 #g = csc_matrix(g)
                 #while not_converged:
-                    #factor = cholesky(g)
+                    #factor = cholesky(g,0.00001,mode='supernodal')
                     #L = factor.L()
-                    #g = L.transpose().dot(L)
-                    #new_eigs = np.diag(g)
-                    #conv = [np.abs(e-ne)<0.01 for e,ne in zip(eigs,new_eigs)]
+                    #g = L.conjugate().transpose().dot(L)
+                    #new_eigs = np.diag(g.todense())
+                    #conv = [np.abs(e-ne)<0.1 for e,ne in zip(eigs,new_eigs)]
                     #eigs = new_eigs.copy()
                     #i += 1
                     #if np.all(conv):
                         #not_converged=False
                 #print eigs , i
-                #raise SystemExit()
 
-                mm = np.eye(self.n)
-
+                mm = np.eye(self.ic.n)
+                #mm[:len(eigs),:len(eigs)] = np.diag(1.0/eigs)
                 #Andzelm
                 f = np.dot(b.transpose(), mm)
                 f = np.dot(f, b)
-                
                 
                 s2, self.ww, s = np.linalg.svd(f)
                 ww = 1./(np.sqrt(self.ww[:k]))
@@ -188,24 +184,11 @@ class Delocalizer:
         #we know stretches come first in the B matrix
         for i in stretch_list:
             d=np.zeros(len(self.ic))
-            #d=self.ic.B.full()[:,i]
             d[i]=1
+            self.constraints_int.append(i)
             e.append(d)
         return e
     
-    def constrainStretches2(self, stretch_list = None):
-        str=self.ic.getStretchBendTorsOop()[0][0]#all stretches
-        if stretch_list is None:
-            stretch_list = str
-        else:
-            stretch_list = list(stretch_list)
-        e=[]
-        #we know stretches come first in the B matrix
-        for i in stretch_list:
-            d=self.ic.B.full()[:,i]
-            e.append(d)
-        return e
-
     def constrainCell(self):
         #the last 3 stretches and the last three bends are special 
         #cell DoFs
@@ -221,6 +204,9 @@ class Delocalizer:
             d=np.zeros(len(self.ic))
             d[s]=1
             e.append(d)
+        tmp = range(self.natoms,self.natoms+9)
+        for i in tmp:
+            self.constraints_cart.append(i)
         return e
 
     def constrainAtoms(self, atom_list):
@@ -233,6 +219,7 @@ class Delocalizer:
         for c, xyz in atom_list:
             d = np.zeros(len(self.ic))
             d[sbto_sum+xyz*self.natoms+c] = 1
+            self.constraints_cart.append(3*c+xyz)
             e.append(d)
         return e
 
@@ -253,44 +240,42 @@ class Delocalizer:
             #u[i,:] /= norm
 
     def constrain2(self,constraints):
-
-        u = self.u.copy()
-        b = self.ic.B.full().transpose()
-        for i,row in enumerate(b):
-            tmp = row
-            for c in constraints:
-                tmp -= (np.dot(tmp, c) * c) / np.dot(c,c)
-            b[i] = tmp 
-        #b = b[:,4:] 
-        #self.ic.n = self.ic.n - 4
-        #self.ic.ic = self.ic.ic[4*3:]
-        #here we need to fix iclist or initialize a new ic system
-        from scipy.sparse import csr_matrix
-        print b.shape
-        B = csr_matrix(b.transpose())
-        B = CSR(n = B.shape[0], m = B.shape[1],
-                nnz = B.nnz, i= B.indptr,
-                j=B.indices, x= B.data)
-        self.ic.Bnnz = B.nnz
-        self.ic.B = B
-        del self.ic.Bt
-        self.ic.evalBt()
-        self.evalG(c=0)
-        print len(self.ic)
-        self.u2 = self.u
-        print self.u2.shape
-        #print self.ic.Bnnz, self.ic.n
-        #print self.ic()
-        #print self.u.shape
-        #raise SystemExit()
+        def null(A, eps=1e-15):
+            import scipy 
+            u, s, vh = la.svd(A)
+            null_mask = (s <= eps)
+            null_space = scipy.compress(null_mask, vh, axis=0)
+            return scipy.transpose(null_space)
+        
+        #constrained eigenvalue problem
+        dofs = len(self.u)
+        b = self.ic.B.full()
+        n = self.ic.n
+        c = np.array(constraints)
+        m = len(c)
+        c = c.transpose()
+        #calculating nullspace
+        c_tmp = np.zeros([n,n])
+        c_tmp[:,:m] = c
+        z = null(c_tmp)
+        print z.shape
+        #solving generalized eigenvalue problem 
+        zb = np.dot(z.transpose(),b)
+        S = np.dot(z.transpose(),z)
+        gg = np.dot(zb, zb.transpose())
+        from scipy.sparse.linalg import eigs
+        #E, V = la.eig(gg,S)#k=dofs, M=S)
+        E, V = eigs(gg,k=dofs+m,M=S)#k=dofs, M=S)
+        print E
+        print V.shape
+        self.u2 = np.real(np.dot(z,V).transpose())
 
     def constrain(self,constraints):
         u = self.u
         #a number of constraint vectors
         #is projected onto the active coord. space
         n_constr = len(constraints)
-        nn = len(u) - n_constr
-        c = []
+        nn = len(u)
         #for coord in u:
             #tmp = coord.copy()
             #for con in constraints:
@@ -298,27 +283,32 @@ class Delocalizer:
             #tmp /= np.linalg.norm(tmp)
             #c.append(tmp)
 
-        #for con in constraints:
-            #tmp = con
-            #tmp = np.zeros_like(con)
-            #for coord in u:
-                #tmp += np.dot(coord, con) * coord
-            ##tmp /= np.linalg.norm(tmp)
-            #c.append(tmp)
-            #print np.linalg.norm(c[0])
-
-        constraints = np.array(constraints)
-        constraints = np.dot(u.transpose(),np.dot(u, constraints.transpose())).transpose()
-        c = list(constraints)
+        
+        #constraints = np.array(c)
+        #constraints = np.array(constraints)
+        #constraints = np.dot(u.transpose(),np.dot(u, constraints.transpose())).transpose()
+        #c = list(constraints)
+        c = []
+        for con in constraints:
+            tmp = con
+            tmp = np.zeros_like(con)
+            for coord in u:
+                tmp += np.dot(coord, con) * coord
+            tmp /= np.linalg.norm(tmp)
+            c.append(tmp)
+        cc = c    
+        #(aa,bb) = np.linalg.qr(np.array(c).transpose(),mode='full')
+        #cc = list(aa.transpose()) 
+       
         for coord in u:
-            c.append(coord)
-        c[0] /= np.linalg.norm(c[0])
-        u2 = [c[0]]
-        for vec in c[1:]:
+            cc.append(coord)
+        cc[0] /= np.linalg.norm(cc[0])
+        u2 = [cc[0]]
+        for vec in cc[1:]:
             tmp = vec
             for v2 in u2:
                 tmp = tmp - (np.dot(tmp,v2)/np.dot(v2,v2)) * v2
             tmp /= np.linalg.norm(tmp)
             u2.append(tmp)
-        self.u2 = np.array(u2[:nn])
+        self.u2 = np.array(u2[:len(u)])
 

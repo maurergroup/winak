@@ -1252,15 +1252,6 @@ class icSystem:
 
             B = self.evalB().full()
             
-            Bcs = B[row_constraints]
-            for j,row in enumerate(B):
-                tmp = N.zeros_like(row)
-                for c in range(len(row_constraints)):
-                    tmp += N.dot(row,Bcs[c])*Bcs[c] /N.dot(Bcs[c],Bcs[c])
-                B[j] -= tmp
-            
-            for c in col_constraints:
-                B[:,c] = 0.0
             
             # self.Bfull = B # DEBUGGING
 
@@ -1274,6 +1265,8 @@ class icSystem:
             self.Ainv = regularizedInverse(A, eps = inveps)
 
             dx[:] = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
+            for c in col_constraints:
+                dx[c] = 0.0
             # self.dx.append(dx.copy()) # for DEBUGGING
 
             if RIIS and n >= RIIS_start - RIIS_maxLength:
@@ -1391,7 +1384,10 @@ class icSystem:
                     'Incomplete Cholesky decomposition failed: ' + `info`)
 
             dx = self.inverseA(Bt(dq)).flatten()
-
+            tmp = dx.copy()
+            for c in col_constraints:
+                tmp[c] = 0.0
+            dx = tmp
             # self.dx.append(dx.copy()) # for DEBUGGING
 
             if RIIS and n >= RIIS_start - RIIS_maxLength:
@@ -1588,7 +1584,7 @@ class Periodic_icSystem(icSystem):
             inveps = 1e-9, maxStep = 0.5, warn = True, 
             RIIS = True, RIIS_start = 20, RIIS_maxLength = 6, RIIS_dim = 4, 
             restart = True, dampingThreshold = 0.1, maxEps = 1e-5,
-            col_constraints = [], row_constraints=[]
+            col_constraints = [], row_constraints=[],
             ):
         """
         Find Cartesian coordinates belonging to the set of internal coordinates
@@ -1630,7 +1626,7 @@ class Periodic_icSystem(icSystem):
         xn = N.concatenate([self.xyz, self.cell], axis=0)
         n = 0
         nScalings = 0 
-        neps = eps*eps*self.nx
+        neps = eps*eps*(self.nx+9)
         xList = [] # geoms for RIIS
         dxList = [] # error vectors for RIIS
         RIIS_on = False
@@ -1652,6 +1648,7 @@ class Periodic_icSystem(icSystem):
             # larger than the one of the second last vector and a sufficient 
             # number of vectors is available to do an extrapolation
             dq = N.subtract(q, qn, dq)
+           
             if RIIS: 
                 if not RIIS_on and n >= RIIS_start:
                     RIIS_on = True
@@ -1667,7 +1664,6 @@ class Periodic_icSystem(icSystem):
                 dq *= maxStep/dqMax
 
             B = self.B.full()
-
             # self.Bfull = B # DEBUGGING
 
             # check all coordinates, if they are close to a singularity
@@ -1678,22 +1674,25 @@ class Periodic_icSystem(icSystem):
 
             A = N.dot(N.transpose(B), B)
             self.Ainv = regularizedInverse(A, eps = inveps)
+            
             #this dx is the displacement vector in x and the 3 lattice vectors
-            
-            #TODO here we should zero the dqs corresponding to constraints in row_constr
-            
             dx = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
             
-            #imposing internal constraints
-            for i,c in enumerate(row_constraints): 
-                e = N.zeros(self.n)
-                e[c] = 1.0
-                tmp = N.dot(self.Ainv, N.dot(N.transpose(B), e))
-                dx -= N.dot(dx, tmp) * tmp
+            ##imposing internal constraints
+            #c = []
+            #for constraint in row_constraints:
+                #c.append(B[constraint])
+            #c = N.array(c).transpose()
+            #from scipy.linalg import qr
+            #(aa,bb) = qr(c,mode='full')
+            #cc = aa.transpose()
+            #for i,c in enumerate(row_constraints): 
+                #e =  cc[c]#/N.linalg.norm(cc[c])
+                #b = e * N.column_stack(e)
+                #dx -= N.dot(b, dx)
             #imposing cartesian constraints
             for c in col_constraints:
                 dx[c] = 0.0
-
             # self.dx.append(dx.copy()) # for DEBUGGING
 
             if RIIS and n >= RIIS_start - RIIS_maxLength:
@@ -1709,16 +1708,13 @@ class Periodic_icSystem(icSystem):
 
             if RIIS_on:
                 xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
-                self.xyz = xn[:-9]
-                #self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
-                self.cell = xn[-9:]
-                self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             else:
                 xn += dx
-                self.xyz = xn[:-9]
-                #self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
-                self.cell = xn[-9:]
-                self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
+      
+            self.xyz = xn[:-9]
+            #self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
+            self.cell = xn[-9:]
+            #self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             norm = N.dot(dx, dx)
             self.convergence = n, N.sqrt(norm/(self.nx+9))
             # remove old data not needed anymore for RIIS
@@ -1787,8 +1783,8 @@ class Periodic_icSystem(icSystem):
         while 1:
             n += 1
             qn = self()
-            #print 'qn ', qn
-            #print len(qn)
+            print 'q ', q[:5]
+            print 'qn ', qn[:5]
             if RIIS: 
                 if not RIIS_on and n >= RIIS_start:
                     RIIS_on = True
@@ -1822,7 +1818,13 @@ class Periodic_icSystem(icSystem):
                     'Incomplete Cholesky decomposition failed: ' + `info`)
             dx = self.inverseA(Bt(dq))
             # self.dx.append(dx.copy()) # for DEBUGGING
-
+            
+            ##imposing cartesian constraints
+            tmp = dx.copy()
+            for c in col_constraints:
+                tmp[c] = 0
+            dx = tmp
+            
             if RIIS and n >= RIIS_start - RIIS_maxLength:
                 dxList.append(dx.copy().reshape((-1,3))) # store dx for RIIS
                 if len(xList) > 0:
@@ -1837,20 +1839,15 @@ class Periodic_icSystem(icSystem):
             if RIIS_on:
                 # print "doing RIIS step"
                 xn[:] = doRIIS(xList, dxList, dim = RIIS_dim)
-                #self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
-                self.xyz = xn[:-9]
-                self.cell = xn[-9:]
-                self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             else:
                 xn += dx 
-                self.xyz = xn[:-9]
-                #self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
-                self.cell = xn[-9:]
-                self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
-            #print self.xyz
-            #print self.cell
+            
+            self.xyz = xn[:-9]
+            #self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
+            self.cell = xn[-9:]
+            #self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             norm = N.dot(dx, dx)
-            #print norm
+            print norm
             self.convergence = n, N.sqrt(norm/self.nx+9)
             # remove old data not needed anymore for RIIS
             if len(xList) >= RIIS_maxLength:

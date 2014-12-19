@@ -10,7 +10,7 @@ from ase.lattice.cubic import FaceCenteredCubic as fcc
 from ase.lattice.surface import fcc100, fcc111
 import numpy as np
 
-system = fcc100('Pd', (2,2,2), a=3.94, vacuum=10.)
+system = fcc100('Pd', (2,2,4), a=3.94, vacuum=10.)
 
 natoms =len(system) 
 np.set_printoptions(threshold=np.nan)
@@ -30,9 +30,9 @@ print start
 #row_constraints=[row1,row2]
 
 #pic example
-run_1 = False 
-run_2 = True 
-run_3 = False
+run_1 = True 
+run_2 = False 
+run_3 = False 
 
 #Example 1:
 #    here we constrain the unit cell
@@ -78,16 +78,16 @@ if run_2:
 
     e2 = d.constrainStretches([0,1])
     e = e2
-    d.constrain2(e)
-    
+    d.constrain(e)
     print 'there are that many stretches ', len(e)
     print 'there are that many DIs ', len(d.u)
-    print 'that leaves that many independent DIs ', len(d.u2)
+    print 'that leaves that many independent DIs ', len(d.u2)-len(e)
     #the last six coordinates in u correspond to the pure cell changes
     d.ic.backIteration = d.ic.denseBackIteration
     coords = PC(d.x_ref.flatten(),d.masses,unit=1.0,atoms=d.atoms,ic=d.ic, Li=d.get_constrained_U(),
-            biArgs={'RIIS': False, 'maxiter': 900, 'eps': 1e-6, 'maxEps':1e-6, 
-                #'col_constraints': d.constraints_cart, 'row_constraints':d.constraints_int,
+            biArgs={'RIIS': True, 'maxiter': 900, 'eps': 1e-6, 'maxEps':1e-6,'maxStep' :0.25,
+                'RIIS_dim':14,'RIIS_maxLength':10,
+                'col_constraints': d.constraints_cart, 'row_constraints':d.constraints_int,
                 #needed for sparseBackIteration...empty columns or rows make cholesky very messy
                 #'iclambda': 1e-6,
                 })
@@ -106,22 +106,29 @@ if run_3:
     d = Delocalizer(system, periodic=True, dense=False, weighted=False, \
                         add_cartesians = True)
 
-    e = d.constrainAtoms([
-        [0,0],#[0,1],[0,2],
-        #[1,0],[1,1],[1,2],
-        #[2,0],[2,1],[2,2],
-        #[3,0],[3,1],[3,2],
+    e1 = d.constrainCell()
+    e2 = d.constrainAtoms([
+        [0,0],[0,1],[0,2],
+        [1,0],[1,1],[1,2],
+        [2,0],[2,1],[2,2],
+        [3,0],[3,1],[3,2],
+        [4,0],[4,1],[4,2],
+        [5,0],[5,1],[5,2],
+        [6,0],[6,1],[6,2],
+        [7,0],[7,1],[7,2],
+        [8,0],[8,1],[8,2],
         ])
-    d.constrain2(e)
+    e = e1 + e2
+    d.constrain(e)
 
     print 'there are that many constraints ', len(e)
     print 'there are that many DIs ', len(d.u)
-    print 'that leaves that many independent DIs ', len(d.u2)
+    print 'that leaves that many independent DIs ', len(d.u2)-len(e)
     #the last six coordinates in u correspond to the pure cell changes
-    d.ic.backIteration = d.ic.denseBackIteration
     coords = PC(d.x_ref.flatten(),d.masses,unit=1.0,atoms=d.atoms,ic=d.ic, Li=d.get_constrained_U(),
             biArgs={'RIIS': True, 'maxiter': 900, 'eps': 1e-6, 'maxEps':1e-6, 
-                #'col_constraints': d.constraints_cart, 'row_constraints':d.constraints_int,
+                'col_constraints': d.constraints_cart,
+                #'row_constraints':d.constraints_int,
                 #needed for sparseBackIteration...empty columns or rows make cholesky very messy
                 #'iclambda': 1e-6,
                 })
@@ -129,6 +136,8 @@ if run_3:
     coords.write_jmol('cart_constrained_Pd2x2x4.jmol')
 
     print 'X0  ', coords.x
-    coords.s[:]= 10.0
+    print 'c0 ', coords.cell
+    coords.s[len(e):]= 10.0
     coords.getX()
     print 'X1  ', coords.x
+    print 'c1 ', coords.cell

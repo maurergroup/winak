@@ -9,7 +9,7 @@ from scipy import linalg as la
 from scikits.sparse.cholmod import cholesky
 
 class Delocalizer:
-    def __init__(self,atoms_obj,weighted=True,icList=None, periodic=False, 
+    def __init__(self,atoms_obj,icList=None, weighted=False, periodic=False, 
             dense=False, threshold=0.5, add_cartesians = True):
         """This generates the delocalized internals as described in the
         paper.
@@ -200,11 +200,13 @@ class Delocalizer:
             d=np.zeros(len(self.ic))
             d[s]=1
             e.append(d)
+            self.constraints_int.append(s)
         for s in bend_ind[-3:]:
             d=np.zeros(len(self.ic))
             d[s]=1
             e.append(d)
-        tmp = range(self.natoms,self.natoms+9)
+            self.constraints_int.append(s)
+        tmp = range(self.natoms*3,self.natoms*3+9)
         for i in tmp:
             self.constraints_cart.append(i)
         return e
@@ -220,6 +222,7 @@ class Delocalizer:
             d = np.zeros(len(self.ic))
             d[sbto_sum+xyz*self.natoms+c] = 1
             self.constraints_cart.append(3*c+xyz)
+            #self.constraints_int.append(3*c+xyz)
             e.append(d)
         return e
 
@@ -240,6 +243,8 @@ class Delocalizer:
             #u[i,:] /= norm
 
     def constrain2(self,constraints):
+        ###TESTING ####
+        
         def null(A, eps=1e-15):
             import scipy 
             u, s, vh = la.svd(A)
@@ -258,17 +263,25 @@ class Delocalizer:
         c_tmp = np.zeros([n,n])
         c_tmp[:,:m] = c
         z = null(c_tmp)
-        print z.shape
+        print np.dot(c_tmp,z)
         #solving generalized eigenvalue problem 
         zb = np.dot(z.transpose(),b)
         S = np.dot(z.transpose(),z)
         gg = np.dot(zb, zb.transpose())
-        from scipy.sparse.linalg import eigs
-        #E, V = la.eig(gg,S)#k=dofs, M=S)
-        E, V = eigs(gg,k=dofs+m,M=S)#k=dofs, M=S)
+        #from scipy.sparse.linalg import eigs
+        E, V = la.eig(gg,S)#k=dofs, M=S)
+        #vv,E, V = la.svd(gg,S)#k=dofs, M=S)
+        #E, V = eigs(gg,k=dofs-m,M=S)#k=dofs, M=S)
         print E
-        print V.shape
+        print V
+        self.z = z
+        #print np.dot(z,V)
+        #print c.shape, self.u.shape
+        #print np.dot(self.u,c)
+        self.V = np.real(V.transpose())
         self.u2 = np.real(np.dot(z,V).transpose())
+        print np.dot(self.u2,c)
+        raise SystemExit()
 
     def constrain(self,constraints):
         u = self.u
@@ -276,18 +289,6 @@ class Delocalizer:
         #is projected onto the active coord. space
         n_constr = len(constraints)
         nn = len(u)
-        #for coord in u:
-            #tmp = coord.copy()
-            #for con in constraints:
-                #tmp -= np.dot(coord, con) * con
-            #tmp /= np.linalg.norm(tmp)
-            #c.append(tmp)
-
-        
-        #constraints = np.array(c)
-        #constraints = np.array(constraints)
-        #constraints = np.dot(u.transpose(),np.dot(u, constraints.transpose())).transpose()
-        #c = list(constraints)
         c = []
         for con in constraints:
             tmp = con

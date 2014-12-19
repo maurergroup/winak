@@ -1313,10 +1313,6 @@ class PeriodicCoordinates(InternalCoordinates):
                     #fac*=2
                     #if tries>40:
                         #raise ValueError('NO convergence after 40 tries')
-        vectmp=w[0:6]
-        del w[0:6]
-        for vtmp in vectmp:
-            w.append(vtmp)#otherwise rot and trans will be filtered out later
         w=N.asarray(w)
         return w
 

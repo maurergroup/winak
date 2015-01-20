@@ -97,7 +97,8 @@ class BetterHopping(Dynamics):
         deloc=Delocalizer(atoms)
         tu=deloc.u
         if self.constr:
-            deloc.constrainStretches()
+            e = deloc.constrainStretches()
+            deloc.constrain(e)
             tu=deloc.u2
         if not self.ads:
             coords=DC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, u=tu)

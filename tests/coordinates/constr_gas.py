@@ -1,7 +1,7 @@
 from ase.all import *
 from winak.globaloptimization.delocalizer import *
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
-m=read('../testsystems/clethen.xyz')
+m=read('../testsystems/rea.xyz')
 e=Delocalizer(m, dense=True)
 d=[]
 

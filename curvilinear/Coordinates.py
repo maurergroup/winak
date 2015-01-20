@@ -42,6 +42,7 @@ from winak.curvilinear.numeric.Rotation import rigidBodySuperposition
 from winak.curvilinear.numeric.Quaternions import Quaternion
 from winak import AtomInfo
 import winak.curvilinear._intcrd as intcrd
+from winak.curvilinear.numeric.Matrix import regularizedInverse
 
 from operator import itemgetter
 
@@ -591,7 +592,7 @@ class InternalCoordinates(Coordinates):
             ic.biInit()
             normalizeIC(q, *ic.tmp_icArrays)
         self.q0 = q.copy()
-        self.getS(x0)
+        Coordinates.getS(self,x0)
     __init__.__doc__ = Coordinates.__init__.__doc__.strip() +  __init__.__doc__
 
     def x2s(self):
@@ -1119,34 +1120,69 @@ class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordin
                       wtemp[i,j, 0],wtemp[i,j, 1], wtemp[i,j, 2]))
         fd.close()
 
-
-class Set_of_CDCs(Coordinates):
+class SingleAtomCoordinates(Coordinates):
     """
-    This coordinate object hosts a set of CDC coordinates, which can be 
+    Coordinate class for rectilinear coordinates, e.g. normal modes.
+    """
+    def __init__(self, x0, masses, atoms = None, L=None, unit = UNIT):
+        """
+        Single Atom cartesian coords
+        """
+        ns = 3
+        if L is None:
+            L = N.eye(3)
+        internal = False
+        Coordinates.__init__(self, x0, masses, ns = ns, internal = internal,
+                            atoms = atoms, freqs = None,)
+        self.L = L
+        self.x[:] = x0
+        Li = N.linalg.inv(L)[:,:]
+        self.Li = Li
+        assert N.allclose(N.dot(Li, L), N.identity(self.ns), 1e-10, 1e-10),(
+            "'Li' is not inverse to 'L'!")
+        self.Avib = L
+        self.Bvib = Li
+        self.unit = unit
+
+    def x2s(self):
+        self.s[:] = N.dot(self.Li, self.x - self.x0)/self.unit
+
+    def s2x(self):
+        self.x[:] = N.dot(self.L, self.s*self.unit) + self.x0
+
+    def evalBvib(self, out = None):
+        if out is None: return self.Bvib
+        out[:] = self.Bvib
+        return out
+
+    def evalAvib(self, out = None):
+        if out is None: return self.Avib
+        out[:] = self.Avib
+        return out
+
+
+class Set_Of_Coordinates(Coordinates):
+    """
+    This coordinate object hosts a set of coordinates objects, which can be 
     an adsorbate and the underlying surface or several molecules in a dense 
     overlayer or a crystal. The coordinates are the overall center of mass 
     translations and rotations followed by the subsystem translations and rotations 
     as well as the subsystem internal degrees of freedom
     """
 
-    def __init__(self, list_of_CDCs=None, unit=UNIT):
+    def __init__(self, list_of_coords=None):
 
-        #collect the CDCs
-        if list_of_CDCs is None:
-            raise ValueError('At least one CDC object has to be passed.')
-        self.CDCs = list_of_CDCs
-
-        if unit is None:
-            self.unit = UNIT
-        else:
-            self.unit = unit
+        #collect the CCs
+        if list_of_coords is None:
+            raise ValueError('At least one CC object has to be passed.')
+        self.CCs = list_of_coords
 
         self.subsystem_nx = [] 
         self.subsystem_ns = [] 
         self.atoms = []
         self.nx = nx = 0
         self.ns = ns = 0
-        for subsystem in self.CDCs:
+        for subsystem in self.CCs:
             self.atoms += subsystem.atoms
             self.nx += subsystem.nx
             self.ns += subsystem.ns
@@ -1154,30 +1190,30 @@ class Set_of_CDCs(Coordinates):
             self.subsystem_ns.append(subsystem.ns)
         self.masses = N.empty(0)
         self.x0 = N.empty(0)
-        self.q = N.empty(0)
-        self.q0 = N.zeros(0)
         self.x = N.empty(self.nx)
         self.s = N.empty(self.ns)
-        for subsystem in self.CDCs:
-            self.masses = N.concatenate([self.masses,subsystem.amasses])
+        for subsystem in self.CCs:
+            self.masses = N.concatenate([self.masses,subsystem.masses])
             self.x0 = N.concatenate([self.x0,subsystem.x0])
-            self.q0 = N.concatenate([self.q0,subsystem.q0])
         
     def __len__(self):
         return self.ns #number of coords
 
     def getX(self, s):
-        
+        """
+        This routine takes the internal coordinates of the subsystem 
+        as one list
+        """
         x = N.zeros(self.nx)
         s = N.array(s)
         starts = 0
         startx = 0
         ends = 0
         endx = 0
-        for i,subsystem in enumerate(self.CDCs):
+        for i,subsystem in enumerate(self.CCs):
             ends += self.subsystem_ns[i]
             endx += self.subsystem_nx[i]
-            ss =s[starts:ends]
+            ss = s[starts:ends]
             xx = subsystem.getX(ss)
             x[startx:endx] = xx
             starts = ends
@@ -1187,13 +1223,13 @@ class Set_of_CDCs(Coordinates):
         
     def getS(self, x):
 
-        s = N.zeros(self.nx)
+        s = N.zeros(len(self))
         x = N.array(x)
         startx = 0
         starts = 0
         ends = 0
         endx = 0
-        for i,subsystem in enumerate(self.CDCs):
+        for i,subsystem in enumerate(self.CCs):
             ends += self.subsystem_ns[i]
             endx += self.subsystem_nx[i]
             xx =x[startx:endx]
@@ -1203,6 +1239,42 @@ class Set_of_CDCs(Coordinates):
             startx = endx
 
         return s
+
+    def get_vectors(self):
+        """Returns the delocalized internal eigenvectors as cartesian
+        displacements. Careful! get_vectors()[0] is the first vector.
+        If you want to interpret it as a matrix in the same way numpy does,
+        you will have to transpose it first. They are normed so that
+        the largest single component is equal to 1"""
+        ss = self.s
+        w=[]
+        for i in range(0,len(ss)):
+            worked=False
+            tries=1
+            fac=0.001
+            while not worked:
+                ss=N.zeros(len(self.s))
+                ss[i]=fac
+                dd=(self.getX(ss)[:-9]-self.x0).reshape(-1,3)
+                dd/=N.max(N.abs(dd))
+                w.append(dd)
+                worked=True
+        w=N.asarray(w)
+        return w
+    
+    def write_jmol(self,filename,constr=False):
+        """This works similar to write_jmol in ase.vibrations."""
+        fd = open(filename, 'w')
+        wtemp=self.get_vectors()
+        for i in range(len(wtemp)):
+            fd.write('%6d\n' % (len(self.x0)/3))
+            fd.write('Mode #%d, f = %.1f%s cm^-1 \n' % (i, i, ' '))
+            for j, pos in enumerate(self.x0.reshape(-1,3)):
+                fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f \n' %
+                     (self.atoms[j], pos[0], pos[1], pos[2],
+                      wtemp[i,j, 0],wtemp[i,j, 1], wtemp[i,j, 2]))
+        fd.close()
+
 
 class PeriodicCoordinates(InternalCoordinates):
     """
@@ -1253,19 +1325,21 @@ class PeriodicCoordinates(InternalCoordinates):
         InternalCoordinates.__init__(self, x0, masses, ns=ns, ic = ic, 
                 internal = False, atoms = atoms, L = L, Li = Li, unit= UNIT, 
                 rcond = rcond, biArgs = biArgs)
+        
+        del self.nx
+        self.nx = len(x0) + 9 
 
+        del self.A
         del self.Atrans
         del self.Arot
-        del self.Btrans
-        del self.Brot
         del self.Avib
-        del self.Bvib
-        self.A = N.empty((self.nx+9, self.ns))
-        self.B = N.empty((self.ns, self.nx+9))
-        self.Bvib = self.B
+        self.A = A = N.empty((self.nx, 6 + self.ns)) # full A matrix
+        self.Atrans = A[:,:3] # translational A matrix
+        self.Arot = A[:,3:6] # rotational A matrix
+        self.Avib = A[:,6:] # vibrational A matrix
  
-        self.evalB = self.evalBvib
-        self.evalA = self.evalAvib
+        #self.evalB = self.evalBvib
+        #self.evalA = self.evalAvib
 
     def x2s(self):
         ic = self.ic
@@ -1277,7 +1351,7 @@ class PeriodicCoordinates(InternalCoordinates):
         if ic.torsions is not None:
             dq = intcrd.dphi_mod_2pi(dq, N.asarray(ic.torsions, N.int32))
         self.s[:] = N.dot(self.Li, dq)/self.unit
-
+        
     def s2x(self):
         ic = self.ic
         q = self.q0 + N.dot(self.L, self.s*self.unit)
@@ -1287,6 +1361,74 @@ class PeriodicCoordinates(InternalCoordinates):
         #for i in range(0, self.nx, 3): ic.xyz[i:i+3] -= R
         self.x[:] = ic.xyz
         self.cell[:] = ic.cell
+    
+    def getS(self, x = None):
+        """
+        Convert Cartesian coordinates to vibrational coordinates.
+        """
+        if x is not None: 
+            self.x[:] = x[:-9]
+            self.cell = x[-9:]
+        self.x2s()
+        return self.s
+
+    def getX(self, s = None):
+        """
+        Convert vibrational coordinates to Cartesian coordinates.
+        """
+        if s is not None: self.s[:] = s
+        self.s2x()
+        return N.concatenate([self.x,self.cell])
+
+    def grad_transform(self,gi=None):
+
+        gx = N.zeros(self.nx)
+        if gi is None:
+            return gx
+        else:
+            ut = self.Li.transpose()
+            self.ic.initA()
+            bt = self.ic.Bt.full()
+            return N.dot(bt,N.dot(ut,gi/self.unit))
+
+    def evalArot(self, out = None):
+        """
+        Evaluate and return rotational A matrix, i.e. the derivatives of
+        Cartesian coordinates w.r.t. rotational coordinates.
+        """
+        if out is None: Arot = self.Arot
+        else:           Arot = out
+        x = N.concatenate([self.x,self.cell])
+        for i in range(0, self.nx, 3):
+            xi = x[i:i+3]
+            Arot[i:i+3,:] = N.array([
+                                [     0,  xi[2], -xi[1]],
+                                [-xi[2],      0,  xi[0]],
+                                [ xi[1], -xi[0],      0]])
+        return Arot
+    
+    def evalAvib(self, out = None, h = 1e-2):
+        """
+        Evaluate and return vibrational A matrix, i.e. the derivatives of
+        Cartesian coordinates w.r.t. vibrational coordinates.
+        (Default is numerical differentiation)
+        """
+        #if out is None: Avib = self.Avib
+        #else:           Avib = out
+        #s = self.s
+        #x = N.concatenate([self.x.copy(),self.cell]) # save current x
+        ## compute numerical derivatives
+        #Avib[:] = df(self.getX, s, order = 1, h = h).T/self.unit
+        #self.getS(x) # restore x
+        from time import time
+        t = time() 
+        self.ic.evalB() 
+        b = N.dot(self.Li,self.ic.B.full())
+        bt = b.transpose()
+        A = N.dot(bt,b)
+        lambd=self.biArgs['iclambda']
+        Ainv = regularizedInverse(A, eps=lambd)
+        return N.dot(Ainv, bt)
 
     def get_vectors(self):
         """Returns the delocalized internal eigenvectors as cartesian
@@ -1304,7 +1446,7 @@ class PeriodicCoordinates(InternalCoordinates):
                 #try:
                     ss=N.zeros(len(self.s))
                     ss[i]=fac
-                    dd=(self.getX(ss)-self.x0).reshape(-1,3)
+                    dd=(self.getX(ss)[:-9]-self.x0).reshape(-1,3)
                     dd/=N.max(N.abs(dd))
                     w.append(dd)
                     worked=True

@@ -811,13 +811,27 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
                 i1 = (*cint++)-1; i2 = (*cint++)-1;
                 if (i1%na==i2%na) {nnzsum-=3;}
                 z = i1/na; /*p1*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 z = i2/na; /*p2*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 if (txset) {nnzsum += 3;}
                 if (tyset) {nnzsum += 3;}
                 if (tzset) {nnzsum += 3;}
@@ -828,17 +842,38 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
                 else if (i1%na==i2%na || i2%na==i3%na || i1%na==i3%na) {nnzsum -= 3;}
                 else {  } //nothing
                 z = i1/na; /*p1*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 z = i2/na; /*p2*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 z = i3/na; /*p3*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 if (txset) {nnzsum += 3;}
                 if (tyset) {nnzsum += 3;}
                 if (tzset) {nnzsum += 3;}
@@ -858,21 +893,49 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
                     i2%na==i3%na || i2%na==i4%na || i3%na==i4%na ) {nnzsum -= 3;}
                 else { } //nothing
                 z = i1/na; /*p1*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 z = i2/na; /*p2*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 z = i3/na; /*p3*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 z = i4/na; /*p4*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 if (txset) {nnzsum += 3;}
                 if (tyset) {nnzsum += 3;}
                 if (tzset) {nnzsum += 3;}
@@ -892,21 +955,49 @@ int Bmatrix_pbc_nnz(int nx, const int *cint, int *nint, int *nnz) {
                     i2%na==i3%na || i2%na==i4%na || i3%na==i4%na ) {nnzsum -= 3;}
                 else {} //nothing
                 z = i1/na; /*p1*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 z = i2/na; /*p2*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 z = i3/na; /*p3*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 z = i4/na; /*p4*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;}
+                if ( z>=20 ) {txset=true;tyset=true;tzset=true;}
                 if (txset) {nnzsum += 3;}
                 if (tyset) {nnzsum += 3;}
                 if (tzset) {nnzsum += 3;}
@@ -1151,13 +1242,33 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                 VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
                 txset = false; tyset = false; tzset = false;
                 z = i1/nx; /*p1*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d1);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d1);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d1);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d1);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d1);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d1);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d1);VADD(ty,ty,d1);VADD(tz,tz,d1);
+                }
                 z = i2/nx; /*p2*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d2);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d2);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d2);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d2);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d2);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d2);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d2);VADD(ty,ty,d2);VADD(tz,tz,d2);
+                }
                 if (txset) {pad += 3; SETB(3+pad,tx); BIDT(0);}
                 if (tyset) {pad += 3; SETB(3+pad,ty); BIDT(3);}
                 if (tzset) {pad += 3; SETB(3+pad,tz); BIDT(6);}
@@ -1200,17 +1311,47 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                 VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
                 txset = false; tyset = false; tzset = false;
                 z = i1/nx; /*p1*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d1);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d1);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d1);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d1);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d1);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d1);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d1);VADD(ty,ty,d1);VADD(tz,tz,d1);
+                }
                 z = i2/nx; /*p2*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d2);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d2);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d2);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d2);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d2);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d2);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d2);VADD(ty,ty,d2);VADD(tz,tz,d2);
+                }
                 z = i3/nx; /*p3*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d3);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d3);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d3);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d3);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d3);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d3);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d3);VADD(ty,ty,d3);VADD(tz,tz,d3);
+                }
                 if (txset) {pad += 3; SETB(6+pad,tx); BIDT(0);}
                 if (tyset) {pad += 3; SETB(6+pad,ty); BIDT(3);}
                 if (tzset) {pad += 3; SETB(6+pad,tz); BIDT(6);}
@@ -1333,21 +1474,61 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                 VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
                 txset = false; tyset = false; tzset = false;
                 z = i1/nx; /*p1*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d1);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d1);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d1);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d1);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d1);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d1);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d1);VADD(ty,ty,d1);VADD(tz,tz,d1);
+                }
                 z = i2/nx; /*p2*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d2);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d2);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d2);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d2);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d2);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d2);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d2);VADD(ty,ty,d2);VADD(tz,tz,d2);
+                }
                 z = i3/nx; /*p3*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d3);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d3);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d3);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d3);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d3);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d3);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d3);VADD(ty,ty,d3);VADD(tz,tz,d3);
+                }
                 z = i4/nx; /*p4*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d4);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d4);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d4);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d4);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d4);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d4);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d4);VADD(ty,ty,d4);VADD(tz,tz,d4);
+                }
                 if (txset) {pad += 3; SETB(9+pad,tx); BIDT(0);}
                 if (tyset) {pad += 3; SETB(9+pad,ty); BIDT(3);}
                 if (tzset) {pad += 3; SETB(9+pad,tz); BIDT(6);}
@@ -1470,21 +1651,61 @@ int Bmatrix_pbc(int nx, const vtype *x, const int *cint, vtype *b, int *jb, int 
                 VCP(tx,zero); VCP(ty,zero); VCP(tz,zero);
                 txset = false; tyset = false; tzset = false;
                 z = i1/nx; /*p1*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d1);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d1);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d1);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d1);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d1);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d1);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d1);VADD(ty,ty,d1);VADD(tz,tz,d1);
+                }
                 z = i2/nx; /*p2*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d2);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d2);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d2);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d2);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d2);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d2);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d2);VADD(ty,ty,d2);VADD(tz,tz,d2);
+                }
                 z = i3/nx; /*p3*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d3);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d3);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d3);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d3);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d3);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d3);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d3);VADD(ty,ty,d3);VADD(tz,tz,d3);
+                }
                 z = i4/nx; /*p4*/
-                if ( z==1 || z==4 || z==5 || z==7) {txset=true;VADD(tx,tx, d4);}
-                if ( z==2 || z==4 || z==6 || z==7) {tyset=true;VADD(ty,ty, d4);}
-                if ( z==3 || z==5 || z==6 || z==7) {tzset=true;VADD(tz,tz, d4);}
+                if ( z==1 || z==4 || z==5 || z==7 || \
+                        z==8 || z==11 || z==12 || z==14 || \
+                        z==15 || z==16 || z==17) {txset=true;VADD(tx,tx,d4);}
+                if ( z==2 || z==4 || z==6 || z==7 || \
+                        z==9 || z==11 || z==13 || z==14 || \
+                        z==15 || z==18 || z==19) {tyset=true;VADD(ty,ty,d4);}
+                if ( z==3 || z==5 || z==6 || z==7 || \
+                        z==10 || z==12 || z==13 || z==16 || \
+                        z==17 || z==18 || z==19) {tzset=true;VADD(tz,tz,d4);}
+                if ( z>=20 ) {
+                    txset=true;tyset=true;tzset=true;
+                    VADD(tx,tx,d4);VADD(ty,ty,d4);VADD(tz,tz,d4);
+                }
                 if (txset) {pad += 3; SETB(9+pad,tx); BIDT(0);}
                 if (tyset) {pad += 3; SETB(9+pad,ty); BIDT(3);}
                 if (tzset) {pad += 3; SETB(9+pad,tz); BIDT(6);}

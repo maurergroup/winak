@@ -596,7 +596,8 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
     does the same as VCG, but for a duplicated cell
     """
     def __init__(self, atoms, vdW = covalentRadius, masses = None, \
-            threshold = 0.5, add_cartesians = False, cell = None):
+            threshold = 0.5, add_cartesians = False, cell = None,
+            expand=1):
 
         if cell is None:
             raise ValueError('unit cell needs to be given.')
@@ -604,13 +605,25 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
         atoms_pbc = N.array(atoms)
         masses_pbc = N.array(masses)
         #nomenclature is x 0 y 0 z 0 , 1, -1
-        self.cell_indices = N.array([
+        if expand==2:
+            self.cell_indices = N.array([
             [0,0,0],[1,0,0],[0,1,0],[0,0,1],
-            [1,1,0],[1,0,1],[0,1,1],[1,1,1]
+            [1,1,0],[1,0,1],[0,1,1],[1,1,1],
+            [2,0,0],[0,2,0],[0,0,2],[2,2,0],
+            [2,0,2],[0,2,2],[1,2,0],[2,1,0],
+            [1,0,2],[2,0,1],[0,1,2],[0,2,1],
+            [2,1,1],[1,2,1],[2,2,1],[1,1,2],
+            [2,1,2],[1,2,2],[2,2,2],
             ])
+        else:
+            self.cell_indices = N.array([
+            [0,0,0],[1,0,0],[0,1,0],[0,0,1],
+            [1,1,0],[1,0,1],[0,1,1],[1,1,1],
+            ])
+
         self.atom_indices = N.zeros(len(atoms)) 
         self.add_cartesians = add_cartesians
-        for i in range(1,8):
+        for i in range(1,len(self.cell_indices)):
             atoms_pbc = N.concatenate([atoms_pbc, atoms])
             masses_pbc = N.concatenate([masses_pbc, masses])
             self.atom_indices = N.concatenate([self.atom_indices, N.ones(len(atoms))*i])
@@ -676,18 +689,43 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
             else:
                 del self.oops[b]
         ###ADDING CELL DoFs
-        self.bonds.append([(0, n),N.linalg.norm(self.cell[0])])    
-        self.bonds.append([(0, 2*n),N.linalg.norm(self.cell[1])])    
-        self.bonds.append([(0, 3*n),N.linalg.norm(self.cell[2])])    
-        self.bends.append([n, 2*n, 0])    
-        self.bends.append([n, 3*n, 0])    
-        self.bends.append([2*n, 3*n, 0])    
+        exists1=False
+        exists2=False
+        exists3=False
+        for b, bond in enumerate(self.bonds):
+            i, j = bond[0]
+            if i==0 and j==n:
+                exists1 = True
+            if i==0 and j==2*n:
+                exists2 = True
+            if i==0 and j==3*n:
+                exists3 = True
+        if not exists1:
+            self.bonds.append([(0, n),N.linalg.norm(self.cell[0])])    
+        if not exists2:
+            self.bonds.append([(0, 2*n),N.linalg.norm(self.cell[1])])    
+        if not exists3:
+            self.bonds.append([(0, 3*n),N.linalg.norm(self.cell[2])])    
+        exists1=False
+        exists2=False
+        exists3=False
+        for b, bend in enumerate(self.bends):
+            i, j, k = bend
+            if i==n and j==2*n and k==0:
+                exists1=True
+            if i==n and j==3*n and k==0:
+                exists2=True
+            if i==2*n and j==3*n and k==0:
+                exists3=True
+        if not exists1:
+            self.bends.append([n, 2*n, 0])    
+        if not exists2:
+            self.bends.append([n, 3*n, 0])    
+        if not exists3:
+            self.bends.append([2*n, 3*n, 0])    
         
         ####delete bonds which do not reach into unit cell
         ##ADDING CELL BONDS
-        #self.bonds.append([(0, n),N.linalg.norm(self.cell[0])])    
-        #self.bonds.append([(0, 2*n),N.linalg.norm(self.cell[1])])    
-        #self.bonds.append([(0, 3*n),N.linalg.norm(self.cell[2])])    
         #bonds = []
         ##eliminate duplicate ones
         #for b,bond in enumerate(self.bonds):
@@ -709,9 +747,6 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
         #self.bonds = bonds
 
         ####delete bends which do not reach into unit cell
-        #self.bends.append([n, 2*n, 0])    
-        #self.bends.append([n, 3*n, 0])    
-        #self.bends.append([2*n, 3*n, 0])    
         #bends = []
         #for b, bend in enumerate(self.bends):
             #indices = list(bend)
@@ -760,12 +795,12 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
             #if take_it:
                 #oops.append(fold_back(indices))
         #self.oops = oops
-        for c, cart in reversed(list(enumerate(self.carts))):
-            indices = list(cart)
-            if self.atom_indices[indices[0]] == 0:
-                pass
-            else:
-                del self.carts[c]
+        #for c, cart in reversed(list(enumerate(self.carts))):
+            #indices = list(cart)
+            #if self.atom_indices[indices[0]] == 0:
+                #pass
+            #else:
+                #del self.carts[c]
        
         return self.toIClist()
 
@@ -1264,6 +1299,9 @@ class icSystem:
             A = N.dot(N.transpose(B), B)
             self.Ainv = regularizedInverse(A, eps = inveps)
 
+            for c in row_constraints:
+                dq[c] = 0.0
+
             dx[:] = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
             for c in col_constraints:
                 dx[c] = 0.0
@@ -1483,7 +1521,7 @@ class Periodic_icSystem(icSystem):
     """
 
     def __init__(self, intcrd, natom, xyz = None, \
-            masses = None, cell = None):
+            masses = None, cell = None, expand=1):
 
         if intcrd[-1] > 0:
             intcrd = list(intcrd)
@@ -1505,10 +1543,22 @@ class Periodic_icSystem(icSystem):
         # we add the three cell vectors as 9 rows at the end of the B matrix
         #self.Bnnz, self.n = ic.Bmatrix_pbc2_nnz(self.nx, self.ic)
         self.Bnnz, self.n = ic.Bmatrix_pbc_nnz(self.nx, self.ic)
-        self.cell_indices = N.array([
-            [0,0,0],[1,0,0],[0,1,0],[0,0,1],
-            [1,1,0],[1,0,1],[0,1,1],[1,1,1]
-            ])
+        if expand==2:
+            self.cell_indices = N.array([
+                [0,0,0],[1,0,0],[0,1,0],[0,0,1],
+                [1,1,0],[1,0,1],[0,1,1],[1,1,1],
+                [2,0,0],[0,2,0],[0,0,2],[2,2,0],
+                [2,0,2],[0,2,2],[1,2,0],[2,1,0],
+                [1,0,2],[2,0,1],[0,1,2],[0,2,1],
+                [2,1,1],[1,2,1],[2,2,1],[1,1,2],
+                [2,1,2],[1,2,2],[2,2,2],
+                ])
+        else:
+            self.cell_indices = N.array([
+                [0,0,0],[1,0,0],[0,1,0],[0,0,1],
+                [1,1,0],[1,0,1],[0,1,1],[1,1,1]
+                ])
+
         #duplicate coordinates
         xyz_pbc = N.empty([0,3])
         xyz = xyz.reshape(-1,3)
@@ -1539,7 +1589,7 @@ class Periodic_icSystem(icSystem):
         self.initA()
     
     def initA(self):
-        self.connectivity()
+        #self.connectivity()
         self.evalB(sort= 1)
         self.evalBt(perm = 0)
         #self.colamd(inverse=1)
@@ -1783,14 +1833,15 @@ class Periodic_icSystem(icSystem):
         while 1:
             n += 1
             qn = self()
-            print 'q ', q[:5]
-            print 'qn ', qn[:5]
             if RIIS: 
                 if not RIIS_on and n >= RIIS_start:
                     RIIS_on = True
                     # print("Turning on RIIS in step %i" %n)
 
             dq = N.subtract(q, qn, dq)
+            
+            #print 'qn ', qn[:8]
+            #print 'q ', q[:8]
             # check phase 
             if torsions is not None: dq = ic.dphi_mod_2pi(dq, torsions)
 
@@ -1824,7 +1875,7 @@ class Periodic_icSystem(icSystem):
             for c in col_constraints:
                 tmp[c] = 0
             dx = tmp
-            
+            #print 'dx ', tmp[:8]
             if RIIS and n >= RIIS_start - RIIS_maxLength:
                 dxList.append(dx.copy().reshape((-1,3))) # store dx for RIIS
                 if len(xList) > 0:
@@ -1847,7 +1898,7 @@ class Periodic_icSystem(icSystem):
             self.cell = xn[-9:]
             #self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             norm = N.dot(dx, dx)
-            print norm
+            #print 'norm ', norm
             self.convergence = n, N.sqrt(norm/self.nx+9)
             # remove old data not needed anymore for RIIS
             if len(xList) >= RIIS_maxLength:

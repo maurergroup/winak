@@ -10,7 +10,7 @@ from scikits.sparse.cholmod import cholesky
 
 class Delocalizer:
     def __init__(self,atoms_obj,icList=None, weighted=False, periodic=False, 
-            dense=False, threshold=0.5, add_cartesians = True):
+            dense=False, threshold=0.5, add_cartesians = False, expand=1):
         """This generates the delocalized internals as described in the
         paper.
         atoms_obj: a properly initialized ase Atoms object (positions,
@@ -26,6 +26,7 @@ class Delocalizer:
         self.vk=None
         self.vc=None
         self.u2=None
+        self.expand=expand
         self.dense = dense
         self.periodic = periodic
         self.weighted = weighted
@@ -38,7 +39,7 @@ class Delocalizer:
         if icList is None:
             if periodic:
                 self.vcg=PVCG(atoms=self.atoms,masses=self.masses, cell=self.cell, \
-                        threshold=threshold, add_cartesians=add_cartesians)
+                        threshold=threshold, add_cartesians=add_cartesians, expand=self.expand)
                 self.iclist=self.vcg(x0)
             else:
                 self.vcg=VCG(atoms=self.atoms,masses=self.masses, \
@@ -46,6 +47,8 @@ class Delocalizer:
                 self.iclist=self.vcg(x0)
         else:
             self.iclist=icList
+
+        #print len(self.iclist)
 
         self.initIC()
         self.evalG()
@@ -56,7 +59,7 @@ class Delocalizer:
         x0 = self.x_ref.flatten()
         if periodic:
             self.ic=Periodic_icSystem(self.iclist, len(self.atoms), 
-                    masses=self.masses, xyz=x0, cell=self.cell)
+                    masses=self.masses, xyz=x0, cell=self.cell, expand=self.expand)
         else:
             self.ic=icSystem(self.iclist,len(self.atoms),
                               masses=self.masses,xyz=x0)
@@ -87,10 +90,10 @@ class Delocalizer:
                     self.m[-i,-i]=1./mtemp
         if periodic:
             k = 3*self.natoms - c
+            if self.add_cartesians:
+                k += 6
         else:
             k = 3*self.natoms-6 - c
-        if self.add_cartesians:
-            k += 6
         if dense:
             pass
         else:
@@ -142,26 +145,20 @@ class Delocalizer:
                 s = (s[:k]).transpose()
                 self.u = np.dot(b, np.dot(s, ww)).transpose()[::-1]
         else:
-            import time
-            print time.time()
             #Sparse algorithm
             if self.weighted:
                 #do Baker
                 g = AmuB(self.ic.B,self.m)
                 g = AmuB(g, self.ic.Bt)
-                print 'after AmuB ', time.time()
                 self.ww, self.u = eigB(g, k=k)
                 self.ww = np.real(self.ww[:k])
                 self.u = np.real(self.u.transpose()[:k])
-                print 'after SVD ', time.time()
             else:
                 #do Andzelm
                 b = self.ic.B
                 bt = self.ic.Bt
                 f = AmuB(bt, b)
-                print 'after AmuB ', time.time()
                 s2, self.ww, s = svdB(f, k=k)
-                print 'after SVD ', time.time()
                 ww = 1./(np.sqrt(self.ww[:k]))
                 ww = np.diag(ww)
                 s = (s[:k]).transpose()

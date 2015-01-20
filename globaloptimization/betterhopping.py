@@ -6,6 +6,7 @@ from ase.units import kB
 from ase.parallel import world
 from ase.io.trajectory import PickleTrajectory
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
+from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
 from winak.globaloptimization.delocalizer import *
 from winak.curvilinear.Coordinates import CompleteDelocalizedCoordinates as CDC
 from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
@@ -34,7 +35,7 @@ class BetterHopping(Dynamics):
                     optimizer_logfile='stdout.log',
                     local_minima_trajectory='temp_local_minima.traj',	#local minima found
                     adjust_cm=True,
-                    movemode=0,		#Pick a way for displacement. 0->random cartesian, 1->delocalized internals
+                    movemode=0,		#Pick a way for displacement. 0->random cartesian, 1->delocalized internals, 2->Periodic
                     maxmoves=1000,	#Should prevent an issue, where you get stuck in a structure, for which get_energy() fails
                     numdelocmodes=1,    #should a LC of modes be applied for the displacement? How many should be combined?
                     adsorbmask=None,	#mask that specifies where the adsorbate is located in the atoms object (list of lowest and highest pos)
@@ -66,6 +67,8 @@ class BetterHopping(Dynamics):
         self.constr=constrain
         if movemode==1:
             self.movename='Delocalized Internals'
+        elif movemode==2:
+            self.movename='Periodic DI'
         if adjust_cm:
             self.cm = atoms.get_center_of_mass()
         else:
@@ -94,17 +97,21 @@ class BetterHopping(Dynamics):
         return ret
 
     def get_vectors(self,atoms):
-        deloc=Delocalizer(atoms)
-        tu=deloc.u
-        if self.constr:
-            e = deloc.constrainStretches()
-            deloc.constrain(e)
-            tu=deloc.u2
-        if not self.ads:
-            coords=DC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, u=tu)
+        if self.movemode==2:
+            deloc=Delocalizer(atoms,periodic=True,dense=True)
+            coords=PC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, Li=deloc.u)
         else:
-            cell = self.atoms.get_cell()*self.cell_scale
-            coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=tu,cell=cell)
+            deloc=Delocalizer(atoms)
+            tu=deloc.u
+            if self.constr:
+                e = deloc.constrainStretches()
+                deloc.constrain(e)
+                tu=deloc.u2
+            if not self.ads:
+                coords=DC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, u=tu)
+            else:
+                cell = self.atoms.get_cell()*self.cell_scale
+                coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=tu,cell=cell)
         return coords.get_vectors()
 
     def initialize(self):
@@ -128,7 +135,7 @@ class BetterHopping(Dynamics):
         for step in range(steps):
             En = None
             tries=0
-            if self.movemode==1:
+            if self.movemode==1 or self.movemode==2:
                 atemp=self.atoms.copy()
                 atemp.set_positions(ro)
                 try:
@@ -153,7 +160,7 @@ class BetterHopping(Dynamics):
             while En is None:
                 if self.movemode==0:
                     rn = self.move(ro)
-                elif self.movemode==1:
+                elif self.movemode==1 or self.movemode==2:
                     rn=self.move_del(ro,vectors)
                 #self.logfile.write('move done\n')
                 #print 'move done'

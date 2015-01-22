@@ -2538,7 +2538,8 @@ THCTKFUN(_intcrd, Bmatrix_nnz)
     if (cint == NULL) return NULL;
 
     if (Bmatrix_nnz((int *) cint->data, &nint, &nnz)) return NULL;
-
+    
+    Py_DECREF(input);
     return Py_BuildValue("ii", nnz, nint);
 
 }
@@ -2560,7 +2561,8 @@ THCTKFUN(_intcrd, Bmatrix_pbc_nnz)
     if (cint == NULL) return NULL;
 
     if (Bmatrix_pbc_nnz(nx, (int *) cint->data, &nint, &nnz)) return NULL;
-
+    
+    Py_DECREF(input);
     return Py_BuildValue("ii", nnz, nint);
 
 }
@@ -2583,17 +2585,17 @@ THCTKFUN(_intcrd, Bmatrix_pbc2_nnz)
     if (cint == NULL) return NULL;
 
     if (Bmatrix_pbc2_nnz(nx, (int *) cint->data, &nint, &nnz)) return NULL;
-
+    
+    Py_DECREF(input);
     return Py_BuildValue("ii", nnz, nint);
 
 }
 
 
-THCTKDOC(_intcrd, internals) = "c = internals(x, cint, c)\n";
+THCTKDOC(_intcrd, internals) = "internals(x, cint, c)\n";
 
 THCTKFUN(_intcrd, internals)
 {
-
     PyObject *input;
     PyArrayObject *x, *cint, *c;
 
@@ -2608,13 +2610,14 @@ THCTKFUN(_intcrd, internals)
 
     if (internals((double *) x->data, (int *) cint->data,
                   (double *) c->data)) return NULL;
-
-    Py_INCREF(c);
-    return (PyObject *) c;
+    
+    Py_DECREF(input);
+    Py_INCREF(Py_None);
+    return Py_None;
 
 }
 
-THCTKDOC(_intcrd, internals_pbc) = "c = internals_pbc(x, h, cint, c)\n";
+THCTKDOC(_intcrd, internals_pbc) = "internals_pbc(x, h, cint, c)\n";
 
 THCTKFUN(_intcrd, internals_pbc)
 {
@@ -2634,8 +2637,9 @@ THCTKFUN(_intcrd, internals_pbc)
     if (internals_pbc((double *) x->data, (double *) h->data, (int *) cint->data,
                   (double *) c->data)) return NULL;
 
-    Py_INCREF(c);
-    return (PyObject *) c;
+    Py_DECREF(input);
+    Py_INCREF(Py_None);
+    return Py_None;
 
 }
 
@@ -2663,6 +2667,7 @@ THCTKFUN(_intcrd, Bmatrix)
                 (double *) b->data, (int *) jb->data, (int *) ib->data, sort))
         return NULL;
 
+    Py_DECREF(input);
     Py_INCREF(Py_None);
     return Py_None;
 
@@ -2692,6 +2697,7 @@ THCTKFUN(_intcrd, Bmatrix_pbc)
                 sort))
         return NULL;
 
+    Py_DECREF(input);
     Py_INCREF(Py_None);
     return Py_None;
 
@@ -2721,6 +2727,7 @@ THCTKFUN(_intcrd, Bmatrix_pbc2)
                 sort))
         return NULL;
 
+    Py_DECREF(input);
     Py_INCREF(Py_None);
     return Py_None;
 
@@ -2878,6 +2885,7 @@ THCTKFUN(_intcrd, symbolicAc)
     if (! (cj = PyArray_FromDimsAndData(1, &n, PyArray_INT, (char *) cij->j)) )
         return NULL;
 
+    Py_DECREF(input);
     return Py_BuildValue("OO", cj, ci);
 
 }

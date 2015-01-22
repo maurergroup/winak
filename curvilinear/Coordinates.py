@@ -1371,6 +1371,20 @@ class PeriodicCoordinates(InternalCoordinates):
             self.cell = x[-9:]
         self.x2s()
         return self.s
+    
+    def getS2(self, x = None):
+        """
+        This version of get S does not use the coordinates and cell, 
+        but the extended coordinates = cell and neighborcell positions
+        """
+        ic = self.ic
+        q = ic.getq(x)
+        normalizeIC(q, *ic.tmp_icArrays)
+        dq = q - self.q0
+        if ic.torsions is not None:
+            dq = intcrd.dphi_mod_2pi(dq, N.asarray(ic.torsions, N.int32))
+        self.s[:] = N.dot(self.Li, dq)/self.unit
+        return self.s
 
     def getX(self, s = None):
         """

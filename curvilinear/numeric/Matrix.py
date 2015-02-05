@@ -26,9 +26,7 @@
 
 import math
 from winak.curvilinear.numeric import *
-LA = importLinearAlgebra()
-
-SVD = LA.singular_value_decomposition
+from scipy.linalg import svd as SVD
 
 def regularizedInverse(A, eps = 1e-15):
     # V, S, WT = N.linalg.svd(A, full_matrices = 0)

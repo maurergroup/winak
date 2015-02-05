@@ -23,53 +23,14 @@
 """
 """
 from winak.curvilinear.numeric._numeric import numericBackend
-numericBackendNumeric, numericBackendNumpy = 0, 1
+numericBackendNumpy = 1
 
 # FFT is used rarely and handled in each file depending on numericBackend
 # see e.g.: spectroscopy/Exciton.py
 
-def importLinearAlgebra():
-    if numericBackend == 0:
-        import LinearAlgebra as LA
-    elif numericBackend == 1:
-        import numpy.oldnumeric.linear_algebra as LA
-    else:
-        raise ImportError('no valid LinearAlgebra package specified!')
-    return LA
-
-if numericBackend == numericBackendNumeric:
-    import Numeric as N
-    from UserArray import UserArray
-    NewAxis = N.NewAxis
-    nxArrayType = N.ArrayType
-    nxFloat = N.Float
-    nxFloat0 = N.Float0
-    nxFloat32 = N.Float32
-    nxFloat64 = N.Float64
-    nxInteger = N.Int
-    nxInt = N.Int
-    nxInt8 = N.Int8
-    nxInt16 = N.Int16
-    nxInt32 = N.Int32
-    nxUnsignedInt8 = N.UnsignedInt8
-    nxCharacter = N.Character
-    nxComplex = N.Complex
-    ncFloat = N.Float
-    ncFloat0 = N.Float0
-    ncFloat32 = N.Float32
-    ncFloat64 = N.Float64
-    ncInteger = N.Int
-    ncInt = N.Int
-    ncInt8 = N.Int8
-    ncInt16 = N.Int16
-    ncInt32 = N.Int32
-    ncUnsignedInt8 = N.UnsignedInt8
-    ncCharacter = N.Character
-    nxTypecode = lambda obj: getattr(obj, 'typecode')()
-    N.nnzSearch = N.nonzero
-elif numericBackend == numericBackendNumpy:
+if numericBackend == numericBackendNumpy:
     import numpy as N
-    import numpy.core.multiarray, numpy.oldnumeric
+    import numpy.core.multiarray
     from numpy.lib.user_array import container as UserArray
     NewAxis = None
     nxArrayType = numpy.core.multiarray.ndarray
@@ -83,23 +44,10 @@ elif numericBackend == numericBackendNumpy:
     nxInt16 = N.int16
     nxInt32 = N.int32
     nxInt64 = N.int64
-    nxUnsignedInt8 = numpy.oldnumeric.UnsignedInt8
     nxCharacter = N.character
     nxComplex = N.complex
     nxComplex64 = N.complex64
     nxComplex128 = N.complex128
-    ncFloat = numpy.oldnumeric.Float
-    ncFloat0 = numpy.oldnumeric.Float0
-    ncFloat32 = numpy.oldnumeric.Float32
-    ncFloat64 = numpy.oldnumeric.Float64
-    ncInteger = numpy.oldnumeric.Int
-    ncInt = numpy.oldnumeric.Int
-    ncInt8 = numpy.oldnumeric.Int8
-    ncInt16 = numpy.oldnumeric.Int16
-    ncInt32 = numpy.oldnumeric.Int32
-    ncUnsignedInt8 = numpy.oldnumeric.UnsignedInt8
-    ncCharacter = numpy.oldnumeric.Character
     nxTypecode = lambda obj: getattr(obj, 'dtype')
-    N.nnzSearch = numpy.oldnumeric.nonzero
 else:
     raise ImportError('no valid numeric backend specified!')

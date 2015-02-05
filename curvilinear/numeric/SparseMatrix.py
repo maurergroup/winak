@@ -33,8 +33,8 @@ from winak.curvilinear.numeric._numeric import amux_CSR, amux_CSR_complex, amux_
 from winak.curvilinear.numeric._numeric import bosonelements, copyArray, dp_index_dd
 from winak.curvilinear.numeric.rcm import genrcm
 from pysparse import spmatrix
-from scipy.linalg.fblas import dnrm2 as norm2
-from scipy.linalg.fblas import ddot
+from scipy.linalg.blas import dnrm2 as norm2
+from scipy.linalg.blas import ddot
 from winak.curvilinear.numeric import blassm
 from winak.curvilinear.numeric.comm import comrr, comzz, comrz
 import itertools
@@ -353,9 +353,9 @@ class CSRd:
     def __init__(self, n = None, nnz = None, i = (), j = (), x = (), d=(), 
         type = nxFloat, offset = 0, filename = None):
         
-        if len(i) == n+1: self.i = N.asarray(i, ncInt32)
+        if len(i) == n+1: self.i = N.asarray(i, nxInt32)
         else: self.i = N.zeros(n+1, nxInt32)
-        if len(j) == nnz: self.j = N.asarray(j, ncInt32)
+        if len(j) == nnz: self.j = N.asarray(j, nxInt32)
         else: self.j = N.zeros(nnz, nxInt32)
         if len(x) == nnz: self.x = N.asarray(x, type)
         else: self.x = N.zeros(nnz, type)

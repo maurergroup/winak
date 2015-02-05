@@ -38,8 +38,7 @@ except:
     pass
 from copy import copy
 
-LinearAlgebra = importLinearAlgebra()
-SVD = LinearAlgebra.singular_value_decomposition
+from scipy.linalg import svd as SVD
 
 class BondGenerator:
     """ 

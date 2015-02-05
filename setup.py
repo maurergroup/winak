@@ -13,20 +13,10 @@ import ConfigParser, os
 # update it when the contents of directories change.
 if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
-try:
-    from scipy_distutils.core import setup, Extension
-    use_numpy = False 
-except:
-    from numpy.distutils.core import setup, Extension
-    use_numpy = True 
-
-if use_numpy:
-    import numpy
-    numerix_macros = [('THCTK_NUMBACKEND', 1)]
-    numerix_include_dirs = [numpy.get_include()]
-else:
-    numerix_macros = [('THCTK_NUMBACKEND', 0)]
-    numerix_include_dirs = []
+from numpy.distutils.core import setup, Extension
+import numpy
+numerix_macros = [('THCTK_NUMBACKEND', 1)]
+numerix_include_dirs = [numpy.get_include()]
 
 # C extensions should NOT check python types
 NO_PY_CHECKS = [('NOPyChecks', None),] # use no checks (faster)

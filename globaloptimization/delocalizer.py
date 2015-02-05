@@ -9,8 +9,9 @@ from scipy import linalg as la
 from scikits.sparse.cholmod import cholesky
 
 class Delocalizer:
-    def __init__(self,atoms_obj,icList=None, weighted=False, periodic=False, 
-            dense=False, threshold=0.5, add_cartesians = False, expand=1):
+    def __init__(self,atoms_obj,icList=None, weighted=False, periodic=False,
+            dense=False, threshold=0.5, add_cartesians = False, expand=1,
+            bendThreshold=170, torsionThreshold=160, oopThreshold=30):
         """This generates the delocalized internals as described in the
         paper.
         atoms_obj: a properly initialized ase Atoms object (positions,
@@ -40,15 +41,15 @@ class Delocalizer:
             if periodic:
                 self.vcg=PVCG(atoms=self.atoms,masses=self.masses, cell=self.cell, \
                         threshold=threshold, add_cartesians=add_cartesians, expand=self.expand)
-                self.iclist=self.vcg(x0)
+                self.iclist=self.vcg(x0, bendThreshold=bendThreshold,
+                        torsionThreshold=torsionThreshold, oopThreshold=oopThreshold)
             else:
                 self.vcg=VCG(atoms=self.atoms,masses=self.masses, \
                         threshold=threshold, add_cartesians=add_cartesians)
-                self.iclist=self.vcg(x0)
+                self.iclist=self.vcg(x0, bendThreshold=bendThreshold,
+                        torsionThreshold=torsionThreshold, oopThreshold=oopThreshold)
         else:
             self.iclist=icList
-
-        #print len(self.iclist)
 
         self.initIC()
         self.evalG()
@@ -58,7 +59,7 @@ class Delocalizer:
         dense = self.dense
         x0 = self.x_ref.flatten()
         if periodic:
-            self.ic=Periodic_icSystem(self.iclist, len(self.atoms), 
+            self.ic=Periodic_icSystem(self.iclist, len(self.atoms),
                     masses=self.masses, xyz=x0, cell=self.cell, expand=self.expand)
         else:
             self.ic=icSystem(self.iclist,len(self.atoms),

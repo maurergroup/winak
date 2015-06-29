@@ -27,7 +27,8 @@ class BetterHopping(Dynamics):
     def __init__(self, atoms,
                     temperature=100 * kB,
                     optimizer=FIRE,
-                    optimizer2=FIRE, #which optimizer to use to 15*fmax
+                    optimizer2=FIRE, #which optimizer to use to fmax_mult*fmax
+                    fmax_mult=15, #at what multiple of fmax do you want to use second optimizer
                     fmax=0.1,
                     dr=0.1,
                     logfile='-',
@@ -52,6 +53,7 @@ class BetterHopping(Dynamics):
             #self.adsorbate=atoms[adsorbmask[0]:(adsorbmask[1]+1)]
         #else:
             #self.adsorbate=None
+        self.fmax_mult=fmax_mult
         self.cell_scale=cell_scale
         self.kT = temperature
         self.numdelmodes=numdelocmodes
@@ -263,7 +265,7 @@ class BetterHopping(Dynamics):
         try:
             opt = self.optimizer2(self.atoms,logfile=self.optimizer_logfile)
             #print 'initialized'
-            opt.run(fmax=self.fmax*15,steps=2000)
+            opt.run(fmax=self.fmax*self.fmax_mult,steps=2000)
 
             opt=self.optimizer(self.atoms,logfile=self.optimizer_logfile)
             opt.run(fmax=self.fmax,steps=2000)

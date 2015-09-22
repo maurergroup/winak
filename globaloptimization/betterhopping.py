@@ -57,7 +57,7 @@ class BetterHopping(Dynamics):
                 self.numdelmodes=int(np.round(numdelocmodes*len(atoms)*3))#3N dis in adsorbates
             else:
                 self.numdelmodes=int(np.round(numdelocmodes*(len(atoms)*3-6)))#3N-6 dis in gas phase
-        elif:
+        else:
             self.numdelmodes=int(np.round(numdelocmodes))#round and int just for you trolls out there 
         self.optimizer = optimizer
         self.optimizer2=optimizer2

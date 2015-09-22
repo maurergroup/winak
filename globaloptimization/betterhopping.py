@@ -49,14 +49,16 @@ class BetterHopping(Dynamics):
         else:
             self.adsorbate=adsorbmask
             self.ads=True
-        #if adsorbmask is not None:
-            #self.adsorbate=atoms[adsorbmask[0]:(adsorbmask[1]+1)]
-        #else:
-            #self.adsorbate=None
         self.fmax_mult=fmax_mult
         self.cell_scale=cell_scale
         self.kT = temperature
-        self.numdelmodes=numdelocmodes
+        if numdelocmodes<1:
+            if self.ads:
+                self.numdelmodes=int(np.round(numdelocmodes*len(atoms)*3))#3N dis in adsorbates
+            else:
+                self.numdelmodes=int(np.round(numdelocmodes*(len(atoms)*3-6)))#3N-6 dis in gas phase
+        elif:
+            self.numdelmodes=int(np.round(numdelocmodes))#round and int just for you trolls out there 
         self.optimizer = optimizer
         self.optimizer2=optimizer2
         self.fmax = fmax
@@ -68,7 +70,7 @@ class BetterHopping(Dynamics):
         self.minima=[]
         self.constr=constrain
         if movemode==1:
-            self.movename='Delocalized Internals'
+            self.movename='Delocalized Internals, using %i modes'%self.numdelmodes
         elif movemode==2:
             self.movename='Periodic DI'
         if adjust_cm:
@@ -80,8 +82,13 @@ class BetterHopping(Dynamics):
         self.lm_trajectory = local_minima_trajectory
         if isinstance(local_minima_trajectory, str):
             self.lm_trajectory = PickleTrajectory(local_minima_trajectory,'a', atoms)
-        self.initialize()
-        #print 'initialize done'
+        self.startT = datetime.now()
+        self.log(msg='STARTING BASINHOPPING at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+':\n Displacements: '+self.movename+' Stepsize: %.3f fmax: %.3f T: %4.2f\n'%(self.dr,self.fmax,self.kT/kB))
+        self.positions = 0.0 * self.atoms.get_positions()
+        self.Emin = self.get_energy(self.atoms.get_positions()) or 1.e15
+        self.rmin = self.atoms.get_positions()
+        self.call_observers()
+        self.log(-1, self.Emin, self.Emin)
 
     def check_distances(self,atoms,min=0.25):
         vcg=VCG(atoms.get_chemical_symbols(),masses=atoms.get_masses())
@@ -116,15 +123,6 @@ class BetterHopping(Dynamics):
                 coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=tu,cell=cell)
         return coords.get_vectors()
 
-    def initialize(self):
-        self.startT = datetime.now()
-        self.log(msg='STARTING BASINHOPPING at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+':\n Displacements: '+self.movename+' Stepsize: %.3f fmax: %.3f T: %4.2f\n'%(self.dr,self.fmax,self.kT/kB))
-        self.positions = 0.0 * self.atoms.get_positions()
-        self.Emin = self.get_energy(self.atoms.get_positions()) or 1.e15
-        self.rmin = self.atoms.get_positions()
-        self.call_observers()
-        self.log(-1, self.Emin, self.Emin)
-
     def run(self, steps):
         """Hop the basins for defined number of steps."""
         ro = self.positions
@@ -133,7 +131,6 @@ class BetterHopping(Dynamics):
         lastworkingpos=ro.copy()
         lastworkinge=Eo
         self.minima.append(self.atoms.copy())
-        #print 'starting for'
         for step in range(steps):
             En = None
             tries=0
@@ -150,22 +147,17 @@ class BetterHopping(Dynamics):
                     self.log(msg='      WARNING: Could not create delocalized coordinates. Rolling back!\n')
                     self.atoms.set_positions(lastmol)
                     atemp=self.atoms.copy()
-                    #atemp.set_positions(ro)
                     if not self.ads:
                         vectors=self.get_vectors(atemp)
                     else:
                         vectors=self.get_vectors(atemp[self.adsorbate[0]:self.adsorbate[1]])
                     ro=lastmol.copy()
                 lastmol=ro.copy()
-            #self.logfile.write('Starting Step\n')
-            #print 'starting step'
             while En is None:
                 if self.movemode==0:
                     rn = self.move(ro)
                 elif self.movemode==1 or self.movemode==2:
                     rn=self.move_del(ro,vectors)
-                #self.logfile.write('move done\n')
-                #print 'move done'
                 self.atoms.write(str(step)+'.xyz',format='xyz')
                 En = self.get_energy(rn)
                 tries+=1
@@ -174,8 +166,6 @@ class BetterHopping(Dynamics):
                     Eo=lastworkinge      #we are going to pretend that never happened and reverse last step
                     tries=0
                     self.log(msg='     WARNING: last step caused get_energy() failure; Resetting step\n')
-            #self.logfile.write('while loop done\n')
-            #print 'while done'
             self.minima.append(self.atoms.copy())
             if En < self.Emin:
                 # new minimum found
@@ -197,7 +187,8 @@ class BetterHopping(Dynamics):
         if self.logfile is not None:
             name = self.__class__.__name__
             if step is not None:
-                self.logfile.write('%s: step %d, energy %15.6f, emin %15.6f\n' %(name, step, En, Emin))
+                taim = datetime.now().strftime("%Y-%m-%d %H:%M")
+                self.logfile.write('%s: %s  step %d, energy %15.6f, emin %15.6f\n' %(name,taim, step, En, Emin))
             elif msg is not None:
                 self.logfile.write(msg)
             self.logfile.flush()
@@ -238,7 +229,6 @@ class BetterHopping(Dynamics):
             for i in w:
                 disp[self.adsorbate[0]:(self.adsorbate[1]),:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
             disp/=np.max(np.abs(disp))
-            #print disp
             #from here on, everything is JUST COPIED from self.move(); should be sane
             rn=ro+self.dr*disp
             atms.set_positions(rn)
@@ -261,23 +251,17 @@ class BetterHopping(Dynamics):
         self.positions = positions
         self.atoms.set_positions(positions)
         ret=None
-        #print 'try'
         try:
             opt = self.optimizer2(self.atoms,logfile=self.optimizer_logfile)
-            #print 'initialized'
             opt.run(fmax=self.fmax*self.fmax_mult,steps=2000)
 
             opt=self.optimizer(self.atoms,logfile=self.optimizer_logfile)
             opt.run(fmax=self.fmax,steps=2000)
-            #print 'run'
             if self.lm_trajectory is not None:
                 self.lm_trajectory.write(self.atoms)
             self.energy = self.atoms.get_potential_energy()
             ret=self.energy
-            #print 'get_pot'
         except:
-                #print sys.exc_info()[0]
-                            #print 'get_energy fail'
                 # Something went wrong.
                 # In GPAW the atoms are probably to near to each other.
                 # In Hotbit: "overlap matrix is not positive definite"

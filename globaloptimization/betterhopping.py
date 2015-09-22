@@ -54,7 +54,7 @@ class BetterHopping(Dynamics):
         self.kT = temperature
         if numdelocmodes<1:
             if self.ads:
-                self.numdelmodes=int(np.round(numdelocmodes*len(atoms)*3))#3N dis in adsorbates
+                self.numdelmodes=int(np.round(numdelocmodes*len(atoms[self.adsorbate[0]:self.adsorbate[1]])*3))#3N dis in adsorbates
             else:
                 self.numdelmodes=int(np.round(numdelocmodes*(len(atoms)*3-6)))#3N-6 dis in gas phase
         else:

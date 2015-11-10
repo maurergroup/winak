@@ -1,6 +1,6 @@
 from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
 from winak.globaloptimization.disspotter import *
-from ase.io.trajectory import PickleTrajectory
+from ase.io.trajectory import Trajectory
 import numpy as np
 
 class Manalyzer:
@@ -12,7 +12,7 @@ class Manalyzer:
         trajectory can either be a string or a ase.io.trajectory PickleTrajectory type
         """
         if isinstance(trajectory,basestring):
-            self.allmin=PickleTrajectory(trajectory,'r')
+            self.allmin=Trajectory(trajectory,'r')
         else:
             self.allmin=trajectory
         if rmsd==-1:
@@ -31,33 +31,6 @@ class Manalyzer:
         self.dis=[]
         self.min=[]
         self.conf=[]
-
-        d = '/home/konstantin/software/HOTBIT/param/SURF/'
-        elm = {'H': d + 'H.elm',
-               'C': d + 'C.elm',
-               'N': d + 'N.elm',
-               'O': d + 'O.elm'}
-        tab = {'CH': d + 'C_H.par',
-               'HH': d + 'H_H.par',
-               'CC': d + 'C_C.par',
-               'CN': d + 'C_N.par',
-               'NH': d + 'N_H.par',
-               'NN': d + 'N_N.par',
-               'rest': 'default'}
-        mixer = {'name': 'Pulay', 'convergence': 1E-7}
-        calc_dftb = Hotbit(txt='hotbit.txt',
-                   elements=elm,
-                   mixer=mixer,
-                   tables=tab,
-                   SCC=True,
-                   verbose_SCC=True,
-                   width=0.10,
-                   maxiter=100,
-                   coulomb_solver=MultipoleExpansion(
-                       n=(3, 3, 1),
-                       k=(1, 1, 1)),
-                   kpts=(1,1,1)
-                   )
 
         print 'Calculating Energies...'
         tmp=0

@@ -2,8 +2,6 @@ from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as 
 from winak.globaloptimization.disspotter import *
 from ase.io.trajectory import PickleTrajectory
 import numpy as np
-from hotbit import *
-from hotbit.coulomb import MultipoleExpansion
 
 class Manalyzer:
     """

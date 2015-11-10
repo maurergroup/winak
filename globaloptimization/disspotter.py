@@ -9,10 +9,10 @@ class DisSpotter:
     Tells you if a molecule is dissociated or not.
     """
     def __init__(self, atoms):
-        if isinstance(atoms,basestring):
-            self.molecule=read(file)
-        else:
+        if isinstance(atoms,Atoms):
             self.molecule=atoms
+        else:
+            self.molecule=read(atoms)
         self.visited=[False]*(len(self.molecule)+1)
         self.vcg=VCG(self.molecule.get_chemical_symbols(),masses=self.molecule.get_masses())
         self.iclist=self.vcg(self.molecule.get_positions().flatten())

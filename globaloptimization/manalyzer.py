@@ -7,14 +7,19 @@ class Manalyzer:
     """
     uses RMSD to determine which minma are the same.
     """
-    def __init__(self,trajectory,rmsd=-1,lenthr=-1,edif=-1):
+    def __init__(self,trajectory,rmsd=-1,lenthr=-1,edif=-1,removedis=True,mask=None):
         """
-        trajectory can either be a string or a ase.io.trajectory PickleTrajectory type
+        trajectory can either be a string or a ase.io.trajectory Trajectory type
+        removedis: should dissociated minima be deleted?
         """
         if isinstance(trajectory,basestring):
             self.allmin=Trajectory(trajectory,'r')
         else:
             self.allmin=trajectory
+        if mask is None:
+            self.mask=[0,len(self.allmin[0])]
+        else:
+            self.mask=mask
         if rmsd==-1:
             self.rmsd=1.2
         else:
@@ -31,18 +36,17 @@ class Manalyzer:
         self.dis=[]
         self.min=[]
         self.conf=[]
-
+        
         print 'Calculating Energies...'
         tmp=0
         for i in self.allmin:
-            e=DisSpotter(atoms=i)
-            if e.spot_dis():
+            e=DisSpotter(atoms=i[self.mask[0]:self.mask[1]])
+            if removedis and e.spot_dis():
                 self.dis.append(Minimum(i,e.vcg,e.iclist,e.ic,tmp))
             else:
-                i.set_calculator(calc_dftb)
                 self.notdis.append(Minimum(i,e.vcg,e.iclist,e.ic,tmp,i.get_potential_energy()))
-                tmp+=1
-                print str(tmp)+' done'
+            tmp+=1
+            print str(tmp)+' done'
         print str(len(self.dis))+' dissociated minima, '+str(len(self.notdis))+ ' undissociated minima, '+str(len(self.allmin))+' total'
 
     def findConformers(self,strref=None,icsref=None):
@@ -55,21 +59,30 @@ class Manalyzer:
         else:
             stre=strref
             ics=icsref
-        xx=PickleTrajectory('confs.traj','a')
+        xx=Trajectory('confs.traj','a')
+        yy=Trajectory('notconfs.traj','a')
         for i in self.notdis:
             istre=i.ic.getStretchBendTorsOop()[0][0]
             iics=i.ic.getStretchBendTorsOop()[1]
             same=True
-            for j in stre:
-                if not (iics[j][0]==ics[j][0] and iics[j][1]==iics[j][1]):
-                    same=False
-                    break
+            if len(stre)>len(istre):
+                same=False
+            else:
+                for j in stre:
+                    #print j
+                    #print i.oldn
+                    if not (iics[j][0]==ics[j][0] and iics[j][1]==iics[j][1]):
+                        same=False
+                        break
             if same:
                 xx.write(i.atoms)
-                print i.oldn
+                #print i.oldn
                 self.conf.append(i)
+            else:
+                yy.write(i.atoms)
 
-
+"""
+THIS FUNCTION IS UNTESTED
     def dothebartman(self,onlyconf=False):
         if onlyconf:
             self.findConformers()
@@ -103,12 +116,12 @@ class Manalyzer:
                     self.min.append(tmpmin)
 
         for i in range(len(self.min)):
-            xx=PickleTrajectory(pre+str(i)+'.traj','w')
+            xx=Trajectory(pre+str(i)+'.traj','w')
             print 'minim: '+str(i)
             for j in range(len(self.min[i])):
                 xx.write(self.min[i][j].atoms)
                 print self.min[i][j].oldn
-
+"""
 class Minimum:
     """
     convenience class, used to avoid a million lists

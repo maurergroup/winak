@@ -4,7 +4,7 @@ from ase.optimize.optimize import Dynamics
 from ase.optimize.fire import FIRE
 from ase.units import kB
 from ase.parallel import world
-from ase.io.trajectory import PickleTrajectory
+from ase.io.trajectory import Trajectory
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
 from winak.globaloptimization.delocalizer import *
@@ -81,7 +81,7 @@ class BetterHopping(Dynamics):
         self.optimizer_logfile = optimizer_logfile
         self.lm_trajectory = local_minima_trajectory
         if isinstance(local_minima_trajectory, str):
-            self.lm_trajectory = PickleTrajectory(local_minima_trajectory,'a', atoms)
+            self.lm_trajectory = Trajectory(local_minima_trajectory,'a', atoms)
         self.startT = datetime.now()
         self.log(msg='STARTING BASINHOPPING at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+':\n Displacements: '+self.movename+' Stepsize: %.3f fmax: %.3f T: %4.2f\n'%(self.dr,self.fmax,self.kT/kB))
         self.positions = 0.0 * self.atoms.get_positions()

@@ -47,8 +47,12 @@ class UltimateScreener:
             tries=0
             reset=False  
             failed=False          
+            
             while tmp is None:
-                tmp=self.displacer.displace(self.current.copy())
+                try:
+                    tmp=self.displacer.displace(self.current.copy())
+                except:
+                    tmp=None
                 tries+=1
                 if tmp is None:
                     self.log('Error while displacing, retrying')
@@ -73,7 +77,7 @@ class UltimateScreener:
             self.fallbackstep=step
             self.traj.write(tmp[0])
             accepted=self.crit.evaluate(tmp[0].copy(),tmp[1])
-            acc='not '
+            acc='not'
             if accepted:       
                 self.current=tmp[0].copy()
                 acc=''

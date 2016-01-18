@@ -1,6 +1,12 @@
 from abc import ABCMeta, abstractmethod
 from ase.all import *
 import numpy as np
+from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
+from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
+from winak.globaloptimization.delocalizer import *
+from winak.curvilinear.Coordinates import CompleteDelocalizedCoordinates as CDC
+from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
+from winak.curvilinear.InternalCoordinates import icSystem
 
 class Displacer:
     """This class accepts or declines a step in any way you see fit. It is also 
@@ -23,6 +29,100 @@ class Displacer:
         all the important parameters"""
         pass
     
+
+class DI(Displacer):
+    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False):
+        """cell_scale: for translations; scales translations, so everything
+        stays in the unit cell. The z component should be set to something small,
+        like 0.05. 
+        numdelocmodes: how many delocalized internals should be combined; from
+        0 to <1 it will interpret it as a percentage (i.e. 0.25=25%), 1 or any
+        number larger than 1 will be interpreted as a certain number of modes 
+        (i.e. 1=1 deloc mode, 15=15 delocmodes etc.)"""
+        Displacer.__init__(self)
+        if adsorbate is None:
+            self.ads=False
+        else:
+            self.adsorbate=adsorbate
+            self.ads=True
+            self.cell_scale=cell_scale
+        self.constrain=constrain
+        self.adjust_cm=adjust_cm
+        self.stepwidth=stepwidth
+        self.numdelmodes=np.abs(numdelocmodes)
+        self.periodic=periodic
+        
+    def get_vectors(self,atoms):
+        if self.periodic:
+            deloc=Delocalizer(atoms,periodic=True,dense=True)
+            coords=PC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, Li=deloc.u)
+        else:
+            deloc=Delocalizer(atoms)
+            tu=deloc.u
+            if self.constrain:
+                e = deloc.constrainStretches()
+                deloc.constrain(e)
+                tu=deloc.u2
+            if not self.ads:
+                coords=DC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, u=tu)
+            else:
+                cell = atoms.get_cell()*self.cell_scale
+                coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=tu,cell=cell)
+
+        return coords.get_vectors() 
+    
+    def displace(self,tmp):
+        disp=np.zeros((len(tmp),3))
+        ro=tmp.get_positions()
+        atms=tmp.copy()
+        if self.ads:
+            tmp=tmp[self.adsorbate[0]:self.adsorbate[1]].copy()
+            ads1=self.adsorbate[0]
+            ads2=self.adsorbate[1]
+        else:
+            ads1=0
+            ads2=len(tmp)
+        if self.numdelmodes<1:
+            if self.ads:
+                nummodes=int(np.round(self.numdelmodes*len(tmp)*3))#3N dis in adsorbates
+            else:
+                nummodes=int(np.round(self.numdelmodes*(len(tmp)*3-6)))#3N-6 dis in gas phase
+        else:
+            nummodes=int(np.round(self.numdelmodes))#round and int just for you trolls out there 
+        
+        vectors=self.get_vectors(tmp)
+        numvec=len(vectors)
+        start=0
+        if self.constrain:
+            mm=tmp.get_masses()
+            x0=tmp.get_positions().flatten()
+            vv=VCG(tmp.get_chemical_symbols(),masses=mm)
+            start=len(icSystem(vv(x0),len(tmp), masses=mm,xyz=x0).getStretchBendTorsOop()[0][0])
+        if nummodes>numvec-start:
+            nummodes=numvec-start
+        w=np.random.choice(range(start,numvec),size=nummodes,replace=False)
+        for i in w:
+            disp[ads1:ads2,:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
+
+        disp/=np.max(np.abs(disp))
+        rn=ro+self.stepwidth*disp
+        
+        if self.adjust_cm:
+            cmt = atms.get_center_of_mass()
+            
+        atms.set_positions(rn)
+
+        if self.adjust_cm is not None:
+            cm = atms.get_center_of_mass()
+            atms.translate(cmt - cm)
+        return atms
+    
+    def print_params(self):
+        if self.ads:
+            ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
+        else:
+            ads=''
+        return '%s: stepwidth=%f, numdelocmodes=%f%s'%(self.__class__.__name__,self.stepwidth,self.numdelmodes,ads)
     
 class Cartesian(Displacer):
     def __init__(self,stepwidth,adsorbate=None,adjust_cm=True):
@@ -46,13 +146,13 @@ class Cartesian(Displacer):
         rn = ro + self.stepwidth * disp
         
         if self.adjust_cm:
-            self.cm = tmp.get_center_of_mass()
+            cmt = tmp.get_center_of_mass()
             
         tmp.set_positions(rn)
         
         if self.adjust_cm:
             cm = tmp.get_center_of_mass()
-            tmp.translate(self.cm - cm)
+            tmp.translate(cmt - cm)
             
         return tmp
     

@@ -19,7 +19,7 @@ class UltimateScreener:
         self.eneval=EnergyEvaluator
         self.displacer=Displacer
         self.crit=Criterion
-        self.traj=Trajectory(trajectory,'a')
+        self.traj=Trajectory(trajectory,'w')
         self.startT = datetime.now()
         self.log('STARTING Screening at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+' KK 2015')
         self.log('Using the following Parameters and Classes:')
@@ -29,14 +29,15 @@ class UltimateScreener:
 
     def run(self, steps):
         """Screen for defined number of steps."""
-        self.current = self.eneval.get_energy(self.atoms.copy())
-        self.fallbackatoms=self.current.copy()
-        self.fallbackstep=-1
-        if self.Emin is None:
+        tmp = self.eneval.get_energy(self.atoms.copy())
+        if tmp is None:
             self.log('Initial Energy Evaluation Failed. Please check your calculator!')
         else:
+            self.current=tmp[0];self.Emin=tmp[1]
             self.traj.write(self.current)
             self.log('Initial Energy Evaluation done. Note that this is structure 0 in your trajectory.')
+        self.fallbackatoms=self.current.copy()
+        self.fallbackstep=-1
         
         for step in range(steps):    
             """I strictly use copies here, so nothing can be overwritten in a subclass.
@@ -68,15 +69,15 @@ class UltimateScreener:
                 break
             
             """setting backup"""
-            self.fallbackatoms=tmp.copy()
+            self.fallbackatoms=tmp[0].copy()
             self.fallbackstep=step
-            self.traj.write(tmp)
-            accepted=self.crit.evaluate(tmp.copy())
+            self.traj.write(tmp[0])
+            accepted=self.crit.evaluate(tmp[0].copy(),tmp[1])
             acc='not '
             if accepted:       
-                self.current=tmp.copy()
+                self.current=tmp[0].copy()
                 acc=''
-            self.log('%s - step %d done, %s accepted '%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),step+1,acc))
+            self.log('%s - step %d done, %s accepted, Energy = %f '%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),step+1,acc,tmp[1]))
         self.endT = datetime.now()
         self.log('ENDING Screening at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))
         self.log('Time elapsed: '+str(self.endT-self.startT))
@@ -85,5 +86,5 @@ class UltimateScreener:
     def log(self, msg):
         if self.logfile is not None:
             with open(self.logfile,'a') as fn:
-                fn.writeln(msg)
+                fn.write(msg+'\n')
                 fn.flush()

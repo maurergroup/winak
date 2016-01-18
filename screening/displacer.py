@@ -28,7 +28,6 @@ class Cartesian(Displacer):
     def __init__(self,stepwidth,adsorbate=None,adjust_cm=True):
         Displacer.__init__(self)
         if adsorbate is None:
-            self.adsorbate=(0,len(atoms))
             self.ads=False
         else:
             self.adsorbate=adsorbate
@@ -40,7 +39,10 @@ class Cartesian(Displacer):
         """Move atoms by a random step."""
         ro=tmp.get_positions()
         disp=np.zeros((len(ro),3))
-        disp[self.adsorbate[0]:self.adsorbate[1],:3] = np.random.uniform(-1., 1., (self.adsorbate[1]-self.adsorbate[0], 3))
+        if self.ads:
+            disp[self.adsorbate[0]:self.adsorbate[1],:3] = np.random.uniform(-1., 1., (self.adsorbate[1]-self.adsorbate[0], 3))
+        else:
+            disp[:,:3] = np.random.uniform(-1., 1., (len(tmp), 3))
         rn = ro + self.stepwidth * disp
         
         if self.adjust_cm:

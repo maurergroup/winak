@@ -12,7 +12,7 @@ class Criterion:
         pass
         
     @abstractmethod
-    def evaluate(self,tmp):
+    def evaluate(self,tmp,en):
         """subclasses must implement this method. Has to return a boolean if
         tmp is accepted"""
         pass
@@ -25,28 +25,27 @@ class Criterion:
     
 class Metropolis(Criterion):
     def __init__(self,T=100*kB,energy='pot'):
-        """if you don't want the potential energy, just change the first if in
-        evaluate by adding your own elif"""
-        CR.__init__(self)
+        Criterion.__init__(self)
         self.kT=T
         self.emin=None
         self.amin=None
+        self.Eo=None #lastaccepted E
         self.minima=[]
         self.energies=[]
         self.energy=energy
         
-    def evaluate(self, tmp):
+    def evaluate(self, tmp, en):
         ret=False
-        if self.energy=='pot':
-            En=tmp.get_potential_energy()
-        self.energies.append(En)
+        self.energies.append(en)
         self.minima.append(tmp.copy())
-        if self.emin is None or En<self.emin:
-            self.emin=En
+        if self.emin is None or en<self.emin:
+            self.emin=en
+            self.Eo=en
             ret=True
-        elif np.exp((Eo - En) / self.kT) > np.random.uniform():
+        elif np.exp((self.Eo - en) / self.kT) > np.random.uniform():
             ret=True
+            self.Eo=en
         return ret
     
     def print_params(self):
-        return '%s: T=%f, energy='%(self.__class__.__name__,self.kT/kB,self.energy)
+        return '%s: T=%f, energy=%s'%(self.__class__.__name__,self.kT/kB,self.energy)

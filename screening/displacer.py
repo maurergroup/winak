@@ -9,7 +9,6 @@ from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as 
 from winak.curvilinear.InternalCoordinates import icSystem
 from winak.globaloptimization.disspotter import DisSpotter
 import os
-from samba.policy import ads_to_dir_access_mask
 
 class Displacer:
     """This class accepts or declines a step in any way you see fit. It is also 
@@ -162,7 +161,7 @@ class DI(Displacer):
         return coords.get_vectors() 
     
     def displace(self,tmp):
-        """No DIS for atoms! Atoms get Cart movements"""
+        """No DIS for atoms! Atoms get Cart movements. If on surf, along cell"""
         disp=np.zeros((len(tmp),3))
         ro=tmp.get_positions()
         atms=tmp.copy()
@@ -207,6 +206,9 @@ class DI(Displacer):
             if self.adjust_cm is not None:
                 cm = atms.get_center_of_mass()
                 atms.translate(cmt - cm)
+        elif self.ads:
+            cc=Celltrans(self.stepwidth,self.adsorbate,self.cell_scale,self.adjust_cm)
+            atms=cc.displace(atms)
         else:
             cc=Cartesian(self.stepwidth,self.adsorbate,self.adjust_cm)
             atms=cc.displace(atms)
@@ -218,6 +220,33 @@ class DI(Displacer):
         else:
             ads=''
         return '%s: stepwidth=%f, numdelocmodes=%f%s'%(self.__class__.__name__,self.stepwidth,self.numdelmodes,ads)
+    
+class Celltrans(Displacer):
+    """displaces along cell vectors"""
+    def __init__(self,stepwidth,adsorbate,cell_scale=[1.,1.,1.],adjust_cm=True):
+        Displacer.__init__(self)
+        self.stepwidth=stepwidth
+        self.adsorbate=adsorbate
+        self.cell_scale=cell_scale
+        self.adjust_cm=adjust_cm
+        
+    def displace(self, tmp):
+        ro=tmp.get_positions()
+        disp=np.zeros((len(ro),3))
+        c=tmp.get_cell()*self.cell_scale
+        disp[self.adsorbate[0]:self.adsorbate[1],:3] = np.dot(c,np.random.uniform(-1., 1., 3))
+        rn = ro + self.stepwidth * disp
+        if self.adjust_cm:
+            cmt = tmp.get_center_of_mass()  
+        tmp.set_positions(rn)
+        if self.adjust_cm:
+            cm = tmp.get_center_of_mass()
+            tmp.translate(cmt - cm)  
+        return tmp
+    
+    def print_params(self):
+        ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
+        return '%s: stepwidth=%f%s'%(self.__class__.__name__,self.stepwidth,ads)
     
 class Cartesian(Displacer):
     def __init__(self,stepwidth,adsorbate=None,adjust_cm=True):
@@ -239,16 +268,12 @@ class Cartesian(Displacer):
         else:
             disp[:,:3] = np.random.uniform(-1., 1., (len(tmp), 3))
         rn = ro + self.stepwidth * disp
-        
         if self.adjust_cm:
-            cmt = tmp.get_center_of_mass()
-            
-        tmp.set_positions(rn)
-        
+            cmt = tmp.get_center_of_mass()  
+        tmp.set_positions(rn) 
         if self.adjust_cm:
             cm = tmp.get_center_of_mass()
-            tmp.translate(cmt - cm)
-            
+            tmp.translate(cmt - cm)   
         return tmp
     
     def print_params(self):

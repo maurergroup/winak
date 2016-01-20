@@ -13,7 +13,7 @@ rea.set_calculator(EMT())
 f = FixAtoms(mask=[atom.symbol == 'Ag' for atom in rea])
 rea.set_constraint(f)
 
-crit=Metropolis(T=100*kB)sssss
+crit=Metropolis(T=100*kB)
 disp=MultiDI(stepwidth=1.7,numdelocmodes=0.33,constrain=False,adsorbate=(18,30),cell_scale=[0.5,0.3,0.031],loghax=True)
 ee=potEE(EMT(),BFGS,fmax=1.0)
 

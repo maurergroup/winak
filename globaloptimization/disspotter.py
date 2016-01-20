@@ -2,6 +2,7 @@ from ase.all import *
 from winak.curvilinear.InternalCoordinates import icSystem
 from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
 from winak.curvilinear.Coordinates import InternalCoordinates as IC
+import numpy as np
 
 
 class DisSpotter:
@@ -20,6 +21,7 @@ class DisSpotter:
 
         self.stre=self.ic.getStretchBendTorsOop()[0][0]
         self.ics=self.ic.getStretchBendTorsOop()[1]
+        
 
     def numConnections(self,j):
         """ics: as in the main program bottom
@@ -62,7 +64,54 @@ class DisSpotter:
         else:
             #print 'Atom '+str(j)+' already accounted for'
             return 0
-
+        
+    def get_fragments(self):
+        """
+        Returns all the fragments
+        """
+        self.visited=[False]*(len(self.molecule)+1)
+        ret=[]
+        while True:
+            try:
+                a=self.visited.index(False)
+                tmp=[]
+                tmp=self.get_fragment(a)
+                ret.append(tmp)
+            except ValueError:
+                break
+        return ret[1:]
+        
+        
+    def get_fragment(self,j):
+        """
+        This might seem complicated, but it is actually not. 
+        """
+        ret=[]
+        if not self.visited[j]:
+            ret.append(j)
+            self.visited[j]=True
+            x=self.numConnections(j)
+            #print 'looking at '+str(j)
+            #print str(j)+' has '+str(x[0])+' connections'
+            if x[0]==1:
+                #print 'ending in atom '+str(j)+' and returning '+str(ret)
+                return ret
+            else:
+                for l in x[1]:
+                    tmp=self.ics[l][1]
+                    if tmp==j:
+                        tmp=self.ics[l][0]
+                    #print str(j)+' is connected to atom '+str(tmp)
+                    r2=self.get_fragment(tmp)
+                    for q in r2:
+                        ret.append(q)
+                    #print 'back at atom '+str(j)
+                    #print 'ret is now '+str(ret)
+            return ret
+        else:
+            #print 'Atom '+str(j)+' already accounted for'
+            return []
+        
     def spot_dis(self):
         """
         Returns true if dissociation happened

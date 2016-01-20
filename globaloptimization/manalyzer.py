@@ -61,6 +61,7 @@ class Manalyzer:
             ics=icsref
         xx=Trajectory('confs.traj','a')
         yy=Trajectory('notconfs.traj','a')
+        cnt=0
         for i in self.notdis:
             istre=i.ic.getStretchBendTorsOop()[0][0]
             iics=i.ic.getStretchBendTorsOop()[1]
@@ -76,10 +77,12 @@ class Manalyzer:
                         break
             if same:
                 xx.write(i.atoms)
-                #print i.oldn
+                cnt+=1
+                print str(cnt)+' - '+str(i.oldn)
                 self.conf.append(i)
             else:
                 yy.write(i.atoms)
+            
 
 """
 THIS FUNCTION IS UNTESTED

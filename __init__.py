@@ -13,6 +13,7 @@ __all__ = [
         'curvilinear',
         'curvilinear.numeric',
         'globaloptimization',
+        'screening'
         ]
 
 license = __doc__ + """

@@ -62,7 +62,9 @@ class UltimateScreener:
                         self.log('Error while evaluating energy, retrying')
                 if tries>10 and not reset:
                     self.log('Repeated Error during current step, rolling back to step %d' %self.fallbackstep)
+                    #self.fallbackatoms.write('eee.xyz')
                     self.current=self.fallbackatoms.copy()
+                    #self.current.write('fff.xyz')
                     tries=0
                     reset=True
                 if tries>10 and reset:
@@ -73,14 +75,14 @@ class UltimateScreener:
                 break
             
             """setting backup"""
-            self.fallbackatoms=tmp[0].copy()
-            self.fallbackstep=step
             self.traj.write(tmp[0])
             accepted=self.crit.evaluate(tmp[0].copy(),tmp[1])
             acc='not'
             if accepted:       
                 self.current=tmp[0].copy()
                 acc=''
+                self.fallbackatoms=tmp[0].copy()
+                self.fallbackstep=step
             self.log('%s - step %d done, %s accepted, Energy = %f '%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),step+1,acc,tmp[1]))
         self.endT = datetime.now()
         self.log('ENDING Screening at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))

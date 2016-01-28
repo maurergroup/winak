@@ -216,7 +216,7 @@ class DI(Displacer):
     
     def print_params(self):
         if self.ads:
-            ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
+            ads=', %d:%d is displaced'%(self.adsorbate[0],self.adsorbate[1])
         else:
             ads=''
         return '%s: stepwidth=%f, numdelocmodes=%f%s'%(self.__class__.__name__,self.stepwidth,self.numdelmodes,ads)
@@ -245,7 +245,7 @@ class Celltrans(Displacer):
         return tmp
     
     def print_params(self):
-        ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
+        ads=', %d:%d is displaced'%(self.adsorbate[0],self.adsorbate[1])
         return '%s: stepwidth=%f%s'%(self.__class__.__name__,self.stepwidth,ads)
     
 class Cartesian(Displacer):
@@ -278,7 +278,7 @@ class Cartesian(Displacer):
     
     def print_params(self):
         if self.ads:
-            ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
+            ads=', %d:%d is displaced'%(self.adsorbate[0],self.adsorbate[1])
         else:
             ads=''
         return '%s: stepwidth=%f%s'%(self.__class__.__name__,self.stepwidth,ads)

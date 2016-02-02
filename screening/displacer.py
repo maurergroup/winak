@@ -117,7 +117,11 @@ class MultiDI(Displacer):
             ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
         else:
             ads=''
-        return '%s: stepwidth=%f%s'%(self.__class__.__name__,self.stepwidth,ads)
+        if self.constrain:
+            cc=''
+        else:
+            cc=' not'
+        return '%s: stepwidth=%f%s, stretches are%s constrained'%(self.__class__.__name__,self.stepwidth,ads,cc)
         
 class DI(Displacer):
     def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False):
@@ -219,7 +223,11 @@ class DI(Displacer):
             ads=', %d:%d is displaced'%(self.adsorbate[0],self.adsorbate[1])
         else:
             ads=''
-        return '%s: stepwidth=%f, numdelocmodes=%f%s'%(self.__class__.__name__,self.stepwidth,self.numdelmodes,ads)
+        if self.constrain:
+            cc=''
+        else:
+            cc=' not'
+        return '%s: stepwidth=%f, numdelocmodes=%f%s, stretches are%s constrained'%(self.__class__.__name__,self.stepwidth,self.numdelmodes,ads,cc)
     
 class Celltrans(Displacer):
     """displaces along cell vectors"""

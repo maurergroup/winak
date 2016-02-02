@@ -49,3 +49,31 @@ class Metropolis(Criterion):
     
     def print_params(self):
         return '%s: T=%f, energy=%s'%(self.__class__.__name__,self.kT/kB,self.energy)
+
+class GCMetropolis(Criterion):
+    """Just copied and pasted for now, actually should work out of the box if the energy evaluator is correct."""
+    def __init__(self,T=100*kB,energy='pot'):
+        Criterion.__init__(self)
+        self.kT=T
+        self.emin=None
+        self.amin=None
+        self.Eo=None #lastaccepted E
+        self.minima=[]
+        self.energies=[]
+        self.energy=energy
+        
+    def evaluate(self, tmp, en):
+        ret=False
+        self.energies.append(en)
+        self.minima.append(tmp.copy())
+        if self.emin is None or en<self.emin:
+            self.emin=en
+            self.Eo=en
+            ret=True
+        elif np.exp((self.Eo - en) / self.kT) > np.random.uniform():
+            ret=True
+            self.Eo=en
+        return ret
+    
+    def print_params(self):
+        return '%s: T=%f, energy=%s'%(self.__class__.__name__,self.kT/kB,self.energy)

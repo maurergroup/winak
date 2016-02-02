@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from ase.all import *
+from ase.utils.geometry import sort
 import numpy as np
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
@@ -117,11 +118,7 @@ class MultiDI(Displacer):
             ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
         else:
             ads=''
-        if self.constrain:
-            cc=''
-        else:
-            cc=' not'
-        return '%s: stepwidth=%f%s, stretches are%s constrained'%(self.__class__.__name__,self.stepwidth,ads,cc)
+        return '%s: stepwidth=%f%s'%(self.__class__.__name__,self.stepwidth,ads)
         
 class DI(Displacer):
     def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False):
@@ -223,11 +220,7 @@ class DI(Displacer):
             ads=', %d:%d is displaced'%(self.adsorbate[0],self.adsorbate[1])
         else:
             ads=''
-        if self.constrain:
-            cc=''
-        else:
-            cc=' not'
-        return '%s: stepwidth=%f, numdelocmodes=%f%s, stretches are%s constrained'%(self.__class__.__name__,self.stepwidth,self.numdelmodes,ads,cc)
+        return '%s: stepwidth=%f, numdelocmodes=%f%s'%(self.__class__.__name__,self.stepwidth,self.numdelmodes,ads)
     
 class Celltrans(Displacer):
     """displaces along cell vectors"""
@@ -290,3 +283,135 @@ class Cartesian(Displacer):
         else:
             ads=''
         return '%s: stepwidth=%f%s'%(self.__class__.__name__,self.stepwidth,ads)
+
+class Remove(Displacer):
+    def __init__(self,prob=0.5,adsorbate=None,adjust_cm=True):
+        Displacer.__init__(self)
+        if adsorbate is None:
+            self.ads=False
+        else:
+            self.adsorbate=adsorbate
+            self.ads=True
+        self.adjust_cm=adjust_cm
+        self.prob=prob
+    
+    def displace(self, tmp):
+        """Randomly remove atom with probability=prob"""
+        if np.random.random() < self.prob:
+            if self.ads:
+                tmp.pop(np.random.choice(self.adsorbate).index)
+            else:
+                tmp.pop(np.random.choice(tmp).index)
+        if self.adjust_cm:
+            cmt = tmp.get_center_of_mass()  
+        if self.adjust_cm:
+            cm = tmp.get_center_of_mass()
+            tmp.translate(cmt - cm)   
+        return sort(tmp)
+    
+    def print_params(self):
+        if self.ads:
+            ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
+        else:
+            ads=''
+        return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
+
+class Insert(Displacer):
+    def __init__(self,prob=0.5,adsorbate=None,adjust_cm=True):
+        Displacer.__init__(self)
+        if adsorbate is None:
+            self.ads=False
+        else:
+            self.adsorbate=adsorbate
+            self.ads=True
+        self.adjust_cm=adjust_cm
+        self.prob=prob
+
+    def randomize(self,tmp):
+        """Generates coordinates of new atom on the surface of the sphere enclosing the current structure. Works well with clusters.
+        """
+        tmp.translate(-tmp.get_center_of_mass())
+        R=max(np.linalg.norm(tmp.get_positions(), axis=1))
+        R=1.5*R ## should alleviate overlaps
+        u = np.random.uniform(0,1)
+        v = np.random.uniform(0,1)
+        theta = 2*np.pi*u
+        phi = np.arccos(2*v-1)
+        x = R*np.cos(theta)*np.cos(phi)
+        y = R*np.cos(theta)*np.sin(phi)
+        z = R*np.sin(theta)
+        return (x,y,z)
+
+    def random_duplicate(self,tmp):
+        """pick a random atom and duplicate it, shifting it a bit farther from the COM --- not working atm"""
+        tmp.translate(-tmp.get_center_of_mass())
+        newatom=tmp[-1]#np.random.choice(tmp)
+        newatom.position*=1.5
+        return newatom.position
+        
+    def displace(self, tmp):
+        """Randomly insert atom with probability=prob. Currently inserts silicon only, work in progress..."""
+        if np.random.random() < self.prob:
+            if self.ads:
+                tmp.pop(np.random.choice(self.adsorbate).index) ###TO BE CHANGED
+            else:
+                new=self.randomize(tmp)
+                tmp.append(Atom('Si',new))
+        if self.adjust_cm:
+            cmt = tmp.get_center_of_mass()  
+        if self.adjust_cm:
+            cm = tmp.get_center_of_mass()
+            tmp.translate(cmt - cm)   
+        return sort(tmp)
+    
+    def print_params(self):
+        if self.ads:
+            ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
+        else:
+            ads=''
+        return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
+
+class GC(Displacer):
+    """Grand Canoical moves: insert or removeparticle with probability p, otherwise displace in DICs"""
+    def __init__(self,prob=0.5,stepwidth=1.0,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False):
+        Displacer.__init__(self)
+        if adsorbate is None:
+            self.ads=False
+        else:
+            self.adsorbate=adsorbate
+            self.ads=True
+        self.prob=prob
+        self.constrain=constrain
+        self.stepwidth=stepwidth
+        self.numdelmodes=np.abs(numdelocmodes)
+        self.periodic=periodic
+        self.adjust_cm=adjust_cm
+
+    def displace(self, tmp):
+        """Randomly insert atom with probability=prob"""
+        if np.random.random() < self.prob:
+            if np.random.random() < 0.5:  ##toss coin insert or remove
+                #print 'inserting'
+                disp=Insert(prob=1)
+            else:  ##toss coin insert or remove
+                #print 'removing'
+                disp=Remove(prob=1)
+            tmp=disp.displace(tmp)
+        else:
+            #print 'displacing by '+str(self.stepwidth)
+            disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain)
+            tmp=disp.displace(tmp)
+        if self.adjust_cm:
+            cmt = tmp.get_center_of_mass()  
+        if self.adjust_cm:
+            cm = tmp.get_center_of_mass()
+            tmp.translate(cmt - cm)   
+        return sort(tmp)
+    
+    def print_params(self):
+        if self.ads:
+            ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
+        else:
+            ads=''
+        return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
+

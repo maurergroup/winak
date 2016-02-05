@@ -4,7 +4,7 @@ from ase.io.trajectory import Trajectory
 from collections import Counter
 from winak.screening.composition import Stoichiometry
 from ase.utils.geometry import sort
-
+import os ##
 class UltimateScreener:
     """UltimateScreener
 
@@ -17,9 +17,7 @@ class UltimateScreener:
                  Criterion,
 		         trajectory='minima.traj',
                  logfile='tt.log'):
-        #self.atoms=atoms
-        self.atoms=sort(atoms) 
-        '''CP this is needed otherwise ase refuses to write trajectories if the composition is the same but the ordering of atoms differs, i.e. after insertion+removal+insertion. Sorting        here AND every time the composition changes should be enough'''
+        self.atoms=atoms
         self.logfile=logfile
         self.eneval=EnergyEvaluator
         self.displacer=Displacer
@@ -65,6 +63,7 @@ class UltimateScreener:
                 else:
                     tmp=self.eneval.get_energy(tmp.copy())
                     if tmp is None:
+                        #os.system('cp dftb.out '+str(step+1).zfill(2)+'_'+str(tries).zfill(2)+'.fail')
                         self.log('Error while evaluating energy, retrying')
                 if tries>10 and not reset:
                     self.log('Repeated Error during current step, rolling back to step %d' %self.fallbackstep)

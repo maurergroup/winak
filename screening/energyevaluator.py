@@ -77,7 +77,7 @@ class grandEE(EE):
         """comp is the composition array (i.e. n_i), mu is the array of chemical potentials,
         ecomp is the array of the total energy of components (e.g. atomici) DICTIONARIES"""
         """If it hasn't converged after 3000 steps, it probably won't ever"""
-        atoms=sort(atoms) ##must be sorted for traj
+        #atoms=sort(atoms) ##must be sorted for traj --- no, sorting in displacements is enough
         composition=Stoichiometry()
         stoich=composition.get(atoms)
         #####CP make arrays with composition, free atom energies and chemical potential, sorted by atomic symbols, from dictionaries

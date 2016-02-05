@@ -13,7 +13,7 @@ class Stoichiometry:
     def get(self,atoms):
         stoich=dict(Counter(atoms.get_chemical_symbols()))
         self.stoich=stoich
-        self.comp=np.asarray(stoich.values()) ### change to sorted
+        self.comp=np.asarray(stoich.values()) 
         self.formula=''.join("{!s}{!r}".format(symbol,coeff) for (symbol,coeff) in self.stoich.iteritems())
         return stoich #not necessary but it can be useful to have the stoichiometry returned
 

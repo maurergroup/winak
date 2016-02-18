@@ -35,7 +35,7 @@ class Displacer:
     
 
 class MultiDI(Displacer):
-    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,loghax=False):
+    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,dense=True,loghax=False):
         """cell_scale: for translations; scales translations, so everything
         stays in the unit cell. The z component should be set to something small,
         like 0.05. 
@@ -51,6 +51,7 @@ class MultiDI(Displacer):
             self.ads=True
         self.cell_scale=cell_scale
         self.constrain=constrain
+        self.dense=dense
         self.adjust_cm=adjust_cm
         self.stepwidth=stepwidth
         self.numdelmodes=np.abs(numdelocmodes)
@@ -99,7 +100,7 @@ class MultiDI(Displacer):
                 adstmp=None
                 ads0=0
             
-            di=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain,adsorbate=adstmp,cell_scale=self.cell_scale,adjust_cm=self.adjust_cm,periodic=self.periodic)
+            di=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain,adsorbate=adstmp,cell_scale=self.cell_scale,adjust_cm=self.adjust_cm,periodic=self.periodic,dense=self.dense)
             if self.lh:
                 tt.write(os.path.join(str(o),'pre_'+str(i[0])+'.xyz'))
             tt=di.displace(tt)
@@ -126,7 +127,7 @@ class MultiDI(Displacer):
         return '%s: stepwidth=%f%s, stretches are%s constrained'%(self.__class__.__name__,self.stepwidth,ads,cc)
         
 class DI(Displacer):
-    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False):
+    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,dense=True):
         """cell_scale: for translations; scales translations, so everything
         stays in the unit cell. The z component should be set to something small,
         like 0.05. 
@@ -145,14 +146,15 @@ class DI(Displacer):
         self.adjust_cm=adjust_cm
         self.stepwidth=stepwidth
         self.numdelmodes=np.abs(numdelocmodes)
+        self.dense=dense
         self.periodic=periodic
         
     def get_vectors(self,atoms):
         if self.periodic:
-            deloc=Delocalizer(atoms,periodic=True,dense=True)
+            deloc=Delocalizer(atoms,periodic=True,dense=self.dense)
             coords=PC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, Li=deloc.u)
         else:
-            deloc=Delocalizer(atoms)
+            deloc=Delocalizer(atoms,dense=self.dense)
             tu=deloc.u
             if self.constrain:
                 e = deloc.constrainStretches()

@@ -4,7 +4,9 @@ from ase.io.trajectory import Trajectory
 from collections import Counter
 from winak.screening.composition import Stoichiometry
 from ase.utils.geometry import sort
-import os ##
+import os 
+
+
 class UltimateScreener:
     """UltimateScreener
 
@@ -15,7 +17,7 @@ class UltimateScreener:
                  EnergyEvaluator,
                  Displacer,
                  Criterion,
-		         trajectory='minima.traj',
+                 trajectory='minima.traj',
                  logfile='tt.log'):
         self.atoms=atoms
         self.logfile=logfile
@@ -42,7 +44,7 @@ class UltimateScreener:
             self.log('Initial Energy Evaluation done. Note that this is structure 0 in your trajectory.')
         self.fallbackatoms=self.current.copy()
         self.fallbackstep=-1
-	
+
         for step in range(steps):    
             """I strictly use copies here, so nothing can be overwritten in a subclass.
             A step is tried 10 times, if it keeps failing, the structure is reset.

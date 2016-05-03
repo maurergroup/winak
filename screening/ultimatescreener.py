@@ -38,10 +38,12 @@ class UltimateScreener:
             self.log('Initial Energy Evaluation Failed. Please check your calculator!')
         else:
             self.current=tmp[0];self.Emin=tmp[1]
+            self.crit.evaluate(tmp[0].copy(),tmp[1])
             self.traj.write(self.current)
             self.log('Initial Energy Evaluation done. Note that this is structure 0 in your trajectory.')
         self.fallbackatoms=self.current.copy()
         self.fallbackstep=-1
+        os.system('mkdir -p trial') 
 	
         for step in range(steps):    
             """I strictly use copies here, so nothing can be overwritten in a subclass.
@@ -51,7 +53,6 @@ class UltimateScreener:
             tries=0
             reset=False  
             failed=False          
-            
             while tmp is None:
                 try:
                     tmp=self.displacer.displace(self.current.copy())
@@ -59,11 +60,16 @@ class UltimateScreener:
                     tmp=None
                 tries+=1
                 if tmp is None:
+                    print 'opsie'
                     self.log('Error while displacing, retrying')
                 else:
+                    ### remove this block
+                    tmp.write('trial/trial'+str(step+1)+'.xyz')
+                    ###
                     tmp=self.eneval.get_energy(tmp.copy())
                     if tmp is None:
                         #os.system('cp dftb.out '+str(step+1).zfill(2)+'_'+str(tries).zfill(2)+'.fail')
+                        #os.system('cp geo_end.gen '+str(step+1).zfill(2)+'_'+str(tries).zfill(2)+'.fail.gen')
                         self.log('Error while evaluating energy, retrying')
                 if tries>10 and not reset:
                     self.log('Repeated Error during current step, rolling back to step %d' %self.fallbackstep)
@@ -95,6 +101,7 @@ class UltimateScreener:
                 acc=''
                 self.fallbackatoms=tmp[0].copy()
                 self.fallbackstep=step
+                #print 'accepted'
             else:
                 self.traj=oldtraj
             #self.log('%s - step %d done, %s accepted, Energy = %f '%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),step+1,acc,tmp[1]))

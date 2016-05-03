@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from ase.all import *
 from ase.utils.geometry import sort
+from ase.calculators.neighborlist import NeighborList
 import numpy as np
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
@@ -99,7 +100,7 @@ class MultiDI(Displacer):
                 adstmp=None
                 ads0=0
             
-            di=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain,adsorbate=adstmp,cell_scale=self.cell_scale,adjust_cm=self.adjust_cm,periodic=self.periodic)
+            di=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain,adsorbate=adstmp,cell_scale=self.cell_scale,adjust_cm=self.adjust_cm,periodic=self.periodic,dense=self.dense)
             if self.lh:
                 tt.write(os.path.join(str(o),'pre_'+str(i[0])+'.xyz'))
             tt=di.displace(tt)
@@ -126,7 +127,7 @@ class MultiDI(Displacer):
         return '%s: stepwidth=%f%s, stretches are%s constrained'%(self.__class__.__name__,self.stepwidth,ads,cc)
         
 class DI(Displacer):
-    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False):
+    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,dense=True):
         """cell_scale: for translations; scales translations, so everything
         stays in the unit cell. The z component should be set to something small,
         like 0.05. 
@@ -145,14 +146,15 @@ class DI(Displacer):
         self.adjust_cm=adjust_cm
         self.stepwidth=stepwidth
         self.numdelmodes=np.abs(numdelocmodes)
+        self.dense=dense
         self.periodic=periodic
         
     def get_vectors(self,atoms):
         if self.periodic:
-            deloc=Delocalizer(atoms,periodic=True,dense=True)
+            deloc=Delocalizer(atoms,periodic=True,dense=self.dense)
             coords=PC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, Li=deloc.u)
         else:
-            deloc=Delocalizer(atoms)
+            deloc=Delocalizer(atoms,dense=self.dense)
             tu=deloc.u
             if self.constrain:
                 e = deloc.constrainStretches()
@@ -163,7 +165,6 @@ class DI(Displacer):
             else:
                 cell = atoms.get_cell()*self.cell_scale
                 coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=tu,cell=cell)
-
         return coords.get_vectors() 
     
     def displace(self,tmp):
@@ -198,9 +199,11 @@ class DI(Displacer):
             if nummodes>numvec-start:
                 nummodes=numvec-start
             w=np.random.choice(range(start,numvec),size=nummodes,replace=False)
+            #w=[0] #np.random.choice(range(start,numvec),size=nummodes,replace=False)
+            #print 'w = ', w, 'out of ', numvec
             for i in w:
                 disp[ads1:ads2,:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
-    
+            #print disp
             disp/=np.max(np.abs(disp))
             rn=ro+self.stepwidth*disp
             
@@ -208,8 +211,8 @@ class DI(Displacer):
                 cmt = atms.get_center_of_mass()
                 
             atms.set_positions(rn)
-    
-            if self.adjust_cm is not None:
+            
+            if self.adjust_cm:         
                 cm = atms.get_center_of_mass()
                 atms.translate(cmt - cm)
         elif self.ads:
@@ -294,7 +297,7 @@ class Cartesian(Displacer):
         return '%s: stepwidth=%f%s'%(self.__class__.__name__,self.stepwidth,ads)
 
 class Remove(Displacer):
-    def __init__(self,prob=0.5,adsorbate=None,adjust_cm=True):
+    def __init__(self,prob=0.5,adsorbate=None,adjust_cm=True,atm=None):
         '''Work in progress: here adsorbate must be an integer. Atoms tagged with it belong to the adsorbate'''
         Displacer.__init__(self)
         if adsorbate is None:
@@ -304,19 +307,45 @@ class Remove(Displacer):
             self.ads=True
         self.adjust_cm=adjust_cm
         self.prob=prob
+        self.atm=atm
+            
+    def pop_atom(self, atoms, slab=None):
+        if self.ads:
+            ads=Atoms([atom for atom in atoms if atom.tag==self.adsorbate])         ### separate
+            tmp=ads.copy()
+            slab=Atoms([atom for atom in atoms if not atom.tag==self.adsorbate],pbc=atoms.pbc,cell=atoms.cell,constraint=atoms.constraints)
+        else:
+            tmp=atoms.copy()
+        if self.atm is None:
+            idx=np.random.choice(tmp).index                                     ### pop atom from ads
+        else:
+            idx=np.random.choice([atom.index for atom in tmp if atom.symbol==self.atm])
+        nspecies=len(Stoichiometry().get(tmp).keys())          ### to avoid disappearing species
+        tmp.pop(idx)                                                              ### pop atom from ads
+        tmp=sort(tmp)    
+        return tmp, nspecies, slab          ## will put back together in displace subclass
     
-    def displace(self, tmp):
+    def displace(self, tmp, ok=False):
         """Randomly remove atom with probability=prob"""
-        '''CP sorting displaced atoms (or adsorbate only) is needed otherwise ase refuses to write trajectories if the composition is the same but the ordering of atoms differs, i.e. after insertion+removal+insertion. Sorting every time the composition changes should be enough'''
+        #CP sorting displaced atoms (or adsorbate only) is needed otherwise ase refuses to write trajectories if the composition is the same but the ordering of atoms differs, i.e. after insertion+removal+insertion. Sorting every time the composition changes should be enough
         if np.random.random() < self.prob:
+            tries=0
+            while not ok:
+                pippo,nspecies,slab=self.pop_atom(tmp.copy())
+                try:
+                    ok=(len(Stoichiometry().get(pippo).keys())==nspecies) ## check if atomic species disappears; also includes the case of running out of atoms completely 
+                except:                                                     ### though maybe that should be treated separately and break, to avoid doing this 10 times
+                    print 'atomic species disappeared'
+                tries+=1
+                #print tries
+                if tries>3:
+                    return None
+                    break
             if self.ads:
-                ads=Atoms([atom for atom in tmp if atom.tag==self.adsorbate])         ### separate
-                slab=Atoms([atom for atom in tmp if not atom.tag==self.adsorbate],pbc=tmp.pbc,cell=tmp.cell,constraint=tmp.constraints)
-                ads.pop(np.random.choice(ads).index)                                      ### pop atom from ads
-                tmp=slab.extend(sort(ads))                                                ### put back together
+                tmp=slab.extend(pippo)                                                ### put back together
+                tmp.constraints[0].delete_atom(-1)  ## remove one boolean value from the constraints to avoid traj complaining; not sure -1 is ok OR the true index shall be passed
             else:
-                tmp.pop(np.random.choice(tmp).index)
-                tmp=sort(tmp)
+                tmp=pippo
         if self.adjust_cm:
             cmt = tmp.get_center_of_mass()  
         if self.adjust_cm:
@@ -332,7 +361,7 @@ class Remove(Displacer):
         return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
 
 class Insert(Displacer):
-    def __init__(self,prob=0.5,adsorbate=None,adjust_cm=True,sys_type='cluster'):
+    def __init__(self,prob=0.5,adsorbate=None,adjust_cm=True,sys_type='cluster',mode='nn',atm=None):
         '''Work in progress: here adsorbate must be an integer. Atoms tagged with it belong to the adsorbate'''
         Displacer.__init__(self)
         if adsorbate is None:
@@ -343,6 +372,22 @@ class Insert(Displacer):
         self.adjust_cm=adjust_cm
         self.prob=prob
         self.sys_type=sys_type
+        self.mode=mode
+        self.atm=atm
+
+    def nn(self,tmp,cutoff=1.5):
+        """Picks a random atom and its nearest neighbor and puts new atom somewhere in between"""
+        com=tmp.get_center_of_mass()
+        tmp.translate(-com)
+        cutoffs=np.full(len(tmp),cutoff) ## TODO:read from covalent radii data 
+        nl=NeighborList(cutoffs, bothways=True)
+        nl.build(tmp)
+        pippo=np.random.choice(tmp).index
+        pluto=nl.get_neighbors(pippo)[0][1] ## index of nearest neighbour. Mind: [0][0] is the atom itself
+        #new=(tmp.positions[pippo]+tmp.positions[pluto])/2+[0.,0.,cutoff] ## push a bit up along z, for adsorbates TODO push away from COM rather than up
+        new=(tmp.positions[pippo]+tmp.positions[pluto])/2
+        new=new*(1+cutoff/np.linalg.norm(new))
+        return com+new
 
     def randomize(self,tmp):
         """Generates coordinates of new atom on the surface of the sphere enclosing the current structure. Works well with clusters.
@@ -350,7 +395,23 @@ class Insert(Displacer):
         com=tmp.get_center_of_mass()
         tmp.translate(-com)
         R=max(np.linalg.norm(tmp.get_positions(), axis=1))
-        R=1.5*R ## should alleviate overlaps
+        R = np.random.uniform(0,R) ## should be crap, use for performance evaluation (as a bad example)
+        u = np.random.uniform(0,1)
+        v = np.random.uniform(0,1)
+        theta = 2*np.pi*u
+        phi = np.arccos(2*v-1)
+        x = R*np.cos(theta)*np.cos(phi)
+        y = R*np.cos(theta)*np.sin(phi)
+        z = R*np.sin(theta)
+        return com+(x,y,z) #### find a smart way to do this for either cluster or adsorbate
+    
+    def randomize_surf(self,tmp):
+        """Generates coordinates of new atom on the surface of the sphere enclosing the current structure. Works well with clusters.
+        """
+        com=tmp.get_center_of_mass()
+        tmp.translate(-com)
+        R=max(np.linalg.norm(tmp.get_positions(), axis=1))
+        #R = (1+1/R)*R ## should alleviate overlaps
         u = np.random.uniform(0,1)
         v = np.random.uniform(0,1)
         theta = 2*np.pi*u
@@ -366,23 +427,35 @@ class Insert(Displacer):
         newatom=tmp[-1]#np.random.choice(tmp)
         newatom.position*=1.5
         return newatom.position
-        
+
     def displace(self, tmp):
-        """Randomly insert atom with probability=prob. Atom is chosen randomly from the composition."""
-        atm=np.random.choice(Stoichiometry().get(tmp).keys())
+        """Randomly insert atom with probability=prob. Atom type is chosen randomly from the composition."""
         if np.random.random() < self.prob:
             if self.ads:
-       #         if self.sys_type is 'cluster':
-                    ads=Atoms([atom for atom in tmp if atom.tag==self.adsorbate])         ### separate
-                    slab=Atoms([atom for atom in tmp if not atom.tag==self.adsorbate],pbc=tmp.pbc,cell=tmp.cell,constraint=tmp.constraints)
-                    newpos=self.randomize(ads.copy())
-                    ads.append(Atom(atm,newpos))
-                    tmp=slab.extend(sort(ads))                                                ### put back together
+                ads=Atoms([atom for atom in tmp if atom.tag==self.adsorbate])         ### separate
+                slab=Atoms([atom for atom in tmp if not atom.tag==self.adsorbate],pbc=tmp.pbc,cell=tmp.cell,constraint=tmp.constraints)
+                tmp=ads.copy()
+            
+            if self.atm is None:
+                atm=np.random.choice(Stoichiometry().get(tmp).keys())
             else:
-        #        if self.sys_type is 'cluster':
-                    newatom=self.randomize(tmp.copy())
-                    tmp.append(Atom(atm,newatom))
-                    tmp=sort(tmp)
+                atm = self.atm
+            
+            if self.mode=='nn': 
+                newpos=self.nn(tmp.copy())
+            elif self.mode=='rsphere':
+                newpos=self.randomize(tmp.copy())
+            elif self.mode=='rsurf':
+                newpos=self.randomize_surf(tmp.copy())
+            else:
+                raise ValueError('Invalid insertion mode')
+            if self.ads:
+                tmp.append(Atom(atm,newpos,tag=100))
+                tmp=slab.extend(sort(tmp))                                                ### put back together
+            else:
+                tmp.append(Atom(atm,newpos))
+                tmp=sort(tmp)
+
         if self.adjust_cm:
             cmt = tmp.get_center_of_mass()  
         if self.adjust_cm:
@@ -399,10 +472,11 @@ class Insert(Displacer):
 
 class GC(Displacer):
     """Grand Canoical moves: insert or removeparticle with probability p, otherwise displace in DICs"""
-    def __init__(self,prob=0.5,stepwidth=1.0,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False):
+    def __init__(self,prob=0.5,stepwidth=1.0,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,bias=0.5,ins_mode='nn',atm=None):
         Displacer.__init__(self)
         if adsorbate is None:
             self.ads=False
+            self.adsorbate=adsorbate
         else:
             self.adsorbate=adsorbate
             self.ads=True
@@ -412,20 +486,31 @@ class GC(Displacer):
         self.numdelmodes=np.abs(numdelocmodes)
         self.periodic=periodic
         self.adjust_cm=adjust_cm
+        self.bias=bias ## bias towards either insertion or removal (I/R ratio)
+        self.ins_mode=ins_mode
+        self.atm=atm
+        self.cell_scale=cell_scale
 
     def displace(self, tmp):
         """Randomly insert atom with probability=prob"""
         if np.random.random() < self.prob:
-            if np.random.random() < 0.5:  ##toss coin insert or remove
+            if np.random.random() < self.bias:  ##toss coin insert or remove or bias towards either
+                disp=Insert(prob=1,adsorbate=self.adsorbate,adjust_cm=self.adjust_cm,mode=self.ins_mode,atm=self.atm)
                 print 'inserting'
-                disp=Insert(prob=1,adsorbate=self.adsorbate)
-            else:  ##toss coin insert or remove
+            else: 
+                disp=Remove(prob=1,adsorbate=self.adsorbate,adjust_cm=self.adjust_cm,atm=self.atm)
                 print 'removing'
-                disp=Remove(prob=1,adsorbate=self.adsorbate)
             tmp=disp.displace(tmp)
         else:
-            #print 'displacing by '+str(self.stepwidth)
-            disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain)
+            if self.ads:    ## cannot be done in init bc it has to be updated... find a way
+                adsidx=[atom.index for atom in tmp if atom.tag==self.adsorbate]    ### convert adsorbate by tag to adsorbate by index
+                print 'ads = ', (adsidx[0],adsidx[-1]+1)
+                disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain, adjust_cm=self.adjust_cm, adsorbate=(adsidx[0],adsidx[-1]+1), cell_scale=self.cell_scale)
+                #disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain, adjust_cm=self.adjust_cm, adsorbate=(249,260),cell_scale=self.cell_scale)
+                print 'displacing by '+str(self.stepwidth)+', ads = '+str(adsidx[0])+','+str(adsidx[-1]+1)
+            else:
+                disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain, adjust_cm=self.adjust_cm, adsorbate=None)#self.adsorbate)
+                print 'displacing by '+str(self.stepwidth)
             tmp=disp.displace(tmp)
         if self.adjust_cm:
             cmt = tmp.get_center_of_mass()  

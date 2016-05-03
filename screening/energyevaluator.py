@@ -64,7 +64,7 @@ class grandEE(EE):
     """grandcanonical potential energy optimization. evaluates the free energy of formation for gas-phase molecules or the surface free energy per unit area 
     for surface adsorptions/reconstructions
     starting with opt until fmax and then followed by opt2 until fmax2 is reached. Use of 2 optimizers is optional"""
-    def __init__(self,calc,opt,fmax,opt2=None,fmax2=None,optlog='opt.log',ecomp={},mu={}):
+    def __init__(self,calc,opt,fmax,opt2=None,fmax2=None,optlog='opt.log',ecomp={},mu={},eref=0.0,adsorbate=None):
         EE.__init__(self, calc,optlog)
         self.fmax=fmax
         self.opt=opt
@@ -72,18 +72,26 @@ class grandEE(EE):
         self.opt2=opt2        
         self.ecomp=ecomp
         self.mu=mu
+        self.eref=eref  ## clean surface energy for adsorbates
+        self.adsorbate=adsorbate
         
     def get_energy(self, atoms):
         """comp is the composition array (i.e. n_i), mu is the array of chemical potentials,
-        ecomp is the array of the total energy of components (e.g. atomici) DICTIONARIES"""
+        ecomp is the array of the total energy of components (e.g. atomic) DICTIONARIES"""
         """If it hasn't converged after 3000 steps, it probably won't ever"""
         #atoms=sort(atoms) ##must be sorted for traj --- no, sorting in displacements is enough
         composition=Stoichiometry()
-        stoich=composition.get(atoms)
+        if self.adsorbate is not None:
+            ads=Atoms([atom for atom in atoms if atom.tag==self.adsorbate])
+            stoich=composition.get(ads)
+        else:
+            stoich=composition.get(atoms)
         #####CP make arrays with composition, free atom energies and chemical potential, sorted by atomic symbols, from dictionaries
         comp=[stoich[c] for c in sorted(stoich)]
-        ecomp=[self.ecomp[e] for e in sorted(self.ecomp)]
-        mu=[self.mu[m] for m in sorted(self.mu)]
+        #ecomp=[self.ecomp[e] for e in sorted(self.ecomp)]
+        ecomp=[self.ecomp[e] for e in sorted(stoich)]
+        #mu=[self.mu[m] for m in sorted(self.mu)]
+        mu=[self.mu[m] for m in sorted(stoich)]
         ret=None
         try:
             atoms.set_calculator(self.calc)
@@ -95,8 +103,8 @@ class grandEE(EE):
             if opt.converged():
                 #print 'fin qui tutto bene'
                 EE=atoms.get_potential_energy()
-                #print EE, comp
-                grandE=EE-np.dot(comp,ecomp)-np.dot(comp,mu)
+                #print EE, comp, ecomp
+                grandE=EE-np.dot(comp,ecomp)-np.dot(comp,mu)-self.eref
                 ret=(atoms,grandE)
         except:
             """Something went wrong."""                

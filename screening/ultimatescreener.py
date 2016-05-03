@@ -4,7 +4,9 @@ from ase.io.trajectory import Trajectory
 from collections import Counter
 from winak.screening.composition import Stoichiometry
 from ase.utils.geometry import sort
-import os ##
+import os 
+
+
 class UltimateScreener:
     """UltimateScreener
 
@@ -15,7 +17,7 @@ class UltimateScreener:
                  EnergyEvaluator,
                  Displacer,
                  Criterion,
-		         trajectory='minima.traj',
+                 trajectory='minima.traj',
                  logfile='tt.log'):
         self.atoms=atoms
         self.logfile=logfile
@@ -43,7 +45,7 @@ class UltimateScreener:
             self.log('Initial Energy Evaluation done. Note that this is structure 0 in your trajectory.')
         self.fallbackatoms=self.current.copy()
         self.fallbackstep=-1
-        os.system('mkdir -p trial') 
+        os.system('mkdir -p trial') ## to store trial geometries, can be removed
 	
         for step in range(steps):    
             """I strictly use copies here, so nothing can be overwritten in a subclass.
@@ -63,7 +65,7 @@ class UltimateScreener:
                     print 'opsie'
                     self.log('Error while displacing, retrying')
                 else:
-                    ### remove this block
+                    ### remove this block and the above mkdir
                     tmp.write('trial/trial'+str(step+1)+'.xyz')
                     ###
                     tmp=self.eneval.get_energy(tmp.copy())

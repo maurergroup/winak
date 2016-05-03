@@ -21,7 +21,6 @@ class DisSpotter:
 
         self.stre=self.ic.getStretchBendTorsOop()[0][0]
         self.ics=self.ic.getStretchBendTorsOop()[1]
-        
 
     def numConnections(self,j):
         """ics: as in the main program bottom
@@ -70,6 +69,7 @@ class DisSpotter:
         Returns all the fragments
         """
         self.visited=[False]*(len(self.molecule)+1)
+        self.visited[0]=True #whoever decided to make ics start at 1, go to hell
         ret=[]
         while True:
             try:
@@ -79,7 +79,7 @@ class DisSpotter:
                 ret.append(tmp)
             except ValueError:
                 break
-        return ret[1:]
+        return ret
         
         
     def get_fragment(self,j):
@@ -93,7 +93,7 @@ class DisSpotter:
             x=self.numConnections(j)
             #print 'looking at '+str(j)
             #print str(j)+' has '+str(x[0])+' connections'
-            if x[0]==1:
+            if x[0]==1 and self.visited[self.ics[self.stre[x[1]]][0]] and self.visited[self.ics[self.stre[x[1]]][1]]:
                 #print 'ending in atom '+str(j)+' and returning '+str(ret)
                 return ret
             else:

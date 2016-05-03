@@ -36,7 +36,7 @@ class Displacer:
     
 
 class MultiDI(Displacer):
-    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,loghax=False):
+    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,dense=True,loghax=False):
         """cell_scale: for translations; scales translations, so everything
         stays in the unit cell. The z component should be set to something small,
         like 0.05. 
@@ -52,6 +52,7 @@ class MultiDI(Displacer):
             self.ads=True
         self.cell_scale=cell_scale
         self.constrain=constrain
+        self.dense=dense
         self.adjust_cm=adjust_cm
         self.stepwidth=stepwidth
         self.numdelmodes=np.abs(numdelocmodes)

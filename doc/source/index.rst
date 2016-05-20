@@ -16,6 +16,7 @@ Contents:
    globaloptimisation.rst
    BetterHopping.rst
 
+   Modules <winak>
 
 Indices and tables
 ==================

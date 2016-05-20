@@ -18,7 +18,7 @@ import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('./../..'))
 
 # -- General configuration ------------------------------------------------
 
@@ -181,7 +181,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'INTERNALSdoc'
+htmlhelp_basename = 'winakdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -201,7 +201,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'INTERNALS.tex', u'INTERNALS Documentation',
+  ('index', 'winak.tex', u'winak Documentation',
    u'Konstantin Krautgasser, Reinhard Maurer', 'manual'),
 ]
 
@@ -231,7 +231,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'internals', u'INTERNALS Documentation',
+    ('index', 'winak', u'winak Documentation',
      [u'Konstantin Krautgasser, Reinhard Maurer'], 1)
 ]
 
@@ -245,8 +245,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'INTERNALS', u'INTERNALS Documentation',
-   u'Konstantin Krautgasser, Reinhard Maurer', 'INTERNALS', 'One line description of project.',
+  ('index', 'winak', u'winak Documentation',
+   u'Konstantin Krautgasser, Reinhard Maurer', 'winak', 'One line description of project.',
    'Miscellaneous'),
 ]
 

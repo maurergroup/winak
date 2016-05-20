@@ -1,7 +1,7 @@
 # README #
 
 
-### What is winak for? ###
+### What does winak do? ###
 
 winak is a package that contains efficient 
 routines to construct and employ curvilinear 
@@ -28,6 +28,11 @@ in global structure optimization in chemistry.
 
 * After installing all dependencies, just issue make 
 and include build/ into PYTHONPATH
+
+## Licensing ##
+
+winak is licensed under the GNU General Public License, version 3 (gnu.org/licenses/gpl.html).
+winak uses certain parts of the package thctk by Christoph Scheurer.
 
 ### Who do I talk to? ###
 

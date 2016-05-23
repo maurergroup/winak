@@ -1,3 +1,9 @@
+# winak.curvilinear.cICTools.pyx
+# 
+# This file is part of winak.
+# This file was originally part of Christoph Scheurers thctk tool
+# Copyright (C) Christoph Scheurer
+#
 import numpy as N
 cimport numpy as N
 cimport cython

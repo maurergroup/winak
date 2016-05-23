@@ -1,3 +1,7 @@
+# winak
+# This file is Copyright Daniel Strobusch
+#
+
 from pysparse import spmatrix 
 from winak.curvilinear.numeric import *
 LLMatType=type(spmatrix.ll_mat_sym(1,1))

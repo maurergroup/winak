@@ -1,3 +1,6 @@
+#
+#    This file is Copyright 2014 Daniel Strobusch. 
+#
 import numpy as np
 
 class Vector:

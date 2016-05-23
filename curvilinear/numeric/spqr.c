@@ -1,3 +1,6 @@
+//
+// This file is Copyright Daniel Strobusch.
+//
 // C wrapper to SparseSuiteQR library et al. for Python
 
 // We pass in the sparse matrix data in a COO sparse matrix format. Cholmod

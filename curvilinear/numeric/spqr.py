@@ -1,3 +1,6 @@
+#
+# This file is Copyright Daniel Strobusch
+#
 #!/usr/bin/env python
 """ SuiteSparseQR Python wrapper """
 

@@ -31,8 +31,9 @@ and include build/ into PYTHONPATH
 
 ## Licensing ##
 
-winak is licensed under the GNU General Public License, version 3 (gnu.org/licenses/gpl.html).
-winak uses certain parts of the package thctk by Christoph Scheurer.
+winak is licensed under the GNU General Public License, version 3 (gnu.org/licenses/gpl.html)
+winak uses certain parts of the package thctk by Christoph Scheurer
+and from other sources, all listed under LICENSES
 
 ### Who do I talk to? ###
 

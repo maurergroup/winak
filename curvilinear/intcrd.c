@@ -1,5 +1,8 @@
     /*
- *   intcrd.c
+ * 
+ *   winak.curvilinear intcrd.c
+ *
+ *   This file is part of winak with modifications by Reinhard J. Maurer
  *
  *   thctk - python package for Theoretical Chemistry
  *   Copyright (C) 2004 Christoph Scheurer

@@ -1,16 +1,29 @@
 # Makefile
 #
+#    winak - python package for structure search and more in curvilinear coordinates
+#    Copyright (C) 2016  Reinhard J. Maurer and Konstantin Krautgasser 
+#    
+#    This file is part of winak 
+#        
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
 #
-#   thctk - python package for Theoretical Chemistry
-#   Copyright (C) 2004-2007 Christoph Scheurer
-#
-#   This file was taken from Christoph Scheurers thctk package (TUM).
-#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#    
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 
 PYTHON = python
 PLATFORM = $(shell python -c 'from distutils.util import get_platform; print get_platform()')
-# FC     = ifort
-FC     = efort
+#FC     = ifort
+FC     = gfortran 
+F77 = gfortran
+F90 = gfortran
 
 ifeq ($(FC), gfortran)
   F2PY   = --fcompiler=gnu95

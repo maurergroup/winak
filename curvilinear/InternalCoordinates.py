@@ -1,7 +1,9 @@
-#  InternalCoordinates
+#  winak.curvilinear.InternalCoordinates
 #
+#  This file is part of winak.
 #
-#   This file was taken from Christoph Scheureres thctk package.
+#   This file was taken from Christoph Scheureres thctk package with 
+#   modifications by Reinhard J. Maurer.
 #
 #   thctk is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -316,7 +318,7 @@ def icMMTK(obj, offset=1, dihedrals=1, impropers=0, debug=0):
 class ValenceCoordinateGenerator:
 
     def __init__(self, atoms, vdW = covalentRadius, masses = None, 
-                threshold = 0.5, add_cartesians = False): 
+                threshold = 0.5, add_cartesians = False, manual_bonds=[]): 
         """
         Parameters:
         'threshold'       Threshold to determine bonds.
@@ -328,7 +330,15 @@ class ValenceCoordinateGenerator:
         self.count = N.zeros(self.n, nxInt) 
         self.threshold = float(threshold)
         self.setvdW(vdW)
-        self.add_cartesians = add_cartesians
+        if not add_cartesians:
+            self.add_cartesians = False
+        else:
+            self.add_cartesians = True
+        if isinstance(add_cartesians,list):
+            self.cartesian_list = add_cartesians
+        else:
+            self.cartesian_list = range(len(self.atoms))
+        self.manual_bonds = manual_bonds
         if masses is None:
             masses = N.array([mass[string.capitalize(i)] for i in atoms])
         assert len(atoms) == len(masses)
@@ -350,11 +360,11 @@ class ValenceCoordinateGenerator:
                 torsionThreshold=torsionThreshold, oopThreshold=oopThreshold)
         self.carts = []
         if self.add_cartesians:
-            for i in range(len(self.atoms)):
+            for i in self.cartesian_list:
                 self.carts.append([i, 0])
-            for i in range(len(self.atoms)):
+            for i in self.cartesian_list:
                 self.carts.append([i, 1])
-            for i in range(len(self.atoms)):
+            for i in self.cartesian_list:
                 self.carts.append([i, 2])
         return self.toIClist()
 
@@ -384,6 +394,11 @@ class ValenceCoordinateGenerator:
         #             bonds.append(((j, i), d))
         #             cnt[i] += 1
         #             cnt[j] += 1
+
+        #add manual bonds
+        for (i,j) in self.manual_bonds:
+            bonds.append( ((i, j), norm(crd[j] - crd[i])) )
+            cnt[i] += 1; cnt[j] +=1
         bonds.sort()
         self.bonds = bonds
         self.crd = crd
@@ -599,7 +614,8 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
     does the same as VCG, but for a duplicated cell
     """
     def __init__(self, atoms, vdW = covalentRadius, masses = None, \
-            threshold = 0.5, add_cartesians = False, cell = None,
+            threshold = 0.5, add_cartesians = False, 
+            manual_bonds = [], cell = None,
             expand=1):
 
         if cell is None:
@@ -624,7 +640,8 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
             [1,1,0],[1,0,1],[0,1,1],[1,1,1],
             ])
 
-        self.atom_indices = N.zeros(len(atoms)) 
+        self.atom_indices = N.zeros(len(atoms))
+        self.manual_bonds = manual_bonds
         self.add_cartesians = add_cartesians
         for i in range(1,len(self.cell_indices)):
             atoms_pbc = N.concatenate([atoms_pbc, atoms])
@@ -632,7 +649,7 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
             self.atom_indices = N.concatenate([self.atom_indices, N.ones(len(atoms))*i])
         #we duplicate the system according to periodicity
         ValenceCoordinateGenerator.__init__(self, atoms_pbc, vdW, \
-                masses_pbc, threshold, add_cartesians)
+                masses_pbc, threshold, add_cartesians, manual_bonds)
         
     def __call__(self,coord, **kwargs):
         """
@@ -709,23 +726,23 @@ class PeriodicValenceCoordinateGenerator(ValenceCoordinateGenerator):
             self.bonds.append([(0, 2*n),N.linalg.norm(self.cell[1])])    
         if not exists3:
             self.bonds.append([(0, 3*n),N.linalg.norm(self.cell[2])])    
-        exists1=False
-        exists2=False
-        exists3=False
-        for b, bend in enumerate(self.bends):
-            i, j, k = bend
-            if i==n and j==2*n and k==0:
-                exists1=True
-            if i==n and j==3*n and k==0:
-                exists2=True
-            if i==2*n and j==3*n and k==0:
-                exists3=True
-        if not exists1:
-            self.bends.append([n, 2*n, 0])    
-        if not exists2:
-            self.bends.append([n, 3*n, 0])    
-        if not exists3:
-            self.bends.append([2*n, 3*n, 0])    
+        #exists1=False
+        #exists2=False
+        #exists3=False
+        #for b, bend in enumerate(self.bends):
+            #i, j, k = bend
+            #if i==n and j==2*n and k==0:
+                #exists1=True
+            #if i==n and j==3*n and k==0:
+                #exists2=True
+            #if i==2*n and j==3*n and k==0:
+                #exists3=True
+        #if not exists1:
+            #self.bends.append([n, 2*n, 0])    
+        #if not exists2:
+            #self.bends.append([n, 3*n, 0])    
+        #if not exists3:
+            #self.bends.append([2*n, 3*n, 0])    
         
         ####delete bonds which do not reach into unit cell
         ##ADDING CELL BONDS
@@ -1647,8 +1664,8 @@ class icSystem:
 
     backIteration = sparseBackIteration
     bi = backIteration
-
-    def internalGradient(self, gx, maxiter = 10, eps = 1e-6, initialize = 1,
+    
+    def internalGradient(self, gx, maxiter = 20, eps = 1e-6, initialize = 1,
             iceps = 1e-6, icp = 10, iclambda = 0.0001):
         """see: J. Chem. Phys. 113 (2000), 5598"""
         if not hasattr(self, 'tmp_q'): self.tmp_q = N.zeros(self.n, nxFloat)
@@ -1659,14 +1676,12 @@ class icSystem:
         gi = self.gi
         if initialize: self.initA()
         B = self.evalB(sort=1)
-        #B.permuted(self.colperm)
         Bt = self.evalBt(perm=0)
         A = self.evalA()
         info = self.cholesky(eps=iceps, p=icp, lambd=iclambda)
-        if info < 0:
+        if info < 1:
             raise ArithmeticError('Incomplete Cholesky decomposition failed: '
                     + `info`)
-        #N.put(x, self.colperm, gx)  # permute gx to match the Matrix A
         g0 = copy(x)
         gi = B(self.inverseA(x), gi)
         n = 0
@@ -1676,14 +1691,44 @@ class icSystem:
             x = Bt(gi, x)
             x -= g0
             norm = N.dot(x, x)
-            print norm
+            #print norm
             dg = B(self.inverseA(x), dg)
             gi -= dg
             if n > maxiter-1 or norm < neps: break
-        B.permuted()
         return n, N.sqrt(norm/self.nx)
 
     ig = internalGradient
+
+    def cartesianGradient(self, gi, maxiter = 20, eps = 1e-6, initialize = 1,
+            iceps = 1e-6, icp = 10, iclambda = 0.0001):
+        """
+        transforms internal to cartesian gradient, self-consistently
+        """
+        if not hasattr(self, 'tmp_q'): self.tmp_q = N.zeros(self.n, nxFloat)
+        if not hasattr(self, 'tmp_x'): self.tmp_x = N.zeros(self.nx, nxFloat)
+        if not hasattr(self, 'gx'): self.gx = N.zeros(self.nx, nxFloat)
+        dg = self.tmp_x
+        q = self.tmp_q
+        gx = self.gx
+        if initialize: self.initA()
+        B = self.evalB()
+        Bt = self.evalBt()
+        A = self.evalA()
+        self.cholesky(eps=iceps, p=icp, lambd=iclambda)
+        gx =Bt(gi)
+        n = 0
+        neps = eps*eps*self.n
+        while 1:
+            n += 1
+            q = B(self.inverseA(gx))
+            diff = gi - q
+            norm = N.dot(diff,diff)
+            #print norm
+            gx += Bt(diff)
+            if n > maxiter-1 or norm < neps: break
+        return n, N.sqrt(norm/self.n)
+
+    xg = cartesianGradient
 
 
 class Periodic_icSystem(icSystem):
@@ -1691,6 +1736,8 @@ class Periodic_icSystem(icSystem):
     Periodic Boundary condition version of icSystem. 
     There are no translation, rotation B matrix components, 
     but there is a Bmatrix part for the lattice vectors
+
+    Coordinates and lattice vectors are both cartesian absolute.
     """
 
     def __init__(self, intcrd, natom, xyz = None, \
@@ -1810,7 +1857,7 @@ class Periodic_icSystem(icSystem):
     def biInit(self):
         if not hasattr(self, 'tmp_cell'): self.tmp_cell = N.zeros(9, nxFloat)
         icSystem.biInit(self)
-        self.tmp_x = N.zeros(self.nx, nxFloat)
+        self.tmp_x = N.zeros(self.nx+9, nxFloat)
     
     def denseBackIteration(self, q, maxiter = 200, eps = 1e-5, initialize = 1,
             inveps = 1e-9, maxStep = 0.5, warn = True, 
@@ -2080,7 +2127,7 @@ class Periodic_icSystem(icSystem):
             self.cell = xn[-9:]
             #self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             norm = N.dot(dx, dx)
-            #print 'norm ', norm
+            #print 'norm ', norm, neps
             self.convergence = n, N.sqrt(norm/self.nx+9)
             # remove old data not needed anymore for RIIS
             if len(xList) >= RIIS_maxLength:
@@ -2089,7 +2136,7 @@ class Periodic_icSystem(icSystem):
 
 
             if (norm < neps) and N.linalg.norm(dx, ord = N.inf) < maxEps:
-                # print 'Back iteration converged after %i steps.' %n
+                #print 'Back iteration converged after %i steps.' %n
                 return self.convergence
             elif n >= maxiter:
                 for i in range(len(self.xyz)//3):
@@ -2109,6 +2156,72 @@ class Periodic_icSystem(icSystem):
     
     backIteration = sparseBackIteration
     bi = backIteration
+    
+    def internalGradient(self, gx, maxiter = 20, eps = 1e-6, initialize = 1,
+            iceps = 1e-6, icp = 10, iclambda = 0.0001):
+        """see: J. Chem. Phys. 113 (2000), 5598"""
+        if not hasattr(self, 'tmp_q'): self.tmp_q = N.zeros(self.n, nxFloat)
+        if not hasattr(self, 'tmp_x'): self.tmp_x = N.zeros(self.nx+9, nxFloat)
+        if not hasattr(self, 'gi'): self.gi = N.zeros(self.n, nxFloat)
+        dg = self.tmp_q
+        x = self.tmp_x
+        gi = self.gi
+        if initialize: self.initA()
+        B = self.evalB(sort=1)
+        Bt = self.evalBt(perm=0)
+        A = self.evalA()
+        info = self.cholesky(eps=iceps, p=icp, lambd=iclambda)
+        if info < 1:
+            raise ArithmeticError('Incomplete Cholesky decomposition failed: '
+                    + `info`)
+        g0 = copy(x)
+        gi = B(self.inverseA(gx))
+        n = 0
+        neps = eps*eps*self.nx
+        while 1:
+            n += 1
+            x = Bt(gi, x)
+            x -= g0
+            norm = N.dot(x, x)
+            #print norm
+            dg = B(self.inverseA(x), dg)
+            gi -= dg
+            if n > maxiter-1 or norm < neps: break
+        return n, N.sqrt(norm/self.nx)
+
+    ig = internalGradient
+    
+    def cartesianGradient(self, gi, maxiter = 20, eps = 1e-6, initialize = 1,
+            iceps = 1e-6, icp = 10, iclambda = 0.0001):
+        """
+        transforms internal to cartesian gradient, self-consistently
+        """
+        if not hasattr(self, 'tmp_q'): self.tmp_q = N.zeros(self.n, nxFloat)
+        if not hasattr(self, 'tmp_x'): self.tmp_x = N.zeros(self.nx+9, nxFloat)
+        if not hasattr(self, 'gx'): self.gx = N.zeros(self.nx+9, nxFloat)
+        dg = self.tmp_x
+        q = self.tmp_q
+        gx = self.gx
+        if initialize: self.initA()
+        B = self.evalB()
+        Bt = self.evalBt()
+        A = self.evalA()
+        self.cholesky(eps=iceps, p=icp, lambd=iclambda)
+        gx =Bt(gi)
+        n = 0
+        neps = eps*eps*self.n
+        while 1:
+            n += 1
+            q = B(self.inverseA(gx))
+            diff = gi - q
+            norm = N.dot(diff,diff)
+            #print norm
+            gx += Bt(diff)
+            if n > maxiter-1 or norm < neps: break
+        self.gx = gx
+        return n, N.sqrt(norm/self.n)
+
+    xg = cartesianGradient
 
 def doRIIS(x, e, dim = 3):
     """
@@ -2143,17 +2256,21 @@ def doRIIS(x, e, dim = 3):
         w = N.dot(Mi, b) # approximate weights
         xn[:] = sum( w_i*x_i for (w_i, x_i) in zip(w[:-1], x))
     return Xn.flatten()
+    
+    
 
 class Periodic_icSystem2(Periodic_icSystem):
     """
     Periodic Boundary condition version of icSystem. 
     There are no translation, rotation B matrix components, 
     but there is a Bmatrix part for the lattice vectors
+
+    Coordinates are in fractional coordinates wrt to unit cell
+    Lattice vectors are absolute.
     """
 
     def __init__(self, intcrd, natom, xyz = None, \
             masses = None, cell = None, expand=1):
-
         if intcrd[-1] > 0:
             intcrd = list(intcrd)
             intcrd.append(0)
@@ -2223,6 +2340,7 @@ class Periodic_icSystem2(Periodic_icSystem):
             self.B = CSR(n=self.n, m=self.nx+9, nnz=self.Bnnz, type = nxFloat)
         ic.Bmatrix_pbc2(self.nx, self.xyz_pbc, self.ic, self.cell, self.celli, 
                self.B.x, self.B.j, self.B.i, sort)
+        return self.B
     
     def __call__(self, x = None, cell = None):
         if x is None: x = self.xyz
@@ -2502,8 +2620,9 @@ class Periodic_icSystem2(Periodic_icSystem):
             else:
                 xn += dx 
             
-            self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
             self.cell = xn[-9:]
+            self.xyz = N.dot(xn[:-9].reshape(-1,3),self.cell.reshape(-1,3)).flatten()
+            #self.cell = xn[-9:]
             self.celli = N.linalg.inv(self.cell.reshape(-1,3)).flatten()
             norm = N.dot(dx, dx)
             #print 'norm ', norm
@@ -2535,3 +2654,74 @@ class Periodic_icSystem2(Periodic_icSystem):
     
     backIteration = sparseBackIteration
     bi = backIteration
+    
+    def internalGradient(self, gx, maxiter = 20, eps = 1e-6, initialize = 1,
+            iceps = 1e-6, icp = 10, iclambda = 0.0001):
+        """see: J. Chem. Phys. 113 (2000), 5598"""
+        if not hasattr(self, 'tmp_q'): self.tmp_q = N.zeros(self.n, nxFloat)
+        if not hasattr(self, 'tmp_x'): self.tmp_x = N.zeros(self.nx+9, nxFloat)
+        if not hasattr(self, 'gi'): self.gi = N.zeros(self.n, nxFloat)
+        dg = self.tmp_q
+        x = self.tmp_x
+        gi = self.gi
+        #if initialize: self.initA()
+        B = self.evalB(sort=1)
+        Bt = self.evalBt(perm=0)
+        A = self.evalA()
+        info = self.cholesky(eps=iceps, p=icp, lambd=iclambda)
+        if info < 1:
+            raise ArithmeticError('Incomplete Cholesky decomposition failed: '
+                    + `info`)
+        g0 = copy(x)
+        #transform to fractional forces
+        gx = N.dot(gx,self.cell)
+        gi = B(self.inverseA(gx))
+        n = 0
+        neps = eps*eps*self.nx
+        while 1:
+            n += 1
+            x = Bt(gi, x)
+            x -= g0
+            norm = N.dot(x, x)
+            #print norm
+            dg = B(self.inverseA(x), dg)
+            gi -= dg
+            if n > maxiter-1 or norm < neps: break
+        return n, N.sqrt(norm/self.nx)
+
+    ig = internalGradient
+    
+    def cartesianGradient(self, gi, maxiter = 20, eps = 1e-6, initialize = 1,
+            iceps = 1e-6, icp = 10, iclambda = 0.0001):
+        """
+        transforms internal to cartesian gradient, self-consistently
+        """
+        if not hasattr(self, 'tmp_q'): self.tmp_q = N.zeros(self.n, nxFloat)
+        if not hasattr(self, 'tmp_x'): self.tmp_x = N.zeros(self.nx+9, nxFloat)
+        if not hasattr(self, 'gx'): self.gx = N.zeros(self.nx+9, nxFloat)
+        dg = self.tmp_x
+        q = self.tmp_q
+        gx = self.gx
+        #if initialize: self.initA()
+        B = self.evalB(sort=1)
+        Bt = self.evalBt(perm=0)
+        A = self.evalA()
+        self.cholesky(eps=iceps, p=icp, lambd=iclambda)
+        gx = Bt(gi)
+        #transforming fractional coords into cartesian
+        #gx[:-9] = np.dot(gx[:-9].reshape(-1,3), self.celli.reshape(-1,3)).flatten()
+        n = 0
+        neps = eps*eps*self.n
+        while 1:
+            n += 1
+            q = B(self.inverseA(gx))
+            diff = gi - q
+            norm = N.dot(diff,diff)
+            #print norm
+            gx += Bt(diff) 
+            if n > maxiter-1 or norm < neps: break
+        gx[:-9] = N.dot(gx[:-9].reshape(-1,3), self.celli.reshape(-1,3)).flatten()
+        self.gx = gx
+        return n, N.sqrt(norm/self.n)
+
+    xg = cartesianGradient

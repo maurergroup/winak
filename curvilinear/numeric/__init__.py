@@ -1,4 +1,4 @@
-# numeric initialization
+#   winak.curvilinear.numeric.__init__
 #
 #
 #   thctk - python package for Theoretical Chemistry

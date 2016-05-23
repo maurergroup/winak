@@ -1,6 +1,27 @@
+# winak.globaloptimization.delocalizer
+#
+#    winak - python package for structure search and more in curvilinear coordinates
+#    Copyright (C) 2016  Reinhard J. Maurer and Konstantin Krautgasser 
+#    
+#    This file is part of winak 
+#        
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#    
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>#
+
 import numpy as np
 from ase.atoms import Atoms
 from winak.curvilinear.InternalCoordinates import icSystem, Periodic_icSystem
+from winak.curvilinear.InternalCoordinates import Periodic_icSystem2
 from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
 from winak.curvilinear.InternalCoordinates import PeriodicValenceCoordinateGenerator as PVCG
 from winak.curvilinear.numeric.SparseMatrix import AmuB, svdB, eigB, CSR
@@ -9,8 +30,9 @@ from scipy import linalg as la
 from scikits.sparse.cholmod import cholesky
 
 class Delocalizer:
-    def __init__(self,atoms_obj,icList=None, weighted=False, periodic=False,
-            dense=False, threshold=0.5, add_cartesians = False, expand=1,
+    def __init__(self,atoms_obj,icList=None, u=None, weighted=False, periodic=False,
+            dense=False, threshold=0.5, add_cartesians = False,
+            manual_bonds = [], expand=1,
             bendThreshold=170, torsionThreshold=160, oopThreshold=30):
         """This generates the delocalized internals as described in the
         paper.
@@ -40,26 +62,32 @@ class Delocalizer:
         if icList is None:
             if periodic:
                 self.vcg=PVCG(atoms=self.atoms,masses=self.masses, cell=self.cell, \
-                        threshold=threshold, add_cartesians=add_cartesians, expand=self.expand)
+                        threshold=threshold, add_cartesians=add_cartesians, 
+                        manual_bonds = manual_bonds, expand=self.expand)
                 self.iclist=self.vcg(x0, bendThreshold=bendThreshold,
                         torsionThreshold=torsionThreshold, oopThreshold=oopThreshold)
             else:
                 self.vcg=VCG(atoms=self.atoms,masses=self.masses, \
-                        threshold=threshold, add_cartesians=add_cartesians)
+                        threshold=threshold, add_cartesians=add_cartesians,
+                        manual_bonds = manual_bonds)
                 self.iclist=self.vcg(x0, bendThreshold=bendThreshold,
                         torsionThreshold=torsionThreshold, oopThreshold=oopThreshold)
         else:
             self.iclist=icList
 
         self.initIC()
-        self.evalG()
+
+        if u is None:
+            self.evalG()
+        else:
+            self.u = u
 
     def initIC(self):
         periodic = self.periodic
         dense = self.dense
         x0 = self.x_ref.flatten()
         if periodic:
-            self.ic=Periodic_icSystem(self.iclist, len(self.atoms),
+            self.ic=Periodic_icSystem2(self.iclist, len(self.atoms),
                     masses=self.masses, xyz=x0, cell=self.cell, expand=self.expand)
         else:
             self.ic=icSystem(self.iclist,len(self.atoms),

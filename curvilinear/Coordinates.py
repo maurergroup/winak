@@ -1,10 +1,12 @@
-#  Coordinates
+#  winak.curvilinear.Coordinates
+#
+#  This file is part of winak. 
 #
 #
 #   thctk - python package for Theoretical Chemistry
 #   Copyright (C) 2004 Christoph Scheurer
 #
-#   This file is part of thctk.
+#   This file was originally part of thctk.
 #
 #   thctk is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -1143,12 +1145,31 @@ class SingleAtomCoordinates(Coordinates):
         self.Avib = L
         self.Bvib = Li
         self.unit = unit
+        #self.cell = cell.reshape(-1,3)
+        #self.celli = N.linalg.inv(cell.reshape(-1,3))
 
     def x2s(self):
+        #f = N.dot(self.x.reshape(-1,3),self.celli).flatten()
         self.s[:] = N.dot(self.Li, self.x - self.x0)/self.unit
 
     def s2x(self):
         self.x[:] = N.dot(self.L, self.s*self.unit) + self.x0
+
+    def grad_x2s(self,gx=None):
+        gi = N.zeros(len(self))
+        if gx is None:
+            return gi
+        else:
+            ut_inv = self.L.transpose()
+            return N.dot(ut_inv, gx) * self.unit
+    
+    def grad_s2x(self,gi=None):
+        gx = N.zeros(len(self))
+        if gi is None:
+            return gx
+        else:
+            ut = self.Li.transpose()
+            return N.dot(ut, gi/self.unit)
 
     def evalBvib(self, out = None):
         if out is None: return self.Bvib
@@ -1195,7 +1216,7 @@ class Set_Of_Coordinates(Coordinates):
         for subsystem in self.CCs:
             self.masses = N.concatenate([self.masses,subsystem.masses])
             self.x0 = N.concatenate([self.x0,subsystem.x0])
-        
+
     def __len__(self):
         return self.ns #number of coords
 
@@ -1239,6 +1260,48 @@ class Set_Of_Coordinates(Coordinates):
             startx = endx
 
         return s
+
+    def grad_s2x(self,gi=None):
+        
+        gx = N.zeros(self.nx)
+        startx = 0
+        starts = 0
+        ends = 0
+        endx = 0
+
+        if gi is None:
+            return gx
+        else:
+            for i,subsystem in enumerate(self.CCs):
+                ends += self.subsystem_ns[i]
+                endx += self.subsystem_nx[i]
+                ggi = gi[starts:ends]
+                ggx = subsystem.grad_s2x(ggi)
+                gx[startx:endx] = ggx 
+                starts = ends
+                startx = endx
+            return gx 
+    
+    def grad_x2s(self,gx=None, gradientProps={}):
+
+        gi = N.zeros(len(self))
+        startx = 0
+        starts = 0
+        ends = 0
+        endx = 0
+
+        if gx is None:
+            return gi
+        else:
+            for i,subsystem in enumerate(self.CCs):
+                ends += self.subsystem_ns[i]
+                endx += self.subsystem_nx[i]
+                ggx = gx[startx:endx]
+                ggi = subsystem.grad_x2s(ggx)
+                gi[starts:ends] = ggi
+                starts = ends
+                startx = endx
+            return gi 
 
     def get_vectors(self):
         """Returns the delocalized internal eigenvectors as cartesian
@@ -1356,6 +1419,7 @@ class PeriodicCoordinates(InternalCoordinates):
         ic = self.ic
         q = self.q0 + N.dot(self.L, self.s*self.unit)
         ic.xyz[:] = self.x
+        ic.cell = self.cell
         ic.backIteration(q, **self.biArgs)
         #R = centerOfMass(ic.xyz, self.masses)
         #for i in range(0, self.nx, 3): ic.xyz[i:i+3] -= R
@@ -1394,16 +1458,52 @@ class PeriodicCoordinates(InternalCoordinates):
         self.s2x()
         return N.concatenate([self.x,self.cell])
 
-    def grad_transform(self,gi=None):
+    #def grad_transform(self,gi=None):
 
-        gx = N.zeros(self.nx)
+        #gx = N.zeros(self.nx)
+        #if gi is None:
+            #return gx
+        #else:
+            #ut = self.Li.transpose()
+            #self.ic.initA()
+            #bt = self.ic.Bt.full()
+            #return N.dot(bt,N.dot(ut,gi/self.unit))
+    
+    def grad_s2x(self,gi=None, gradientProps={}):
+
         if gi is None:
             return gx
         else:
             ut = self.Li.transpose()
-            self.ic.initA()
-            bt = self.ic.Bt.full()
-            return N.dot(bt,N.dot(ut,gi/self.unit))
+            gii = N.dot(ut, gi/self.unit)
+            self.ic.xg(gii, *gradientProps)
+            return self.ic.gx
+    
+    #def grad_back_transform(self,gx=None):
+
+        #gi = N.zeros(len(self))
+        #if gx is None:
+            #return gi
+        #else:
+            #ut_inv = self.L.transpose()
+            #self.ic.initA()
+            #bt = self.ic.Bt.full()
+            #b = bt.transpose()
+            #g = N.dot(b,bt)
+            #bt_inv = N.dot(regularizedInverse(g),b)
+            #gg = N.dot(bt_inv,gx)
+            #return N.dot(ut_inv,gg)*self.unit
+    
+    def grad_x2s(self,gx=None, gradientProps={}):
+
+        gi = N.zeros(len(self))
+        if gx is None:
+            return gi
+        else:
+            self.ic.ig(gx, *gradientProps)
+            gi = self.ic.gi
+            ut_inv = self.L.transpose()
+            return N.dot(ut_inv, gi)*self.unit 
 
     def evalArot(self, out = None):
         """
@@ -1443,6 +1543,14 @@ class PeriodicCoordinates(InternalCoordinates):
         lambd=self.biArgs['iclambda']
         Ainv = regularizedInverse(A, eps=lambd)
         return N.dot(Ainv, bt)
+
+    def evalBvib(self):
+        """
+        Evaluates and returns vibrational B matrix.
+        """
+        
+        b = N.dot(self.Li,self.ic.B.full())
+        return b
 
     def get_vectors(self):
         """Returns the delocalized internal eigenvectors as cartesian

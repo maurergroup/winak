@@ -1,3 +1,6 @@
+#
+# This file is Copyright 2010 Daniel Strobusch
+#
 """
 Author: Daniel Strobusch
 Date: 14. March 2010

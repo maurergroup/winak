@@ -32,3 +32,5 @@ if use_cython:
         ext_modules = ext_modules,
     )
 
+else:
+    print('Please install cython before running this file!')

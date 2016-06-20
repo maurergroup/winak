@@ -29,23 +29,6 @@ winak.constants module
     :undoc-members:
     :show-inheritance:
 
-winak.setup-cython module
--------------------------
-
-.. automodule:: winak.setup-cython
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-winak.setup module
-------------------
-
-.. automodule:: winak.setup
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
 Module contents
 ---------------
 

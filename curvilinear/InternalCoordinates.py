@@ -15,7 +15,8 @@
 #   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-Module for handling Internal Coordinates
+Module for handling Internal Coordinates. This module is being 
+used by Coordinate classes in the Coordinates module.
 """
 
 import string

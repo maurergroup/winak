@@ -1,7 +1,3 @@
-# curvilinear initialization
-#
-# winak.screening.__init__
-#
 #    winak - python package for structure search and more in curvilinear coordinates
 #    Copyright (C) 2016  Reinhard J. Maurer and Konstantin Krautgasser 
 #    
@@ -20,9 +16,14 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 
-
-
 """
-curvilinear contains all routines necessary to construct and employ 
-curvilinear coordinates or more general coordinate definitions
+Example 1: Global Optimization of a metal cluster using BetterHopping
+=====================================================================
+
+
+Code
+----
+
+.. literalinclude:: ../../examples/example1/example1.py
+
 """

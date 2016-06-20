@@ -1,13 +1,6 @@
 winak.curvilinear package
 =========================
 
-Subpackages
------------
-
-.. toctree::
-
-    winak.curvilinear.numeric
-
 Submodules
 ----------
 

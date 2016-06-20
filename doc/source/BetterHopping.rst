@@ -1,7 +1,8 @@
 BetterHopping
 *************
 
-BetterHopping is a variation of Basinhopping, which is a global optimization algorithm based on Wales and Doye, J. Phys. Chem. A, vol 101 (1997) 5111-5116 and David J. Wales and Harold A. Scheraga, Science, Vol. 285, 1368 (1999). It makes use of delocalized internal coordinates to reduce dissociation events after displacements.
+BetterHopping is a variation of the Basinhopping algorithm [Wales1]_, [Wales2]_. 
+It makes use of delocalized internal coordinates to make global structure search more efficient.
 
 Usage
 =====
@@ -9,7 +10,7 @@ Usage
 All that is needed is a properly initialized ase.atoms object with a calculator::
 
 	from ase.optimize import BFGS
-	from INTERNALS.globaloptimization.betterhopping import BetterHopping
+	from winak.globaloptimization.betterhopping import BetterHopping
 	bh = BetterHopping(atoms=molecule,temperature=100 * kB,
 		          dr=1.1,
 		          optimizer=BFGS,
@@ -22,7 +23,7 @@ All that is needed is a properly initialized ase.atoms object with a calculator:
 Constructor Arguments
 =====================
 
-.. class:: INTERNALS.globaloptimization.BetterHopping(atoms,temperature=100*kB,optimizer=FIRE,optimizer2=FIRE,fmax=0.1,dr=0.1,logfile='-',trajectory='lowest.traj',optimizer_logfile='optim.log',local_minima_trajectory='temp_local_minima.traj',adjust_cm=True,movemode=0,maxmoves=10000,numdelocmodes=1,adsorb=None)
+.. class:: winak.globaloptimization.BetterHopping(atoms,temperature=100*kB,optimizer=FIRE,optimizer2=FIRE,fmax=0.1,dr=0.1,logfile='-',trajectory='lowest.traj',optimizer_logfile='optim.log',local_minima_trajectory='temp_local_minima.traj',adjust_cm=True,movemode=0,maxmoves=10000,numdelocmodes=1,adsorb=None)
 
 BetterHopping Object
 
@@ -52,8 +53,8 @@ adjust_cm: boolean
 	Determines whether or not a center of mass adjustment should be performed after a displacement.
 movemode: int
 	Determines which kind of displacement will be performed. 
-* movemode=0: For every x, y and z coordinate of every atom a random number between -1.0 and +1.0 is generated and multiplied by the value specified for dr. 
-* movemode=1: Delocalized coordinates are generated for the molecule and a displacement is performed along either 1 or a linear combination of multiple coordinates. The total displacement is normed, so that the largest single change in a coordinate in x, y or z direction for any atom is at most 1 Angstrom. Afterwards the displacement is multiplied by the value specified for dr.
+    * movemode=0: For every x, y and z coordinate of every atom a random number between -1.0 and +1.0 is generated and multiplied by the value specified for dr. 
+    * movemode=1: Delocalized coordinates are generated for the molecule and a displacement is performed along either 1 or a linear combination of multiple coordinates. The total displacement is normed, so that the largest single change in a coordinate in x, y or z direction for any atom is at most 1 Angstrom. Afterwards the displacement is multiplied by the value specified for dr.
 maxmoves: int
 	In rare cases, it is not possible to displace the structure in a minimum, without the optimizer or the calculator failing. This parameter helps avoid getting stuck at a certain minimum. After the specified amount of failed displacements the structure is reset to the last minimum.
 numdelocmodes: int

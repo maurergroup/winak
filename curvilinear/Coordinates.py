@@ -23,16 +23,14 @@
 #   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-###############
-# COORDINATES #
-###############
+COORDINATES
+############
 by Daniel Strobusch and R.J Maurer
 
 This module provides classes for different kinds of coordinates, i.e.
 rectilinear and curvilinear coordinates.
 The basis classes should also be used to derive classes for custom coordinate
-systems. This will ensure, that the kinetic energy module can deal with the
-coordinates properly.
+systems. 
 """
 
 from warnings import warn

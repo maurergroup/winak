@@ -101,9 +101,9 @@ def EulerAngle(u, v, x, y, z, eps = 1.0e-7):
        for transforming the right-handed coordinate system given by vectors
        (x, y, z) into the one (e1, e2, e3) defined by vectors u, v with the
        convention:
-           e1 || u
-           e2 in plane(u, v)
-           e3 = e1 x e2
+       e1 || u
+       e2 in plane(u, v)
+       e3 = e1 x e2
     """
     phi = 0.0
     theta = 0.0
@@ -188,8 +188,8 @@ def rigidBodySuperposition(X, Y, weights = None, RMSD = False, shift = True):
     weighted during the alignment procedure. Possible options are:
     'None' : equal weight for all atoms
     array of weights : a user defined array of weights, e.g. to align only
-        a fraction of the atoms by setting the weights for
-        some atoms to zero or to use mass weighting
+    a fraction of the atoms by setting the weights for
+    some atoms to zero or to use mass weighting
     'RMSD' defines if the RMSD should be computed.
     Returns a tuple of transformed X, the RMSD and a tuple defining the
     transformation, i.e a vector, a quaternion and another vector.

@@ -138,7 +138,7 @@ class MultiDI(Displacer):
     
     def print_params(self):
         if self.ads:
-            ads=', %d:%d is displaced',(self.adsorbate[0],self.adsorbate[1])
+            ads=', %d:%d is displaced'%(self.adsorbate[0],self.adsorbate[1])
         else:
             ads=''
         if self.constrain:
@@ -376,7 +376,7 @@ class Remove(Displacer):
     
     def print_params(self):
         if self.ads:
-            ads=', %d: is displaced',(self.adsorbate)
+            ads=', %d: is displaced'%(self.adsorbate)
         else:
             ads=''
         return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
@@ -486,7 +486,7 @@ class Insert(Displacer):
     
     def print_params(self):
         if self.ads:
-            ads=', %d: is displaced',(self.adsorbate)
+            ads=', %d: is displaced'%(self.adsorbate)
         else:
             ads=''
         return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
@@ -542,7 +542,7 @@ class GC(Displacer):
     
     def print_params(self):
         if self.ads:
-            ads=', %d: is displaced',(self.adsorbate)
+            ads=', %d: is displaced'%(self.adsorbate)
         else:
             ads=''
         return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)

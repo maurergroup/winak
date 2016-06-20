@@ -1,3 +1,5 @@
+*.traj
+*.log
 build
 *.swp
 *.pyc

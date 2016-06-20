@@ -19,8 +19,14 @@ if use_cython:
     ext_modules = [
         Extension("curvilinear.cICTools", 
                     ["curvilinear/cICTools.pyx",], 
-                    extra_compile_args =[], 
-                    libraries = ['blas',],
+                    # extra_compile_args =['-mkl=sequential'], 
+                    #libraries = ['blas',],
+                    # include_dirs=['opt/intel/mkl/include'],
+                    #include_dirs=['/opt/OpenBLAS/include'],
+                    #library_dirs = ['/opt/OpenBLAS/lib',],
+                    # library_dirs = ['/opt/intel/mkl/lib/intel64',],
+                    libraries = ['openblas',],
+                    # libraries = ['mkl_core','mkl_intel_lp64', 'mkl_sequential','pthread','m'],
                     ),
     ]
 

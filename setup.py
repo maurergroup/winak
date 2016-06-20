@@ -34,7 +34,7 @@ config = ConfigParser.ConfigParser({
     'fortran_libs': '',
     'pardiso_dirs': '',
     'pardiso_libs': '',
-})
+    })
 
 config.read('site.cfg')
 

@@ -38,4 +38,5 @@ and from other sources, all listed under LICENSES
 ### Who do I talk to? ###
 
 reinhard.maurer@yale.edu
+
 konstantin.krautgasser@tum.de

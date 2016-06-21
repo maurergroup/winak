@@ -15,7 +15,7 @@ in global structure optimization in chemistry.
 
 ### Dependencies ###
 
-* Python 2.7.0
+* Python 2.7.x
 * NumPy >=1.6
 * Scipy >=0.12
 * scikits.sparse >=0.1 [ Scikits.Sparse ](https://github.com/njsmith/scikits-sparse)

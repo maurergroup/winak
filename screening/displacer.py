@@ -19,7 +19,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 
 from abc import ABCMeta, abstractmethod
-from ase.all import *
 from ase.utils.geometry import sort
 from ase.calculators.neighborlist import NeighborList
 import numpy as np

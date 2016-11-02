@@ -1,4 +1,4 @@
-from ase.all import *
+from ase.io import read
 from ase.calculators.emt import EMT
 from ase.optimize import BFGS
 from winak.globaloptimization.betterhopping import Delocalizer 
@@ -12,6 +12,9 @@ molecule = read(adsorbate)
 molecule.set_calculator(EMT())
 
 deloc = Delocalizer(molecule)
+
+assert 0
+
 #constraining all stretches with FixInternals
 stretch_ind = deloc.ic.getStretchBendTorsOop()[0][0]
 stretches = deloc.ic.getStretchBendTorsOop()[1]

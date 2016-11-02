@@ -1,4 +1,4 @@
-from ase.all import *
+from ase.io import read
 from winak.globaloptimization.delocalizer import *
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 m=read('../testsystems/rea.xyz')
@@ -7,10 +7,11 @@ d=[]
 
 n=17
 
-c_vec = e.constrainStretches()
-e.constrain(c_vec)
+#c_vec = e.constrainStretches()
+#e.constrain(c_vec)
 coords=DC(e.x_ref.flatten(), e.masses, internal=True, atoms=e.atoms, \
-             ic=e.ic, L=None, Li=None,u=e.get_constrained_U(),
+             #ic=e.ic, L=None, Li=None,u=e.get_constrained_U(),
+             ic=e.ic, L=None, Li=None,u=e.get_U(),
              biArgs={'maxiter':100,'RIIS': True, 
                  #'col_constraints':e.constraints_cart,
                  #'row_constraints':e.constraints_int,

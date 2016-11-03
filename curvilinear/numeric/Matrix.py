@@ -27,12 +27,15 @@
 import math
 from winak.curvilinear.numeric import *
 from scipy.linalg import svd as SVD
+from numpy.linalg import pinv
 
 def regularizedInverse(A, eps = 1e-15):
-    # V, S, WT = N.linalg.svd(A, full_matrices = 0)
-    V, S, WT = SVD(A)
-    S2 = S*S
-    S2 += eps*eps
-    S /= S2
-    Ainv = N.dot(V, S[:,NewAxis]*WT)
-    return Ainv
+    ##V, S, WT = N.linalg.svd(A, full_matrices = 0)
+    # V, S, WT = SVD(A)
+    # S2 = S*S
+    # S2 += eps*eps
+    # S /= S2
+    # Ainv = N.dot(V, S[:,NewAxis]*WT)
+    # return Ainv
+
+    return pinv(A,rcond=eps)

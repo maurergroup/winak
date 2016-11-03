@@ -25,7 +25,8 @@
 """
 COORDINATES
 ############
-by Daniel Strobusch and R.J Maurer
+by Daniel Strobusch
+Contributions by R. J. Maurer
 
 This module provides classes for different kinds of coordinates, i.e.
 rectilinear and curvilinear coordinates.
@@ -580,6 +581,11 @@ class InternalCoordinates(Coordinates):
             assert N.allclose(N.dot(Li, L), N.identity(self.ns)), (
                 "Coordinate definition could not be inverted! " +
                 "Try to regularize it.")
+        else:
+            L = N.dot(N.linalg.inv(N.dot(Li,Li.transpose())),Li)
+            L = L.transpose()
+            ns = Li.shape[0]
+        self.L = L
         self.Li = Li
         self.ic = ic
         self.unit = unit
@@ -635,6 +641,27 @@ class InternalCoordinates(Coordinates):
             di = d[i]
             L[:,i] *= di
             Li[i,:] /= di
+
+    def grad_s2x(self,gi=None, gradientProps={}):
+
+        if gi is None:
+            return gx
+        else:
+            ut = self.Li.transpose()
+            gii = N.dot(ut, gi/self.unit)
+            self.ic.xg(gii, **gradientProps)
+            return self.ic.gx
+
+    def grad_x2s(self,gx=None, gradientProps={}):
+
+        gi = N.zeros(len(self))
+        if gx is None:
+            return gi
+        else:
+            self.ic.ig(gx, **gradientProps)
+            gi = self.ic.gi
+            ut_inv = self.L.transpose()
+            return N.dot(ut_inv, gi)*self.unit 
 
 
 class InternalEckartFrameCoordinates(EckartFrameCoordinates,
@@ -1014,7 +1041,7 @@ class ReducedDimSurfaceCoordinates(CompleteAdsorbateInternalEckartFrameCoordinat
 
 class CompleteDelocalizedCoordinates(CompleteAdsorbateInternalEckartFrameCoordinates):
     """
-    Derived CAIFC object do host Delocalized Internal Coordinates for adsorbate on surface
+    Derived CAIFC object to host Delocalized Internal Coordinates for adsorbate on surface
     """
     def __init__(self, x0, masses, u=None, xRef = None, atoms=None, freqs = None, \
             ic = None, Ltrans = None, Lrot = None, cell = None, \
@@ -1376,7 +1403,7 @@ class PeriodicCoordinates(InternalCoordinates):
             L = L.transpose()
             ns = Li.shape[0]
         else:
-            L = N.dot(N.linalg.inv(N.dot(L,L.transpose())),L)
+            Li = N.dot(N.linalg.inv(N.dot(L,L.transpose())),L)
         
         if cell is None:
             self.cell = ic.cell
@@ -1469,12 +1496,13 @@ class PeriodicCoordinates(InternalCoordinates):
     
     def grad_s2x(self,gi=None, gradientProps={}):
 
+        gx = N.zeros(self.nx)
         if gi is None:
             return gx
         else:
             ut = self.Li.transpose()
             gii = N.dot(ut, gi/self.unit)
-            self.ic.xg(gii, *gradientProps)
+            self.ic.xg(gii, **gradientProps)
             return self.ic.gx
     
     #def grad_back_transform(self,gx=None):
@@ -1498,7 +1526,7 @@ class PeriodicCoordinates(InternalCoordinates):
         if gx is None:
             return gi
         else:
-            self.ic.ig(gx, *gradientProps)
+            self.ic.ig(gx, **gradientProps)
             gi = self.ic.gi
             ut_inv = self.L.transpose()
             return N.dot(ut_inv, gi)*self.unit 

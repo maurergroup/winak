@@ -1,3 +1,22 @@
+# winak.optimize.diopt
+#
+#    winak - python package for structure search and more in curvilinear coordinates
+#    Copyright (C) 2016  Reinhard J. Maurer and Konstantin Krautgasser 
+#    
+#    This file is part of winak 
+#        
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#    
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 # -*- coding: utf-8 -*-
 import numpy as np
 from numpy.linalg import eigh
@@ -5,13 +24,13 @@ from ase.optimize.optimize import Optimizer
 
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
-from winak.globaloptimization.delocalizeer import *
+from winak.globaloptimization.delocalizer import *
 
 class DIopt(Optimizer):
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
                  maxstep=None, master=None, npulaymax=15, ):
-        """delocalized inernal optimizer following J. Chem. Phys. 122, 124508 (2005).
-        written by Reinhard J. Maurer, Yale University 2016
+        """delocalized internal optimizer following J. Chem. Phys. 122, 124508 (2005).
+        written by Reinhard J. Maurer, Yale University 2017
         The optimizer has external dependencies, namely the curvilinear coordinate 
         code 'winak', see www.damaurer.at
 
@@ -34,7 +53,7 @@ class DIopt(Optimizer):
  
         maxstep: float
             Used to set the maximum distance an atom can move per
-            iteration (default value is 0.04 Å).
+            iteration (default value is 0.04 Angstrom).
         
         master: boolean
             Defaults to None, which causes only rank 0 to save files.  If
@@ -45,7 +64,7 @@ class DIopt(Optimizer):
         if maxstep is not None:
             if maxstep > 1.0:
                 raise ValueError('You are using a much too large value for ' +
-                                 'the maximum step size: %.1f Å' % maxstep)
+                                 'the maximum step size: %.1f Angstrom' % maxstep)
             self.maxstep = maxstep
 
         self.npulaymax = 15
@@ -74,9 +93,10 @@ class DIopt(Optimizer):
     def initialize(self):
         #initialize curvilinear coordinates
         self.is_periodic = any(self.atoms.get_pbc())
-        d = Delocalizer(atoms,periodic=self.is_periodic,dense=True, weighted=True)
-
+        
+        d = Delocalizer(self.atoms,periodic=self.is_periodic,dense=True, weighted=True)
         if self.is_periodic:
+            #NOT IMPLEMENTED YET
             pass
         else:
             self.coords = DC(d.x_ref.flatten(), d.masses, internal=True, 
@@ -89,10 +109,12 @@ class DIopt(Optimizer):
         self.f_diis = []
 
         #setup model Hessian
-        self.H = self.get_hessian()
+        self.H = self.init_hessian()
 
     def read(self):
-        self.H, self.r0, self.f0, self.maxstep = self.load()
+        self.H, r0, f0, self.maxstep = self.load()
+        self.r_diis = [r0]
+        self.f_diis = [f0]
 
     def step(self, f):
         c = self.coords
@@ -105,7 +127,7 @@ class DIopt(Optimizer):
             s = self.atoms.get_stress().flatten()
             # pass
 
-        #transform to internal coordinates
+        #transform from cartesian to internal coordinates
         if is_periodic:
             sr = c.getS(np.concatenate([r,atoms.cell.flatten()]))
             sf = c.grad_x2s(np.concatenate([f,s]))
@@ -113,32 +135,51 @@ class DIopt(Optimizer):
             sr = c.getS(r)
             sf = c.grad_x2s(f)
 
+        sr_old = self.r_diis[-1]
+        sf_old = self.f_diis[-1]
+
+        #add to DIIS vectors
+        self.r_diis.append(sr)
+        self.f_diis.append(sf)
+        #cut DIIS vectors if too long
+        if len(rvec)>self.npulaymax:
+            del rvec[0]
+            del fvec[0]
+
         #make step in DCs
-        ds = self.update(sr, sf)
-        
+        ds = self.update(sr, sf, sr_old, sf_old)
+
         #transform displacement to cartesian
         #TODO Coordinates objects should have a function that 
         #applies B, sparse
         b = c.evalBvib()
         dr = np.dot(b,ds)
 
+        #TODO cutoff displacement if it is larger than a predefined maxval
         atoms.set_positions(r + dr)
         f = atoms.get_forces() 
         return f
 
-    def update(self, r, f, r0, f0):
+    def update(self, r, f, r_old, f_old):
         """
-        coordinate step in DC coordinates
+        coordinate step in DC coordinates using 
+        the DIIS algorithm with a BFGS Hessian update
+
+        r ... positions in DI coordinates
+        f ... forces in DI coordinates
         """
       
-        #update Hessian matrix with BFGS
-            #get new hessian
-            #update old hessian
+        self.H = update_hessian(r, r_old, f, f_old)
 
         #do quasi-Newton for the first few steps
         dr = np.dot(np.inv(self.H),f)
+        if self.nsteps < 5:
+            pass 
+        else:
+            #TODO automatic DIIS length adjust, step rejection and repeat
+            #at the moment we just always do a BFGS
+            pass
 
-        
         #riis stuff
 
         # self.r_diis.append(r)
@@ -147,11 +188,9 @@ class DIopt(Optimizer):
         #in self.f_diis we build a matrix
         # dr, w = doRIIS(self.r_diis,self.f_diis,dim=len(self.r_diis))
 
-
-
         return dr
 
-    def get_hessian(self):
+    def init_hessian(self):
         """
         model hessian based on Bucko et al.
         this function assumes that self.coords and atoms.positions
@@ -202,7 +241,8 @@ class DIopt(Optimizer):
                 break
             a += 1
 
-        return np.dot(Ut,np.dot(np.diag(Hdiag),U)
+        #returns the primitive internal diagonal Hessian in DI space
+        return np.dot(Ut,np.dot(np.diag(Hdiag),U))
            
     def get_exp(self,i, j):
         pos = self.atoms.positions
@@ -210,8 +250,35 @@ class DIopt(Optimizer):
         rij = (pos[i]-pos[j])
         r0ij = self.r0[self.el_dict[elnums[i]],self.el_dict[elnums[j]]]
         alpha = self.alpha[self.el_dict[elnums[i]],self.el_dict[elnums[j]]]
-        return np.exp(alpha(r0ij*r0ij - rij*rij))
+        return np.exp(alpha*(r0ij*r0ij - rij*rij))
 
+    def update_hessian(pnew, pold, grad_new, grad_old):
+        """
+        do a BFGS update of the Hessian
+        """
+        d_p = pnew-pold
+        d_grad = grad_new - grad_old
+
+        h_old = self.hessian.copy()
+
+        h1 = np.dot(d_grad,d_grad.transpose())/(np.dot(d_grad.transpose(),d_p))
+        h2 = np.dot(d_p,d_p.transpose())
+        h2 = np.dot(h_old,np.dot(h2,h_old))
+        h2 = h2/(np.dot(d_p.transpose(),np.dot(h_old,d_p)))
+
+        return h_old - (h1 + h2)
+
+    def adjust_diis_vecs():
+        """
+
+        """
+        rvec = self.r_diis
+        fvec = self.f_diis
+        #TODO adjust DIIS vectors according to flexible criterion of 
+        #Farkas and Schlegel PCCP 4, 11 (2002)
+
+        self.r_diis = rvec
+        self.f_diis = fvec
 
     # def doRIIS(x, e, dim = 3):
         # """

@@ -94,8 +94,11 @@ class Delocalizer:
                               masses=self.masses,xyz=x0)
         if dense:
             self.ic.backIteration = self.ic.denseBackIteration
+            # self.ic.ig = self.ic.denseinternalGradient
         else:
             self.ic.backIteration = self.ic.sparseBackIteration
+            # self.ic.ig = self.ic.denseinternalGradient
+            # self.ic.ig = self.ic.sparseinternalGradient
 
     def evalG(self, c=0):
         dense = self.dense

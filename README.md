@@ -18,11 +18,11 @@ in global structure optimization in chemistry.
 * Python 2.7.x
 * NumPy >=1.6
 * Scipy >=0.12
+* Cython>=0.20
 * scikits.sparse >=0.1 [ Scikits.Sparse ](https://github.com/njsmith/scikits-sparse)
   (depends itself on CHOLMOD/SuiteSparse)
 
 * Atomic Simulation Environment [ ASE ](https://wiki.fysik.dtu.dk/ase/)
-  (for global optimization)
 
 ### Installation ###
 
@@ -38,5 +38,4 @@ and from other sources, all listed under LICENSES
 ### Who do I talk to? ###
 
 reinhard.maurer@yale.edu
-
 konstantin.krautgasser@tum.de

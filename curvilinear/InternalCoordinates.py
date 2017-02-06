@@ -1268,9 +1268,38 @@ class icSystem:
             #ic.BxBt(self.nx, self.Bt.x, self.Bt.j, self.Bt.i,
                     #self.A.x, self.A.j, self.A.i, self.Annz, 0)
         return self.A
+    
+    def evalAt(self, diag = 1, sort = 0 , force = 0):
+        if not hasattr(self, 'At') or force == 1:
+            from winak.curvilinear.numeric.SparseMatrix import AmuB
+            self.At = AmuB(self.B, self.evalBt(perm=0))
+            #if not hasattr(self, 'colperm'):
+                #nnz = self.nx + 9*(self.ci[-1]/2)
+                #if (diag == 0): nnz += self.nx
+                #aj = N.zeros(nnz, nxInt)
+                #ai = N.zeros(self.nx+1, nxInt)
+                #ic.conn2crd(self.natom, diag, self.cj, self.ci, aj, ai)
+            #else:
+                #aj, ai = ic.conn2crd_p(self.natom, diag, self.cj, self.ci,
+                                       #self.colperm, sort)
+            #self.Annz = ai[-1]
+            #if diag:
+                #self.A = CSRd(n=self.nx, nnz=self.Annz, i=ai, j=aj, type=nxFloat)
+            #else:
+                #self.A = CSR(n=self.nx, m=self.nx, nnz=self.Annz, i=ai, j=aj, type=nxFloat)
+        #if hasattr(self.A, 'd'):
+            #ic.BxBt_d(self.nx, self.Bt.x, self.Bt.j, self.Bt.i, self.Annz,
+                      #self.A.x, self.A.j, self.A.i, self.A.d)
+        #else:
+            #ic.BxBt(self.nx, self.Bt.x, self.Bt.j, self.Bt.i,
+                    #self.A.x, self.A.j, self.A.i, self.Annz, 0)
+        return self.At
 
-    def cholesky(self, p = 10, eps = 1.0e-6, fout = 1, lambd = 0.0001):
-        A = self.A
+    def cholesky(self, A=None, p = 10, eps = 1.0e-6, fout = 1, lambd = 0.0001):
+        if A is None:
+            A = self.A
+        else:
+            A = A
         from scikits.sparse.cholmod import cholesky
         from winak.curvilinear.numeric.csrVSmsr import csrcsc
         from scipy.sparse import csc_matrix
@@ -1396,10 +1425,10 @@ class icSystem:
                 N.array(oop, dtype = N.int), 
                 )
 
-    def denseBackIteration(self, q, maxiter = 200, eps = 1e-5, initialize = 1,
+    def denseBackIteration(self, q, maxiter = 200, eps = 1e-6, initialize = 1,
             inveps = 1e-9, maxStep = 0.5, warn = True, 
             RIIS = True, RIIS_start = 20, RIIS_maxLength = 6, RIIS_dim = 4, 
-            restart = True, dampingThreshold = 0.1, maxEps = 1e-5, 
+            restart = True, dampingThreshold = 0.1, maxEps = 1e-6, 
             col_constraints=[], row_constraints=[]):
         """
         Find Cartesian coordinates belonging to the set of internal coordinates
@@ -1437,6 +1466,8 @@ class icSystem:
         dq = self.tmp_q
         dx = self.tmp_x
         xn = self.xyz
+        if initialize: self.initA()
+
         n = 0
         nScalings = 0 
         neps = eps*eps*self.nx
@@ -1476,7 +1507,8 @@ class icSystem:
                 nScalings += 1
                 dq *= maxStep/dqMax
 
-            B = self.evalB().full()
+            B = self.evalB()
+            B = B.full()
             
             
             # self.Bfull = B # DEBUGGING
@@ -1487,13 +1519,14 @@ class icSystem:
             # If they get close, damp them away with 
             denseDampIC(printWarning, qn, dq, B, dampingThreshold, *icArrays)
 
-            A = N.dot(N.transpose(B), B)
+            Bt = self.evalBt(update=1,perm=0).full()
+            A = N.dot(Bt, B)
             self.Ainv = regularizedInverse(A, eps = inveps)
 
             for c in row_constraints:
                 dq[c] = 0.0
 
-            dx[:] = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
+            dx[:] = N.dot(self.Ainv, N.dot(Bt, dq))
             for c in col_constraints:
                 dx[c] = 0.0
             # self.dx.append(dx.copy()) # for DEBUGGING
@@ -1666,7 +1699,41 @@ class icSystem:
     backIteration = sparseBackIteration
     bi = backIteration
     
-    def internalGradient(self, gx, maxiter = 20, eps = 1e-6, initialize = 1,
+    
+    def denseinternalGradient(self, gx, maxiter = 20, eps = 1e-6, initialize = 1,
+            iceps = 1e-6, icp = 10, iclambda = 0.0001):
+   
+        if not hasattr(self, 'tmp_q'): self.tmp_q = N.zeros(self.n, nxFloat)
+        if not hasattr(self, 'tmp_x'): self.tmp_x = N.zeros(self.nx, nxFloat)
+        if not hasattr(self, 'gi'): self.gi = N.zeros(self.n, nxFloat)
+        dg = self.tmp_q
+        x = self.tmp_x
+        gi = self.gi
+        if initialize: self.initA()
+        B = self.evalB(sort=0).full()
+        Bt = self.evalBt(update=1,perm=0).full()
+        At = N.dot(Bt,B)
+        Atinv = regularizedInverse(At,eps=iceps).transpose()
+
+        n = 0
+        neps = eps*eps*self.nx
+        while 1:
+            n += 1
+            x = N.dot(Bt,gi)
+            dx = gx-x
+            # print n
+            # print x, dx
+            norm = N.dot(dx, dx)
+            # print norm
+            dg = N.dot(B,N.dot(Atinv,dx)) 
+            gi += dg
+            if n > maxiter-1 or norm < neps: break
+        # print gi
+        # self.gi = gi
+        return n, N.sqrt(norm/self.nx)
+
+
+    def sparseinternalGradient(self, gx, maxiter = 20, eps = 1e-6, initialize = 1,
             iceps = 1e-6, icp = 10, iclambda = 0.0001):
         """see: J. Chem. Phys. 113 (2000), 5598"""
         if not hasattr(self, 'tmp_q'): self.tmp_q = N.zeros(self.n, nxFloat)
@@ -1676,29 +1743,39 @@ class icSystem:
         x = self.tmp_x
         gi = self.gi
         if initialize: self.initA()
-        B = self.evalB(sort=1)
-        Bt = self.evalBt(perm=0)
+        B = self.evalB()
+        Bt = self.evalBt(update=1, perm=0)
         A = self.evalA()
         info = self.cholesky(eps=iceps, p=icp, lambd=iclambda)
         if info < 1:
             raise ArithmeticError('Incomplete Cholesky decomposition failed: '
-                    + `info`)
-        g0 = copy(x)
-        gi = B(self.inverseA(x), gi)
+                   + `info`)
+        # g0 = copy(x)
+        # g0 = self.inverseA(B(gx))
+        # gi = copy(g0)
         n = 0
         neps = eps*eps*self.nx
         while 1:
             n += 1
-            x = Bt(gi, x)
-            x -= g0
-            norm = N.dot(x, x)
-            #print norm
-            dg = B(self.inverseA(x), dg)
-            gi -= dg
+            x = Bt(gi)
+            dx = gx-x
+            print n
+            # print x, dx
+            norm = N.dot(dx, dx)
+            print norm
+            # dg = B(self.inverseA(dx))
+            # dg = self.inverseA(B(dx))
+            gprime = self.inverseLt(dx)
+            gprime2 = self.inverseL(gprime)
+            dg = B(gprime2)
+            gi += dg
             if n > maxiter-1 or norm < neps: break
+        # print gi
+        # self.gi = gi
         return n, N.sqrt(norm/self.nx)
 
-    ig = internalGradient
+    # ig = sparseinternalGradient
+    ig = denseinternalGradient
 
     def cartesianGradient(self, gi, maxiter = 20, eps = 1e-6, initialize = 1,
             iceps = 1e-6, icp = 10, iclambda = 0.0001):
@@ -1725,7 +1802,7 @@ class icSystem:
             diff = gi - q
             norm = N.dot(diff,diff)
             #print norm
-            gx += Bt(diff)
+            gx -= Bt(diff)
             if n > maxiter-1 or norm < neps: break
         return n, N.sqrt(norm/self.n)
 
@@ -1952,7 +2029,8 @@ class Periodic_icSystem(icSystem):
             # If they get close, damp them away with 
             denseDampIC(printWarning, qn, dq, B, dampingThreshold, *icArrays)
 
-            A = N.dot(N.transpose(B), B)
+            Bt = self.evalBt(update=1,perm=0).full()
+            A = N.dot(Bt, B)
             self.Ainv = regularizedInverse(A, eps = inveps)
             
             #this dx is the displacement vector in x and the 3 lattice vectors
@@ -2452,11 +2530,12 @@ class Periodic_icSystem2(Periodic_icSystem):
             # If they get close, damp them away with 
             denseDampIC(printWarning, qn, dq, B, dampingThreshold, *icArrays)
 
-            A = N.dot(N.transpose(B), B)
+            Bt = self.evalBt(update=1,perm=0).full()
+            A = N.dot(Bt, B)
             self.Ainv = regularizedInverse(A, eps = inveps)
             
             #this dx is the displacement vector in x and the 3 lattice vectors
-            dx = N.dot(self.Ainv, N.dot(N.transpose(B), dq))
+            dx = N.dot(self.Ainv, N.dot(Bt, dq))
             
             ##imposing internal constraints
             #c = []
@@ -2656,6 +2735,40 @@ class Periodic_icSystem2(Periodic_icSystem):
     backIteration = sparseBackIteration
     bi = backIteration
     
+    def denseinternalGradient(self, gx, maxiter = 20, eps = 1e-6, initialize = 1,
+            iceps = 1e-6, icp = 10, iclambda = 0.0001):
+   
+        if not hasattr(self, 'tmp_q'): self.tmp_q = N.zeros(self.n, nxFloat)
+        if not hasattr(self, 'tmp_x'): self.tmp_x = N.zeros(self.nx+9, nxFloat)
+        if not hasattr(self, 'gi'): self.gi = N.zeros(self.n, nxFloat)
+        dg = self.tmp_q
+        x = self.tmp_x
+        gi = self.gi
+        if initialize: self.initA()
+        B = self.evalB(sort=0).full()
+        Bt = self.evalBt(update=1,perm=0).full()
+        At = N.dot(Bt,B)
+        Atinv = regularizedInverse(At,eps=iceps).transpose()
+        #transform to fractional forces
+        # gx = N.dot(gx,self.cell).flatten()
+
+        n = 0
+        neps = eps*eps*(self.nx+9)
+        while 1:
+            n += 1
+            x = N.dot(Bt,gi)
+            dx = gx-x
+            # print n
+            # print x, dx
+            norm = N.dot(dx, dx)
+            # print norm
+            dg = N.dot(B,N.dot(Atinv,dx)) 
+            gi += dg
+            if n > maxiter-1 or norm < neps: break
+        # print gi
+        # self.gi = gi
+        return n, N.sqrt(norm/self.nx)
+    
     def internalGradient(self, gx, maxiter = 20, eps = 1e-6, initialize = 1,
             iceps = 1e-6, icp = 10, iclambda = 0.0001):
         """see: J. Chem. Phys. 113 (2000), 5598"""
@@ -2665,7 +2778,7 @@ class Periodic_icSystem2(Periodic_icSystem):
         dg = self.tmp_q
         x = self.tmp_x
         gi = self.gi
-        #if initialize: self.initA()
+        if initialize: self.initA()
         B = self.evalB(sort=1)
         Bt = self.evalBt(perm=0)
         A = self.evalA()
@@ -2684,13 +2797,14 @@ class Periodic_icSystem2(Periodic_icSystem):
             x = Bt(gi, x)
             x -= g0
             norm = N.dot(x, x)
-            #print norm
+            # print norm
             dg = B(self.inverseA(x), dg)
             gi -= dg
             if n > maxiter-1 or norm < neps: break
         return n, N.sqrt(norm/self.nx)
 
-    ig = internalGradient
+    # ig = internalGradient
+    ig = denseinternalGradient
     
     def cartesianGradient(self, gi, maxiter = 20, eps = 1e-6, initialize = 1,
             iceps = 1e-6, icp = 10, iclambda = 0.0001):

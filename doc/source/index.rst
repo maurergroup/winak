@@ -35,6 +35,7 @@ Dependencies
 * Python 2.7.x
 * NumPy >= 1.6
 * SciPy >= 0.12
+* Cython>= 0.20
 * scikits.sparse >=0.1 [ Scikits.Sparse ](https://github.com/njsmith/scikits-sparse)
   (depends itself on CHOLMOD/SuiteSparse)
 * Atomic Simulation Environment [ASE]_
@@ -46,6 +47,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   Installation.rst
    BetterHopping.rst
    Tutorial.rst 
    Modules <winak>
@@ -55,7 +57,7 @@ References
 ##########
 
 .. [Panosetti2015] C. Panosetti, K. Krautgasser, D. Palagin, K. Reuter, and R. J. Maurer, Global Materials Structure Search with Chemically Motivated Coordinates, *Nano Lett.* **15**, 8044-8048 (2015)
-.. [Krautgasser2016] K. Krautgasser, C. Panosetti, D. Palagin, K. Reuter, and R. J. Maurer, Global Structure Search for Molecules on Surfaces: Efficient Sampling with Curvilinear Coordinates, *J. Chem. Phys*, under Review, (2016)
+.. [Krautgasser2016] K. Krautgasser, C. Panosetti, D. Palagin, K. Reuter, and R. J. Maurer, Global Structure Search for Molecules on Surfaces: Efficient Sampling with Curvilinear Coordinates, *J. Chem. Phys* **145**, 084117, (2016)
 .. [ASE]  `Atomic Simulation Environment (ASE)  <https://wiki.fysik.dtu.dk/ase/>`_
 
 .. [Wales1] Wales and Doye, J. Phys. Chem. A, vol 101 (1997) 5111-5116 

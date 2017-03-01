@@ -108,6 +108,7 @@ class grandEE(EE):
             stoich=composition.get(atoms)
         #####CP make arrays with composition, free atom energies and chemical potential, sorted by atomic symbols, from dictionaries
         comp=[stoich[c] for c in sorted(stoich)]
+        print comp
         #ecomp=[self.ecomp[e] for e in sorted(self.ecomp)]
         ecomp=[self.ecomp[e] for e in sorted(stoich)]
         #mu=[self.mu[m] for m in sorted(self.mu)]

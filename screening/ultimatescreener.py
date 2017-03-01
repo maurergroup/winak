@@ -38,7 +38,8 @@ class UltimateScreener:
                  Displacer,
                  Criterion,
                  trajectory='minima.traj',
-                 logfile='tt.log'):
+                 logfile='tt.log',
+                 savetrials=True):
         self.atoms=atoms
         self.logfile=logfile
         self.eneval=EnergyEvaluator
@@ -51,7 +52,7 @@ class UltimateScreener:
         self.log('EnergyEvaluator - '+self.eneval.print_params())
         self.log('Displacer - '+self.displacer.print_params())
         self.log('Criterion - '+self.crit.print_params())
-
+        self.savetrials=savetrials ## if True, store all trial moves in folder 'trial'
 
     def run(self, steps):
         """Screen for defined number of steps."""
@@ -62,10 +63,11 @@ class UltimateScreener:
             self.current=tmp[0];self.Emin=tmp[1]
             self.crit.evaluate(tmp[0].copy(),tmp[1])
             self.traj.write(self.current)
-            self.log('Initial Energy Evaluation done. Note that this is structure 0 in your trajectory.')
+            self.log('Initial Energy Evaluation done. Note that this is structure 0 in your trajectory. E = %s' %self.Emin)
         self.fallbackatoms=self.current.copy()
         self.fallbackstep=-1
-        os.system('mkdir -p trial') ## to store trial geometries, can be removed
+        if self.savetrials:
+            os.system('mkdir -p trial') 
 	
         for step in range(steps):    
             """I strictly use copies here, so nothing can be overwritten in a subclass.
@@ -82,22 +84,16 @@ class UltimateScreener:
                     tmp=None
                 tries+=1
                 if tmp is None:
-                    print 'opsie'
                     self.log('Error while displacing, retrying')
                 else:
-                    ### remove this block and the above mkdir
-                    tmp.write('trial/trial'+str(step+1)+'.xyz')
-                    ###
+                    if self.savetrials:
+                        tmp.write('trial/trial'+str(step+1)+'.xyz')
                     tmp=self.eneval.get_energy(tmp.copy())
                     if tmp is None:
-                        #os.system('cp dftb.out '+str(step+1).zfill(2)+'_'+str(tries).zfill(2)+'.fail')
-                        #os.system('cp geo_end.gen '+str(step+1).zfill(2)+'_'+str(tries).zfill(2)+'.fail.gen')
                         self.log('Error while evaluating energy, retrying')
                 if tries>10 and not reset:
                     self.log('Repeated Error during current step, rolling back to step %d' %self.fallbackstep)
-                    #self.fallbackatoms.write('eee.xyz')
                     self.current=self.fallbackatoms.copy()
-                    #self.current.write('fff.xyz')
                     tries=0
                     reset=True
                 if tries>10 and reset:
@@ -123,10 +119,8 @@ class UltimateScreener:
                 acc=''
                 self.fallbackatoms=tmp[0].copy()
                 self.fallbackstep=step
-                #print 'accepted'
             else:
                 self.traj=oldtraj
-            #self.log('%s - step %d done, %s accepted, Energy = %f '%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),step+1,acc,tmp[1]))
             self.log('%s - step %d done, %s accepted, Energy = %f, Stoichiometry = %s '%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),step+1,acc,tmp[1], comp.stoich))
         self.endT = datetime.now()
         self.log('ENDING Screening at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))

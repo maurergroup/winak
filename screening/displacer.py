@@ -363,7 +363,8 @@ class Remove(Displacer):
                     break
             if self.ads:
                 tmp=slab.extend(pippo)                                                ### put back together
-                tmp.constraints[0].delete_atom(-1)  ## remove one boolean value from the constraints to avoid traj complaining; not sure -1 is ok OR the true index shall be passed
+                #tmp.constraints[0].delete_atom(-1)  ## remove one boolean value from the constraints to avoid traj complaining; not sure -1 is ok OR the true index shall be passed
+                ### seems so be no longer needed in latest ASE
             else:
                 tmp=pippo
         if self.adjust_cm:
@@ -491,7 +492,7 @@ class Insert(Displacer):
         return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
 
 class GC(Displacer):
-    """Grand Canoical moves: insert or removeparticle with probability p, otherwise displace in DICs"""
+    """Grand Canoical moves: insert or removeparticle with probability prob, otherwise displace in DICs"""
     def __init__(self,prob=0.5,stepwidth=1.0,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,bias=0.5,ins_mode='nn',atm=None):
         Displacer.__init__(self)
         if adsorbate is None:
@@ -516,21 +517,20 @@ class GC(Displacer):
         if np.random.random() < self.prob:
             if np.random.random() < self.bias:  ##toss coin insert or remove or bias towards either
                 disp=Insert(prob=1,adsorbate=self.adsorbate,adjust_cm=self.adjust_cm,mode=self.ins_mode,atm=self.atm)
-                print 'inserting'
+                #print 'inserting'
             else: 
                 disp=Remove(prob=1,adsorbate=self.adsorbate,adjust_cm=self.adjust_cm,atm=self.atm)
-                print 'removing'
+                #print 'removing'
             tmp=disp.displace(tmp)
         else:
             if self.ads:    ## cannot be done in init bc it has to be updated... find a way
                 adsidx=[atom.index for atom in tmp if atom.tag==self.adsorbate]    ### convert adsorbate by tag to adsorbate by index
-                print 'ads = ', (adsidx[0],adsidx[-1]+1)
-                disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain, adjust_cm=self.adjust_cm, adsorbate=(adsidx[0],adsidx[-1]+1), cell_scale=self.cell_scale)
-                #disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain, adjust_cm=self.adjust_cm, adsorbate=(249,260),cell_scale=self.cell_scale)
-                print 'displacing by '+str(self.stepwidth)+', ads = '+str(adsidx[0])+','+str(adsidx[-1]+1)
+                #print 'ads = ', (adsidx[0],adsidx[-1]+1)
+                disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain, adjust_cm=self.adjust_cm, adsorbate=(adsidx[0],adsidx[-1]+1), periodic=self.periodic, cell_scale=self.cell_scale)
+                #print 'displacing by '+str(self.stepwidth)+', ads = '+str(adsidx[0])+','+str(adsidx[-1]+1)
             else:
                 disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain, adjust_cm=self.adjust_cm, adsorbate=None)#self.adsorbate)
-                print 'displacing by '+str(self.stepwidth)
+                #print 'displacing by '+str(self.stepwidth)
             tmp=disp.displace(tmp)
         if self.adjust_cm:
             cmt = tmp.get_center_of_mass()  

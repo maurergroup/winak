@@ -1,4 +1,3 @@
-from ase.all import *
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.globaloptimization.delocalizer import *
@@ -41,5 +40,5 @@ X0 = system.positions.flatten()
 coords.s[:]= 10.0
 X1 = coords.getX()
 print 'c ',coords.cell
-print 'x ',X1-X0
+#print 'x ',X1-X0
 print 's ',coords.getS(X1)

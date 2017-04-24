@@ -19,8 +19,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 
 from abc import ABCMeta, abstractmethod
-from ase.all import *
-from ase.units import kB
+from winak.constants import kB
 import numpy as np
 
 class Criterion:

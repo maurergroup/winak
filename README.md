@@ -20,7 +20,9 @@ in global structure optimization in chemistry.
 * Scipy >=0.12
 * Cython>=0.20
 * scikits.sparse >=0.1 [ Scikits.Sparse ](https://github.com/njsmith/scikits-sparse)
-  (depends itself on CHOLMOD/SuiteSparse)
+  (depends itself on CHOLMOD/SuiteSparse , available via 
+  pip install scikits.sparse
+  )
 
 * Atomic Simulation Environment [ ASE ](https://wiki.fysik.dtu.dk/ase/)
 

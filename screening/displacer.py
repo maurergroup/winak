@@ -147,7 +147,7 @@ class MultiDI(Displacer):
         return '%s: stepwidth=%f%s, stretches are%s constrained'%(self.__class__.__name__,self.stepwidth,ads,cc)
         
 class DI(Displacer):
-    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,dense=True):
+    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,dense=True,weighted=True,thresholds=[2.5,0,0]):
         """cell_scale: for translations; scales translations, so everything
         stays in the unit cell. The z component should be set to something small,
         like 0.05. 
@@ -167,14 +167,25 @@ class DI(Displacer):
         self.stepwidth=stepwidth
         self.numdelmodes=np.abs(numdelocmodes)
         self.dense=dense
+        self.weighted=weighted
         self.periodic=periodic
+        self.thresholds=thresholds
         
     def get_vectors(self,atoms):
         if self.periodic:
-            deloc=Delocalizer(atoms,periodic=True,dense=self.dense)
+            deloc=Delocalizer(atoms,periodic=True,
+                    dense=self.dense,
+                    weighted=self.weighted,
+                    threshold=self.thresholds[0],
+                    bendThreshold=self.thresholds[1],
+                    torsionThreshold=self.thresholds[2])
             coords=PC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, Li=deloc.u)
         else:
-            deloc=Delocalizer(atoms,dense=self.dense)
+            deloc=Delocalizer(atoms,dense=self.dense,
+                    weighted=self.weighted,
+                    threshold=self.thresholds[0],
+                    bendThreshold=self.thresholds[1],
+                    torsionThreshold=self.thresholds[2])
             tu=deloc.u
             if self.constrain:
                 e = deloc.constrainStretches()

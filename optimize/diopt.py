@@ -21,6 +21,7 @@
 import numpy as np
 from numpy.linalg import eigh
 from ase.optimize.optimize import Optimizer
+from copy import copy
 
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
@@ -59,15 +60,8 @@ class DIopt(Optimizer):
             Defaults to None, which causes only rank 0 to save files.  If
             set to true,  this rank will save files.
         """
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master)
-
-        if maxstep is not None:
-            if maxstep > 1.0:
-                raise ValueError('You are using a much too large value for ' +
-                                 'the maximum step size: %.1f Angstrom' % maxstep)
-            self.maxstep = maxstep
-
-        self.npulaymax = 15
+        
+        self.npulaymax = npulaymax
         
         self.k = [0.45, 0.15, 0.005]
         self.alpha = np.array([
@@ -75,11 +69,12 @@ class DIopt(Optimizer):
             [0.3949,0.2800,0.2800],
             [0.3949,0.2800,0.2800],
             ])
-        self.r0 = np.array([
+        self.r0H = np.array([
             [1.35,2.10,2.53],
             [2.10,2.87,3.40],
             [2.53,3.40,3.40],
             ])
+        
         elements_dict = {}
         for i in range(1,119):
             if i<3:
@@ -88,13 +83,30 @@ class DIopt(Optimizer):
                 elements_dict[i] = 1
             else:
                 elements_dict[i] = 2
-        self.el_dict
+        self.el_dict = elements_dict
+
+        self.r0 = None
+        self.f0 = None
+        self.is_periodic = any(atoms.get_pbc())
+
+        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master)
+
+        if maxstep is not None:
+            if maxstep > 1.0:
+                raise ValueError('You are using a much too large value for ' +
+                                 'the maximum step size: %.1f Angstrom' % maxstep)
+            self.maxstep = maxstep
+        if maxstep is None:
+            self.maxstep = 0.04
+        
+        #initialize all the memory stuff for DIIS
+        self.r_diis = []
+        self.f_diis = []
 
     def initialize(self):
         #initialize curvilinear coordinates
-        self.is_periodic = any(self.atoms.get_pbc())
         
-        d = Delocalizer(self.atoms,periodic=self.is_periodic,dense=True, weighted=True)
+        d = Delocalizer(self.atoms,periodic=self.is_periodic,dense=True, weighted=False)
         if self.is_periodic:
             #NOT IMPLEMENTED YET
             pass
@@ -103,18 +115,12 @@ class DIopt(Optimizer):
                     atoms=d.atoms, ic=d.ic, L=None, Li=None, u=d.get_U(), 
                     biArgs={'RIIS': 4, 'RIIS_maxLength': 6, 'maxStep':0.5,})
 
-
-        #initialize all the memory stuff for DIIS
-        self.r_diis = []
-        self.f_diis = []
-
         #setup model Hessian
-        self.H = self.init_hessian()
+        self.init_hessian()
 
     def read(self):
-        self.H, r0, f0, self.maxstep = self.load()
-        self.r_diis = [r0]
-        self.f_diis = [f0]
+        self.H, self.r0, self.f0, self.maxstep = self.load()
+        self.is_periodic = any(self.atoms.get_pbc())
 
     def step(self, f):
         c = self.coords
@@ -128,35 +134,47 @@ class DIopt(Optimizer):
             # pass
 
         #transform from cartesian to internal coordinates
-        if is_periodic:
+        if self.is_periodic:
             sr = c.getS(np.concatenate([r,atoms.cell.flatten()]))
             sf = c.grad_x2s(np.concatenate([f,s]))
         else:
             sr = c.getS(r)
             sf = c.grad_x2s(f)
 
-        sr_old = self.r_diis[-1]
-        sf_old = self.f_diis[-1]
-
         #add to DIIS vectors
-        self.r_diis.append(sr)
-        self.f_diis.append(sf)
+        self.r_diis.append(copy(sr))
+        self.f_diis.append(copy(sf))
         #cut DIIS vectors if too long
-        if len(rvec)>self.npulaymax:
-            del rvec[0]
-            del fvec[0]
+        if len(self.r_diis)>self.npulaymax:
+            self.r_diis = self.r_diis[-self.npulaymax:]
+            self.f_diis = self.f_diis[-self.npulaymax:]
 
         #make step in DCs
-        ds = self.update(sr, sf, sr_old, sf_old)
+        ds = self.update(sr, sf, self.r0, self.f0)
+        # print ds
 
+        #TODO cutoff displacement if it is larger than a predefined maxval
+        # ds = self.determine_step(ds, steplengths)
+        
+        
         #transform displacement to cartesian
         #TODO Coordinates objects should have a function that 
         #applies B, sparse
-        b = c.evalBvib()
-        dr = np.dot(b,ds)
+        
+        # b = c.evalBvib()
+        # dr = np.dot(b.transpose(),ds)
+        # rnew = (r+dr).reshape([-1,3])
+        #set old pos and force
+        self.r0 = copy(sr)
+        self.f0 = copy(sf)
 
-        #TODO cutoff displacement if it is larger than a predefined maxval
-        atoms.set_positions(r + dr)
+        r2 = c.getX(sr+ds)
+        rnew = (r2).reshape([-1,3])
+        dr = r2-r
+        #steplengths = (dr**2).sum(1)**0.5
+        #dr = self.determine_step(dr, steplengths)
+        #atoms.set_positions(r+dr)
+        atoms.set_positions(rnew)
         f = atoms.get_forces() 
         return f
 
@@ -168,26 +186,23 @@ class DIopt(Optimizer):
         r ... positions in DI coordinates
         f ... forces in DI coordinates
         """
-      
-        self.H = update_hessian(r, r_old, f, f_old)
+        
+        if self.nsteps>0:
+            self.update_hessian(r, r_old, f, f_old)
 
         #do quasi-Newton for the first few steps
-        dr = np.dot(np.inv(self.H),f)
-        if self.nsteps < 5:
-            pass 
+        # dr = np.dot(np.linalg.inv(self.H),f)
+        omega, V = np.linalg.eigh(self.H)
+        dr_bfgs = np.dot(V,np.dot(f,V) / np.fabs(omega))
+
+        if self.nsteps < 2:
+            dr = dr_bfgs 
         else:
-            #TODO automatic DIIS length adjust, step rejection and repeat
-            #at the moment we just always do a BFGS
-            pass
+            #TODO adjust diis length
 
-        #riis stuff
-
-        # self.r_diis.append(r)
-        # self.f_diis.append(f)
-        #given the new forces and the old ones 
-        #in self.f_diis we build a matrix
-        # dr, w = doRIIS(self.r_diis,self.f_diis,dim=len(self.r_diis))
-
+            #riis stuff
+            # dr = self.doRIIS(self.r_diis,self.f_diis,dim=len(self.r_diis))
+            dr = dr_bfgs
         return dr
 
     def init_hessian(self):
@@ -197,15 +212,15 @@ class DIopt(Optimizer):
         are synchronized and up to date.
         """
         c = self.coords
-        U = c.Li
-        Ut = c.L
+        Ut = c.Li
+        U = c.L
         ns =len(c.ic)
 
         Hdiag = np.zeros([ns])
         ic = c.ic.ic
         ind = 0
         a = 0
-        xyz = ic.xyz
+        xyz = c.ic.xyz
         while ind<len(ic):
             if ic[ind] == 0:
                 break
@@ -218,19 +233,19 @@ class DIopt(Optimizer):
                 ind += 3
             elif ic[ind] == 2:
                 #angle
-                i = ic[ind+1]
-                j = ic[ind+2]
-                k = ic[ind+3]
+                i = ic[ind+1]-1
+                j = ic[ind+2]-1
+                k = ic[ind+3]-1
                 rho1 = self.get_exp(i,j)
                 rho2 = self.get_exp(j,k)
                 Hdiag[a] = self.k[1]*rho1*rho2 
                 ind += 4
             elif ic[ind] == 3:
                 #dihedral
-                i = ic[ind+1]
-                j = ic[ind+2] 
-                k = ic[ind+3] 
-                l = ic[ind+4]
+                i = ic[ind+1]-1
+                j = ic[ind+2]-1
+                k = ic[ind+3]-1
+                l = ic[ind+4]-1
                 rho1 = self.get_exp(i,j)
                 rho2 = self.get_exp(j,k)
                 rho3 = self.get_exp(k,l)
@@ -242,31 +257,45 @@ class DIopt(Optimizer):
             a += 1
 
         #returns the primitive internal diagonal Hessian in DI space
-        return np.dot(Ut,np.dot(np.diag(Hdiag),U))
+        self.H = np.dot(Ut,np.dot(np.diag(Hdiag),U))
            
     def get_exp(self,i, j):
         pos = self.atoms.positions
         elnums = self.atoms.get_atomic_numbers()
-        rij = (pos[i]-pos[j])
-        r0ij = self.r0[self.el_dict[elnums[i]],self.el_dict[elnums[j]]]
+        rij2 = np.dot(pos[i]-pos[j],pos[i]-pos[j])
+        r0ij = self.r0H[self.el_dict[elnums[i]],self.el_dict[elnums[j]]]
         alpha = self.alpha[self.el_dict[elnums[i]],self.el_dict[elnums[j]]]
-        return np.exp(alpha*(r0ij*r0ij - rij*rij))
+        return np.exp(alpha*(r0ij*r0ij - rij2))
 
-    def update_hessian(pnew, pold, grad_new, grad_old):
+    def update_hessian(self,pnew, pold, grad_new, grad_old):
         """
         do a BFGS update of the Hessian
         """
-        d_p = pnew-pold
-        d_grad = grad_new - grad_old
+        dr = pnew - pold
+        df = grad_new - grad_old
+        # print 'dr'
+        # print dr
+        # print 'df'
+        # print df
 
-        h_old = self.hessian.copy()
+        if np.abs(dr).max() < 1.e-7:
+            self.init_hessian()
+        else:
+            a = np.dot(dr, df)
+            dg = np.dot(self.H, dr)
+            b = np.dot(dr, dg)
+            self.H -= np.outer(df, df) / a + np.outer(dg, dg) / b
 
-        h1 = np.dot(d_grad,d_grad.transpose())/(np.dot(d_grad.transpose(),d_p))
-        h2 = np.dot(d_p,d_p.transpose())
-        h2 = np.dot(h_old,np.dot(h2,h_old))
-        h2 = h2/(np.dot(d_p.transpose(),np.dot(h_old,d_p)))
+    def determine_step(self, dr, steplengths):
+        """Determine step to take according to maxstep
 
-        return h_old - (h1 + h2)
+        Normalize all steps as the largest step. This way
+        we still move along the eigendirection.
+        """
+        maxsteplength = np.max(steplengths)
+        if maxsteplength >= self.maxstep:
+            dr *= self.maxstep / maxsteplength
+        return dr
 
     def adjust_diis_vecs():
         """
@@ -279,8 +308,60 @@ class DIopt(Optimizer):
 
         self.r_diis = rvec
         self.f_diis = fvec
+    
+    def doRIIS(self,x, e, dim = 3):
+        """
+        Do an Regularized Inversion of the Iterative Subspace (RIIS) for each atom.
+        'dim' gives an approximate cutoff for the Tikhonov regularization.
+        HINT: This could be optimized by saving the correlation matrices M for 
+        each atom and calculating only the new vector after each iteration step.
+        """
+        assert len(e) == len(x)
+        
+        omega, V = np.linalg.eigh(self.H)
+        # dr_bfgs = np.dot(V,np.dot(f,V) / np.fabs(omega))
+        
+        # order the error vectors and positions of the atoms so, that there is
+        # a list of those vectors for each atom.
+        X = np.rollaxis(np.asarray(x), 1,0)
+        E = np.rollaxis(np.asarray(e), 1,0)
+        Xn = np.empty(x[0].shape) # the new interpolated geometry
+        En = np.empty(e[0].shape)
+        n = len(e) + 1
+        M = np.ones((n,n) ) # correlation matrix
+        b = np.zeros(n) # inhomogeneity of the linear equation system
+        w = np.zeros(n) # interpolation weights
+        M[-1,-1] = 0
+        b[-1] = 1
+        counter = 0
+        #each element gets its own system of linear equations
+        for (x, e, xn, en) in zip(X, E, Xn, En):
+            for i in xrange(len(e)):
+                for j in range(i+1):
+                    M[i,j] = M[j,i] = np.dot(e[i], e[j])
 
-    # def doRIIS(x, e, dim = 3):
+            # do Tikhonov regularization
+            U, s, VT = np.linalg.svd(M)
+            eps = s[dim] # eps is determined by the singular values 
+            s2 = s*s 
+            s2 += eps*eps
+            s /= s2
+            Mi = np.dot(U, s[:,np.newaxis]*VT) # regularized inverse
+            w = np.dot(Mi, b) # approximate weights
+            xn = 0.0
+            en = 0.0
+            for (w_i, x_i, e_i) in zip(w[:-1], x, e):
+                xn += w_i*x_i
+                en += w_i*e_i
+            Xn[counter] = xn
+            En[counter] = en
+            counter += 1
+        # dr = Xn + np.dot(V,np.dot(En,V) / np.fabs(omega))
+        dr = Xn + np.dot(np.linalg.inv(self.H),En)
+        print 'dr', dr
+        return dr 
+
+    # def doRIIS(self,x, e, dim = 3):
         # """
         # Do an Regularized Inversion of the Iterative Subspace (RIIS) for each atom.
         # 'dim' gives an approximate cutoff for the Tikhonov regularization.
@@ -290,26 +371,30 @@ class DIopt(Optimizer):
         # assert len(e) == len(x)
         # # order the error vectors and positions of the atoms so, that there is
         # # a list of those vectors for each atom.
-        # X = N.rollaxis(N.asarray(x), 1,0)
-        # E = N.rollaxis(N.asarray(e), 1,0)
-        # Xn = N.empty(x[0].shape) # the new interpolated geometry
+        # X = np.rollaxis(np.asarray(x), 1,0)
+        # E = np.rollaxis(np.asarray(e), 1,0)
+        # Xn = np.empty(x[0].shape) # the new interpolated geometry
         # n = len(e) + 1
-        # M = -N.ones((n,n) ) # correlation matrix
-        # b = N.zeros(n) # inhomogeneity of the linear equation system
-        # w = N.zeros(n) # interpolation weights
+        # M = -np.ones((n,n) ) # correlation matrix
+        # b = np.zeros(n) # inhomogeneity of the linear equation system
+        # w = np.zeros(n) # interpolation weights
         # M[-1,-1] = 0
         # b[-1] = -1
+        # counter = 0
         # for (x, e, xn) in zip(X, E, Xn):
             # for i in xrange(len(e)):
                 # for j in range(i+1):
-                    # M[i,j] = M[j,i] = N.dot(e[i], e[j])
+                    # M[i,j] = M[j,i] = np.dot(e[i], e[j])
             # # do Tikhonov regularization
-            # U, s, VT = N.linalg.svd(M)
+            # U, s, VT = np.linalg.svd(M)
             # eps = s[dim] # eps is determined by the singular values 
             # s2 = s*s 
             # s2 += eps*eps
             # s /= s2
-            # Mi = N.dot(U, s[:,N.newaxis]*VT) # regularized inverse
-            # w = N.dot(Mi, b) # approximate weights
-            # xn[:] = sum( w_i*x_i for (w_i, x_i) in zip(w[:-1], x))
-            # return Xn.flatten(), w[:-1]
+            # Mi = np.dot(U, s[:,np.newaxis]*VT) # regularized inverse
+            # w = np.dot(Mi, b) # approximate weights
+            # xn = sum( w_i*x_i for (w_i, x_i) in zip(w[:-1], x))
+            # Xn[counter] = xn
+            # counter += 1
+        # print Xn
+        # return Xn.flatten()

@@ -19,7 +19,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 
 from abc import ABCMeta, abstractmethod
-from ase.all import *
 from winak.screening.composition import Stoichiometry
 from ase.utils.geometry import sort
 

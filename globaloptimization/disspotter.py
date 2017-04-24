@@ -18,7 +18,6 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 
-from ase.all import *
 from winak.curvilinear.InternalCoordinates import icSystem
 from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
 from winak.curvilinear.Coordinates import InternalCoordinates as IC

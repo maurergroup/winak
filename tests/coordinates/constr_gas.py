@@ -1,4 +1,4 @@
-from ase.all import *
+from ase.io import read
 from winak.globaloptimization.delocalizer import *
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 m=read('../testsystems/rea.xyz')

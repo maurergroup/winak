@@ -27,6 +27,48 @@ Rigid Body rotations
 from winak.curvilinear.numeric import *
 from operator import itemgetter
 
+
+def rand_rotation_matrix(deflection=1.0, randnums=None):
+    """
+    Creates a random rotation matrix.
+    
+    deflection: the magnitude of the rotation. For 0, no rotation; for 1, competely random
+    rotation. Small deflection => small perturbation.
+    randnums: 3 random numbers in the range [0, 1]. If `None`, they will be auto-generated.
+    """
+    # from http://www.realtimerendering.com/resources/GraphicsGems/gemsiii/rand_rotation.c
+    
+    if randnums is None:
+        randnums = N.random.uniform(size=(3,))
+        
+    theta, phi, z = randnums
+    
+    theta = theta * 2.0*deflection*N.pi  # Rotation about the pole (Z).
+    phi = phi * 2.0*N.pi  # For direction of pole deflection.
+    z = z * 2.0*deflection  # For magnitude of pole deflection.
+    
+    # Compute a vector V used for distributing points over the sphere
+    # via the reflection I - V Transpose(V).  This formulation of V
+    # will guarantee that if x[1] and x[2] are uniformly distributed,
+    # the reflected points will be uniform on the sphere.  Note that V
+    # has length sqrt(2) to eliminate the 2 in the Householder matrix.
+    
+    r = N.sqrt(z)
+    Vx, Vy, Vz = V = (
+        N.sin(phi) * r,
+        N.cos(phi) * r,
+        N.sqrt(2.0 - z)
+        )
+    
+    st = N.sin(theta)
+    ct = N.cos(theta)
+    
+    R = N.array(((ct, st, 0), (-st, ct, 0), (0, 0, 1)))
+    M = (N.outer(V, V) - N.eye(3)).dot(R)
+    return M
+
+
+
 def rotationFromQuaternion(e):
     s0 = e[0]*e[0]
     s1 = e[1]*e[1]
@@ -205,7 +247,7 @@ def rigidBodySuperposition(X, Y, weights = None, RMSD = False, shift = True):
     assert X.ndim == 2
     assert X.shape == Y.shape
     n = len(X) # the number of atoms specified in the molecule
-    if weights == None: # equal weights for all atoms
+    if weights is None: # equal weights for all atoms
         W = N.array(N.ones(n))
     else: # use custom weights
         W = N.array(weights, dtype = N.float64)

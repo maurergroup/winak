@@ -47,7 +47,7 @@ class BetterHopping(Dynamics):
     def __init__(self, atoms,
                     temperature=100 * kB,
                     optimizer=FIRE,
-                    optimizer2=FIRE, #which optimizer to use to fmax_mult*fmax
+                    optimizer2=None, #which optimizer to use to fmax_mult*fmax
                     fmax_mult=15, #at what multiple of fmax do you want to use second optimizer
                     fmax=0.1,
                     dr=0.1,
@@ -63,6 +63,7 @@ class BetterHopping(Dynamics):
                     cell_scale=[1.0,1.0,1.0],    #used for translation in adsorbates
                     constrain=False):   #constrain stretches?
         Dynamics.__init__(self, atoms, logfile, trajectory)
+
         if adsorbmask is None:
             self.adsorbate=(0,len(atoms))
             self.ads=False
@@ -80,7 +81,10 @@ class BetterHopping(Dynamics):
         else:
             self.numdelmodes=int(np.round(numdelocmodes))#round and int just for you trolls out there 
         self.optimizer = optimizer
-        self.optimizer2=optimizer2
+        if optimizer2 is None:
+            self.optimizer2=optimizer
+        else:
+            self.optimizer2=optimizer2
         self.fmax = fmax
         self.mm=maxmoves
         self.dr = dr

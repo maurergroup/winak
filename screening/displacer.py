@@ -22,6 +22,7 @@ from abc import ABCMeta, abstractmethod
 from ase.utils.geometry import sort
 from ase.calculators.neighborlist import NeighborList
 import numpy as np
+from winak.constants import UNIT
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
 from winak.globaloptimization.delocalizer import *
@@ -30,6 +31,7 @@ from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as 
 from winak.curvilinear.InternalCoordinates import icSystem
 from winak.globaloptimization.disspotter import DisSpotter
 from winak.screening.composition import *
+from winak.curvilinear.numeric.Rotation import rand_rotation_matrix
 import os
 
 class Displacer:
@@ -53,9 +55,10 @@ class Displacer:
         all the important parameters"""
         pass
     
-
 class MultiDI(Displacer):
-    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,dense=True,loghax=False):
+    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],
+            translate=False,rotate=False, periodic=False,dense=True,weighted=False, 
+            thresholds=[0.5,170,160], loghax=False):
         """cell_scale: for translations; scales translations, so everything
         stays in the unit cell. The z component should be set to something small,
         like 0.05. 
@@ -72,7 +75,10 @@ class MultiDI(Displacer):
         self.cell_scale=cell_scale
         self.constrain=constrain
         self.dense=dense
-        self.adjust_cm=adjust_cm
+        self.weighted=weighted
+        self.thresholds = thresholds
+        self.translate=translate
+        self.rotate=rotate
         self.stepwidth=stepwidth
         self.numdelmodes=np.abs(numdelocmodes)
         self.lh=loghax
@@ -96,7 +102,7 @@ class MultiDI(Displacer):
             ads=tmp.copy()
         d=DisSpotter(ads)
         a=d.get_fragments()
-        #tmp.write('overall.xyz')
+        # tmp.write('overall.xyz')
         o=1
         if self.lh:
             while True:
@@ -120,7 +126,13 @@ class MultiDI(Displacer):
                 adstmp=None
                 ads0=0
             
-            di=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain,adsorbate=adstmp,cell_scale=self.cell_scale,adjust_cm=self.adjust_cm,periodic=self.periodic,dense=self.dense)
+            di=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain,cell_scale=self.cell_scale,
+                    translate=self.translate,
+                    rotate=self.rotate,
+                    periodic=self.periodic,
+                    dense=self.dense, 
+                    weighted=self.weighted, 
+                    thresholds=self.thresholds)
             if self.lh:
                 tt.write(os.path.join(str(o),'pre_'+str(i[0])+'.xyz'))
             tt=di.displace(tt)
@@ -147,7 +159,8 @@ class MultiDI(Displacer):
         return '%s: stepwidth=%f%s, stretches are%s constrained'%(self.__class__.__name__,self.stepwidth,ads,cc)
         
 class DI(Displacer):
-    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,dense=True,weighted=True,thresholds=[2.5,0,0]):
+    def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],
+            translate=False,rotate=False, periodic=False,dense=True,weighted=True,thresholds=[0.5,170,160]):
         """cell_scale: for translations; scales translations, so everything
         stays in the unit cell. The z component should be set to something small,
         like 0.05. 
@@ -163,7 +176,8 @@ class DI(Displacer):
             self.ads=True
             self.cell_scale=cell_scale
         self.constrain=constrain
-        self.adjust_cm=adjust_cm
+        self.translate=translate
+        self.rotate=rotate
         self.stepwidth=stepwidth
         self.numdelmodes=np.abs(numdelocmodes)
         self.dense=dense
@@ -171,7 +185,35 @@ class DI(Displacer):
         self.periodic=periodic
         self.thresholds=thresholds
         
-    def get_vectors(self,atoms):
+    # def get_vectors(self,atoms):
+        # if self.periodic:
+            # deloc=Delocalizer(atoms,periodic=True,
+                    # dense=self.dense,
+                    # weighted=self.weighted,
+                    # threshold=self.thresholds[0],
+                    # bendThreshold=self.thresholds[1],
+                    # torsionThreshold=self.thresholds[2])
+            # coords=PC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, Li=deloc.u)
+        # else:
+            # deloc=Delocalizer(atoms,dense=self.dense,
+                    # weighted=self.weighted,
+                    # threshold=self.thresholds[0],
+                    # bendThreshold=self.thresholds[1],
+                    # torsionThreshold=self.thresholds[2])
+            # tu=deloc.u
+            # if self.constrain:
+                # e = deloc.constrainStretches()
+                # deloc.constrain(e)
+                # tu=deloc.u2
+            # if not self.ads:
+                # coords=DC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, u=tu)
+            # else:
+                # cell = atoms.get_cell()*self.cell_scale
+                # coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=tu,cell=cell)
+        # # coords.write_jmol('bla.xyz')
+        # return coords.get_vectors() 
+    
+    def get_coords(self,atoms):
         if self.periodic:
             deloc=Delocalizer(atoms,periodic=True,
                     dense=self.dense,
@@ -190,13 +232,14 @@ class DI(Displacer):
             if self.constrain:
                 e = deloc.constrainStretches()
                 deloc.constrain(e)
-                tu=deloc.u2
+                tu=deloc.get_constrained_U()
             if not self.ads:
                 coords=DC(deloc.x_ref.flatten(), deloc.masses, atoms=deloc.atoms, ic=deloc.ic, u=tu)
             else:
                 cell = atoms.get_cell()*self.cell_scale
                 coords=CDC(deloc.x_ref.flatten(), deloc.masses, unit=1.0, atoms=deloc.atoms, ic=deloc.ic, u=tu,cell=cell)
-        return coords.get_vectors() 
+
+        return coords 
     
     def displace(self,tmp):
         """No DIS for atoms! Atoms get Cart movements. If on surf, along cell"""
@@ -219,9 +262,10 @@ class DI(Displacer):
             else:
                 nummodes=int(np.round(self.numdelmodes))#round and int just for you trolls out there 
             
-            vectors=self.get_vectors(tmp)
-            numvec=len(vectors)
+            coords=self.get_coords(tmp)
+            numvec=len(coords)
             start=0
+            ss = coords.s.copy()
             if self.constrain:
                 mm=tmp.get_masses()
                 x0=tmp.get_positions().flatten()
@@ -232,25 +276,38 @@ class DI(Displacer):
             w=np.random.choice(range(start,numvec),size=nummodes,replace=False)
             #w=[0] #np.random.choice(range(start,numvec),size=nummodes,replace=False)
             #print 'w = ', w, 'out of ', numvec
+            
+            # for i in w:
+                # disp[ads1:ads2,:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
+            # #print disp
+            # disp/=np.max(np.abs(disp))
+            # rn=ro+self.stepwidth*disp
+            
+            # if self.fix_cm:
+                # cmt = atms.get_center_of_mass()
+            
             for i in w:
-                disp[ads1:ads2,:3]+=vectors[i]*np.random.uniform(-1.,1.) #this is important if there is an adsorbate.
-            #print disp
-            disp/=np.max(np.abs(disp))
-            rn=ro+self.stepwidth*disp
+                ss[i] += self.stepwidth*np.random.uniform(-1.,1.)/UNIT
             
-            if self.adjust_cm:
-                cmt = atms.get_center_of_mass()
-                
-            atms.set_positions(rn)
-            
-            if self.adjust_cm:         
-                cm = atms.get_center_of_mass()
-                atms.translate(cmt - cm)
+            atms.positions[ads1:ads2,:] = (coords.getX(ss).reshape([-1,3])) #important for adsorbate
+          
+            #translation
+            if self.translate:
+                atms.positions[ads1:ads2,:] += np.random.uniform(-1.,1.,3)*self.stepwidth
+            #rotation
+            if self.rotate:
+                rot = rand_rotation_matrix(self.stepwidth)
+                for i in range(ads1,ads2):
+                    atms.positions[i,:] = np.dot(rot,atms.positions[i,:])
+
+            # if self.fix_cm:         
+                # cm = atms.get_center_of_mass()
+                # atms.translate(cmt - cm)
         elif self.ads:
-            cc=Celltrans(self.stepwidth,self.adsorbate,self.cell_scale,self.adjust_cm)
+            cc=Celltrans(self.stepwidth,self.adsorbate,self.cell_scale)#,self.adjust_cm=self.fix_cm)
             atms=cc.displace(atms)
         else:
-            cc=Cartesian(self.stepwidth,self.adsorbate,self.adjust_cm)
+            cc=Cartesian(self.stepwidth,self.adsorbate)#,self.adjust_cm=self.fix_cm)
             atms=cc.displace(atms)
         return atms
     

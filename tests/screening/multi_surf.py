@@ -3,7 +3,9 @@ from winak.screening.displacer import MultiDI
 from winak.screening.energyevaluator import potEE
 from winak.screening.ultimatescreener import UltimateScreener
 from ase.optimize import BFGS
-from ase.all import *
+from ase.io import read
+from ase.constraints import FixAtoms
+from ase.calculators.emt import EMT
 from ase.units import kB
 
 """NOTE: THIS WILL OFTEN FAIL WITH THE EMT CALCULATOR"""

@@ -73,13 +73,14 @@ class UltimateScreener:
             If it still fails, abort, since something is clearly wrong."""
             tmp=None
             tries=0
-            reset=False  
-            failed=False          
+            reset=False
+            failed=False
             while tmp is None:
-                try:
-                    tmp=self.displacer.displace(self.current.copy())
-                except:
-                    tmp=None
+                tmp=self.displacer.displace(self.current.copy())
+                # try:
+                    # tmp=self.displacer.displace(self.current.copy())
+                # except:
+                    # tmp=None
                 tries+=1
                 if tmp is None:
                     print 'opsie'

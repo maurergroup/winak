@@ -21,6 +21,7 @@
 from winak.curvilinear.InternalCoordinates import icSystem
 from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as VCG
 from winak.curvilinear.Coordinates import InternalCoordinates as IC
+from ase.atoms import Atoms
 import numpy as np
 
 

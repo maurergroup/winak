@@ -13,6 +13,7 @@ import ConfigParser, os
 # update it when the contents of directories change.
 if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
+import setuptools
 from numpy.distutils.core import setup, Extension
 import numpy
 numerix_macros = [('THCTK_NUMBACKEND', 1)]
@@ -116,12 +117,18 @@ setup(name = package_name,
       version = __version__,
       author = 'Konstantin Krautgasser, Reinhard J. Maurer',
       author_email = 'reinhard.maurer@yale.edu',
-      #url = 'http://url.com/',
+      url = 'https://gitlab.com/reinimaurer1/winak',
       package_dir = {package_name: '.'},
       description = 'python package for Global Optimization in Curvilinear Coordinates',
       long_description = 'python package for Global Optimization in Curvilinear Coordinates',
       license = 'GNU GPL',
       platforms = 'UNIX',
+      install_requires=[
+          'numpy',
+          'scipy',
+          'cython'
+          'scikits.sparse',
+          ],
       packages = packages,
       ext_package = package_name,
       ext_modules = ext_modules,

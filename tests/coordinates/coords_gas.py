@@ -1,6 +1,5 @@
 import numpy as np
-from ase.all import *
-
+from ase.io import read
 from winak.curvilinear.InternalCoordinates import icSystem
 from winak.curvilinear import Coordinates
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC

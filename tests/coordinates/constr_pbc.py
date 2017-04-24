@@ -1,4 +1,3 @@
-from ase.all import *
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.globaloptimization.delocalizer import *
@@ -30,8 +29,8 @@ print start
 #row_constraints=[row1,row2]
 
 #pic example
-run_1 = True 
-run_2 = False 
+run_1 = False 
+run_2 = True 
 run_3 = False 
 
 #Example 1:

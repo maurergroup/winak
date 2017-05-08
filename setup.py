@@ -126,7 +126,7 @@ setup(name = package_name,
       install_requires=[
           'numpy',
           'scipy',
-          'cython'
+          'cython',
           'scikits.sparse',
           ],
       packages = packages,

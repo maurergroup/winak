@@ -19,8 +19,14 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 
 from abc import ABCMeta, abstractmethod
-from ase.utils.geometry import sort
-from ase.calculators.neighborlist import NeighborList
+try:
+    from ase.build.tools import sort
+except:
+    from ase.utils.geometry import sort
+try:
+    from ase.neighborlist import NeighborList
+except:
+    from ase.calculators.neighborlist import NeighborList
 import numpy as np
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC

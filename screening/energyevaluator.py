@@ -20,7 +20,10 @@
 
 from abc import ABCMeta, abstractmethod
 from winak.screening.composition import Stoichiometry
-from ase.utils.geometry import sort
+try:
+    from ase.build.tools import sort
+except:
+    from ase.geometry import sort
 
 class EE:
     """This class relaxes an ase.atoms object in any way you see fit. The only

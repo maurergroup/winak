@@ -23,7 +23,10 @@ from datetime import datetime
 from ase.io.trajectory import Trajectory
 from collections import Counter
 from winak.screening.composition import Stoichiometry
-from ase.utils.geometry import sort
+try:
+    from ase.build.tools import sort
+except:
+    from ase.utils.geometry import sort
 import os 
 
 

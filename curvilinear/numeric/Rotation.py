@@ -205,7 +205,7 @@ def rigidBodySuperposition(X, Y, weights = None, RMSD = False, shift = True):
     assert X.ndim == 2
     assert X.shape == Y.shape
     n = len(X) # the number of atoms specified in the molecule
-    if weights == None: # equal weights for all atoms
+    if weights is None: # equal weights for all atoms
         W = N.array(N.ones(n))
     else: # use custom weights
         W = N.array(weights, dtype = N.float64)

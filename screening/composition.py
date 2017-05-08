@@ -19,6 +19,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 
 from collections import Counter
+from ase.io import Trajectory
 import numpy as np
 
 class Stoichiometry:

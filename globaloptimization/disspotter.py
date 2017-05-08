@@ -112,7 +112,8 @@ class DisSpotter:
             x=self.numConnections(j)
             #print 'looking at '+str(j)
             #print str(j)+' has '+str(x[0])+' connections'
-            if x[0]==1 and self.visited[self.ics[self.stre[x[1]]][0]] and self.visited[self.ics[self.stre[x[1]]][1]]:
+            #if x[0]==1 and self.visited[self.ics[self.stre[x[1]]][0]] and self.visited[self.ics[self.stre[x[1]]][1]]:
+            if x[0]==1 and self.visited[self.ics[self.stre[x[1][0]]][0]] and self.visited[self.ics[self.stre[x[1][0]]][1]]:
                 #print 'ending in atom '+str(j)+' and returning '+str(ret)
                 return ret
             else:

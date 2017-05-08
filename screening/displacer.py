@@ -503,7 +503,7 @@ class Insert(Displacer):
         return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
 
 class GC(Displacer):
-    """Grand Canonical moves: insert or removeparticle with probability prob, otherwise displace in DICs"""
+    """Grand Canonical moves: insert or remove particle with probability prob, otherwise displace in DICs"""
     def __init__(self,prob=0.5,stepwidth=1.0,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,bias=0.5,ins_mode='nn',atm=None):
         Displacer.__init__(self)
         if adsorbate is None:

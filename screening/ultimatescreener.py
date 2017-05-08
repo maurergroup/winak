@@ -45,7 +45,12 @@ class UltimateScreener:
         self.eneval=EnergyEvaluator
         self.displacer=Displacer
         self.crit=Criterion
-        self.traj=Trajectory(trajectory,'w')
+        #self.traj=Trajectory(trajectory,'w')
+        ### set initial trajectory with composition
+        self.comp=Stoichiometry()
+        self.comp.get(atoms)
+        self.traj=self.comp.make_traj()
+        ###
         self.startT = datetime.now()
         self.log('STARTING Screening at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+' KK 2015')
         self.log('Using the following Parameters and Classes:')
@@ -60,10 +65,11 @@ class UltimateScreener:
         if tmp is None:
             self.log('Initial Energy Evaluation Failed. Please check your calculator!')
         else:
+            tmp[0].info={'accepted':True}
             self.current=tmp[0];self.Emin=tmp[1]
             self.crit.evaluate(tmp[0].copy(),tmp[1])
             self.traj.write(self.current)
-            self.log('Initial Energy Evaluation done. Note that this is structure 0 in your trajectory. E = %s' %self.Emin)
+            self.log('Initial Energy Evaluation done. Note that this is structure 0 in your trajectory. Energy = %f, Stoichiometry = %s' %(tmp[1],self.comp.stoich))
         self.fallbackatoms=self.current.copy()
         self.fallbackstep=-1
         if self.savetrials:
@@ -111,8 +117,13 @@ class UltimateScreener:
                 self.traj=newtraj
             
             """setting backup"""
-            self.traj.write(tmp[0])
             accepted=self.crit.evaluate(tmp[0].copy(),tmp[1])
+            if accepted:
+                tmp[0].info={'accepted':True}
+            else:
+                tmp[0].info={'accepted':False}
+            self.traj.write(tmp[0])
+            
             acc='not'
             if accepted:       
                 self.current=tmp[0].copy()

@@ -114,7 +114,11 @@ class grandEE(EE):
         ret=None
         try:
             atoms.set_calculator(self.calc)
-            opt = self.opt(atoms,logfile=self.optlog)
+            ## CP the following fixes some back-compatibility issue with ASE; since v.3.13 the force_consistent tag was introduced in optimizers BUT not all of them
+            try:
+                opt = self.opt(atoms,logfile=self.optlog,force_consistent=False)
+            except:
+                opt = self.opt(atoms,logfile=self.optlog)
             opt.run(fmax=self.fmax,steps=3000)
             if opt.converged() and self.opt2 is not None and self.fmax2 is not None:
                 opt=self.opt2(atoms,logfile=self.optlog)

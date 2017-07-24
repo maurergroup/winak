@@ -43,6 +43,11 @@ class Stoichiometry:
         return not new==old
 
     def make_traj(self):
-        traj = Trajectory('minima_'+self.formula+'.traj', 'a')
+        try:
+            traj = Trajectory('minima_'+self.formula+'.traj', 'a')
+            ## fails if there exists an empty trajectory with the same name with
+            ## ase.io.ulm.InvalidULMFileError: This is not an ULM formatted file.
+        except:
+            traj = Trajectory('minima_'+self.formula+'.traj', 'w')
         return traj
 

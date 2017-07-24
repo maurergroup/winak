@@ -53,7 +53,7 @@ class potEE(EE):
     """standard potential energy optimization, starting with opt until fmax
     and then followed by opt2 until fmax2 is reached. Use of 2 optimizers is optional"""
     def __init__(self,calc,opt,fmax,opt2=None,fmax2=None,optlog='opt.log'):
-        EE.__init__(self, calc,optlog)
+        EE.__init__(self, calc, optlog)
         self.fmax=fmax
         self.opt=opt
         self.fmax2=fmax2
@@ -64,10 +64,10 @@ class potEE(EE):
         ret=None
         try:
             atoms.set_calculator(self.calc)
-            opt = self.opt(atoms,logfile=self.optlog)
+            opt = self.opt(atoms,logfile=self.optlog,trajectory='relax.traj')
             opt.run(fmax=self.fmax,steps=3000)
             if opt.converged() and self.opt2 is not None and self.fmax2 is not None:
-                opt=self.opt2(atoms,logfile=self.optlog)
+                opt=self.opt2(atoms,logfile=self.optlog,trajectory='relax.traj')
                 opt.run(fmax=self.fmax2,steps=3000)
             if opt.converged():
                 ret=(atoms,atoms.get_potential_energy())
@@ -82,16 +82,16 @@ class potEE(EE):
             ret+=', Optimizer2=%s, fmax2=%f '%(self.opt2.__name__,self.fmax2)
         return ret
 
-class grandEE(EE):
+class grandEE(potEE):
     """grandcanonical potential energy optimization. evaluates the free energy of formation for gas-phase molecules or the surface free energy per unit area 
     for surface adsorptions/reconstructions
     starting with opt until fmax and then followed by opt2 until fmax2 is reached. Use of 2 optimizers is optional"""
     def __init__(self,calc,opt,fmax,opt2=None,fmax2=None,optlog='opt.log',ecomp={},mu={},eref=0.0,adsorbate=None):
-        EE.__init__(self, calc,optlog)
-        self.fmax=fmax
-        self.opt=opt
-        self.fmax2=fmax2
-        self.opt2=opt2        
+        potEE.__init__(self, calc, opt, fmax, opt2, fmax2, optlog)
+        #self.fmax=fmax
+        #self.opt=opt
+        #self.fmax2=fmax2
+        #self.opt2=opt2        
         self.ecomp=ecomp
         self.mu=mu
         self.eref=eref  ## clean surface energy for adsorbates
@@ -119,17 +119,17 @@ class grandEE(EE):
             atoms.set_calculator(self.calc)
             ## CP the following fixes some back-compatibility issue with ASE; since v.3.13 the force_consistent tag was introduced in optimizers BUT not all of them
             try:
-                opt = self.opt(atoms,logfile=self.optlog,force_consistent=False)
+                opt = self.opt(atoms,logfile=self.optlog,force_consistent=False, trajectory='relax.traj')
             except:
-                opt = self.opt(atoms,logfile=self.optlog)
+                opt = self.opt(atoms,logfile=self.optlog, trajectory='relax.traj')
             opt.run(fmax=self.fmax,steps=3000)
             if opt.converged() and self.opt2 is not None and self.fmax2 is not None:
-                opt=self.opt2(atoms,logfile=self.optlog)
+                opt=self.opt2(atoms,logfile=self.optlog, trajectory='relax.traj')
                 opt.run(fmax=self.fmax2,steps=3000)
             if opt.converged():
+                import numpy as np
                 #print 'fin qui tutto bene'
                 EE=atoms.get_potential_energy()
-                #print EE, comp, ecomp
                 grandE=EE-np.dot(comp,ecomp)-np.dot(comp,mu)-self.eref
                 ret=(atoms,grandE)
         except:

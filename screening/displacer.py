@@ -39,7 +39,7 @@ from winak.screening.composition import *
 import os
 
 class Displacer:
-    """This class accepts or declines a step in any way you see fit. It is also 
+    """This class performs a step in any way you see fit. It is also 
     in charge of logging."""
     __metaclass__ = ABCMeta
 

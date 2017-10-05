@@ -20,10 +20,15 @@
 
 from abc import ABCMeta, abstractmethod
 from winak.screening.composition import Stoichiometry
+
+### CP - ugly hack to deal with ASE backwards compatibility; this is temporary
 try:
     from ase.build.tools import sort
 except:
     from ase.geometry import sort
+###
+
+from ase.atoms import Atoms
 
 class EE:
     """This class relaxes an ase.atoms object in any way you see fit. The only

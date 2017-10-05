@@ -19,6 +19,8 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 
 from abc import ABCMeta, abstractmethod
+
+### CP - ugly hack to deal with ASE backwards compatibility; this is temporary
 try:
     from ase.build.tools import sort
 except:
@@ -27,6 +29,9 @@ try:
     from ase.neighborlist import NeighborList
 except:
     from ase.calculators.neighborlist import NeighborList
+###
+
+from ase.atom import Atom
 import numpy as np
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC

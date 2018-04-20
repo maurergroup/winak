@@ -27,7 +27,7 @@ from winak.curvilinear.InternalCoordinates import PeriodicValenceCoordinateGener
 from winak.curvilinear.numeric.SparseMatrix import AmuB, svdB, eigB, CSR
 from scipy.sparse import csr_matrix, csc_matrix
 from scipy import linalg as la
-from scikits.sparse.cholmod import cholesky
+#from scikits.sparse.cholmod import cholesky
 
 class Delocalizer:
     def __init__(self,atoms_obj,icList=None, u=None, weighted=False, periodic=False,

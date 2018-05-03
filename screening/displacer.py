@@ -63,7 +63,7 @@ class Displacer:
         """subclasses must implement this method. Has to return a string containing
         all the important parameters"""
         pass
-    
+   
 
 class MultiDI(Displacer):
     def __init__(self,stepwidth,numdelocmodes=1,constrain=False,adsorbate=None,cell_scale=[1.0,1.0,1.0],adjust_cm=True,periodic=False,dense=True,loghax=False):
@@ -91,6 +91,8 @@ class MultiDI(Displacer):
         
     def displace(self,tmp):
         atms=tmp.copy()
+        if self.ads:
+            ads=tmp[self.adsorbate[0]:self.adsorbate[1]].copy()
         if self.ads:
             ads=tmp[self.adsorbate[0]:self.adsorbate[1]].copy()
             tmp1=tmp[:self.adsorbate[0]].copy()
@@ -532,8 +534,6 @@ class GC(Displacer):
         self.bias=bias ## bias towards either insertion or removal (I/R ratio)
         self.ins_mode=ins_mode
         self.atm=atm
-        self.cell_scale=cell_scale
-
     def displace(self, tmp):
         """Randomly insert atom with probability=prob"""
         if np.random.random() < self.prob:
@@ -568,3 +568,180 @@ class GC(Displacer):
             ads=''
         return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
 
+
+class PopulationGenerator:
+    """This class generates a population of structures, starting from a generic input"""
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        """subclasses must call this method."""
+        pass
+
+    @abstractmethod
+    def generate(self,input,popsize):
+        """subclasses must implement this method. Has to return a population of structures."""
+        pass
+
+    @abstractmethod
+    def print_params(self):
+        """subclasses must implement this method. Has to return a string containing all the imporant parameters."""
+        pass
+
+class OurPopulationGenerator(PopulationGenerator):
+    def __init__(self):
+        #still all to figure out
+
+    def generate(self,input,popsize):
+        #still all to figure out
+
+    def print_params(self):
+        #still all to figure out
+
+
+
+class PopulationManager:
+    """This class performs a step on a population of structures. Just like Displacer, it is also in charge of logging."""
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        """subclasses must call this method."""
+        pass
+
+    @abstractmethod
+    def evolve(self,pop):
+        """subclasse must implement this method. Has to return a modified population of structures."""
+        pass
+
+    @abstractmethod
+    def print_params(self):
+        """subclasses must implement this method. Has to return a string containing all the important parameters."""
+        pass
+
+
+class FabioManager(PopulationManager):
+    def __init__(self,MatingManager,MutationManager=None,Xparameter=0): #to add: parameters for following classes  
+    """Performs an evolution step on a given population. Distributes work to the Mating and (if desired) Mutation classes, according to the Xparameter."""   
+       self.MatingManager=MatingManger
+       self.MutationManager=MutationManager
+       self.Xparameter=np.abs(Xparameter)
+
+   def evolve(self,pop):
+       #distribute work to MatingManager and MutationManager
+       OffspringStructures = self.MatingManager.MatePopulation(pop,Xparameter)
+       MutatedStructures = self.MutationManager.MutatePopulation(pop,Xparameter)
+        
+             
+       pop.append(OffspringStructures) #to implement
+       pop.append(MutatedStructures)   #to implement
+       return pop
+
+    def print_params(self):
+        #to implement
+        return "" 
+
+
+
+class MatingManager:
+    """This class performs matings on a population.
+    Receives the population, performs matings according to Xparameter and the selected MatingOperator, and returns the offspring population"""
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        """subclasses must call this method"""
+        pass
+
+    @abstractmethod
+    def MatePopulation(self,pop,Xparameter):
+        """subclasses must implement this method. Return an offspring of structures"""
+        pass
+
+    @abstractmethod
+    def print_params(self):
+        """subclasses must implement this method. Has to return a string containing all the important parameters."""
+        pass
+
+
+class FabioMating(MatingManager):
+    def __init__(self,MatingOperator,Xparameter): #to add: parameters for following classes
+        self.Xparameter = Xparameter
+        self.MatingOperator = MatingOperator
+
+    def MatePopulation(self,pop,Xparameter):
+        offspring = [] #to implement
+        for structure in pop[:Xparameter]: #to implement
+            partner = pop - structure     #to implement
+            Children = self.MatingOperator(structure,partner) #to implement
+            offspring += Children #to implement
+        return offspring
+
+    def print_params(self): 
+        #to implement
+        return ""
+
+
+
+class MatingOperator:
+    """This class performs a single mating. Receives two structures, and returns two 'children' structures"""
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        """subclasses must call this method"""
+        pass
+
+    @abstractmethod
+    def Mate(self,partner1,partner2):
+        """subclasses must implement this method. Returns two 'childern' structures"""
+        pass
+
+    @abstractmethod
+    def print_params(self):
+        """subclasses must implement this method. Has to return a string containing all the important parameters."""
+        pass
+
+
+class SinusoidalCut(MatingOperator):
+    def __init__(self,parameters):
+        #to implement
+
+    def Mate(self,partner1,partner2):
+        #to be implemented
+
+    def print_params(self):
+        #to be implemented
+        return ""
+
+
+
+class MutationManager:
+    """This class performs mutations on a population.
+Receives a population, performs mutations according to the xParameter, and returns the population of mutated structures"""
+    __metaclass__= ABCMeta
+
+    def __init__(self):
+        """subclasses must call this method"""
+
+    @abstractmethod
+    def MutatePopulation(self,pop,Xparameter):
+        """subclasses must implement this method. Returns a population of mutated structures"""
+        pass
+
+    @abstractmethod
+    def print_params(self):
+        """subclasses must implement this method. Has to return a string containing all the important parameters."""
+        pass
+
+
+class FabioMutation(MutationManager):
+    def __init__(self,parameters):
+        ###########
+
+    def MutatePopulation(self,pop,xParameter): 
+        MutatedStructures = [] ####    
+        for structure in pop[xParameter:]:
+            mutated = self.MutationOperator(structure,params)
+            MutatedStructures += mutated
+        return MutatedStructures
+
+    def print_params(self):
+        ########
+        return ""

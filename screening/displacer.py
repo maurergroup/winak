@@ -621,19 +621,31 @@ class PopulationManager:
 class FabioManager(PopulationManager):
     def __init__(self,MatingManager,MutationManager=None,Xparameter=0): #to add: parameters for following classes  
     """Performs an evolution step on a given population. Distributes work to the Mating and (if desired) Mutation classes, according to the Xparameter."""   
-       self.MatingManager=MatingManger
+       PopulationManager.__init__(self)
+       self.MatingManager=MatingManager
        self.MutationManager=MutationManager
        self.Xparameter=np.abs(Xparameter)
 
    def evolve(self,pop):
        #distribute work to MatingManager and MutationManager
+       #should receive new two pop objects
        OffspringStructures = self.MatingManager.MatePopulation(pop,Xparameter)
        MutatedStructures = self.MutationManager.MutatePopulation(pop,Xparameter)
         
-             
-       pop.append(OffspringStructures) #to implement
-       pop.append(MutatedStructures)   #to implement
-       return pop
+       #generates the evolved population merging parents, offspring and mutated 
+       newpop=[]
+       for stru in pop:
+           newpop.append(stru.copy())
+
+       for stru in OffspringStructures:
+           newpop.append(stru.copy())
+
+       for stru in MutatedStructures:
+           newpop.append(stru.copy())
+       #to be implemented: option to avoid overwriting
+       write('newpop.traj',newpop)
+       newpop = Trajectory('newpop.traj','r')
+       return newpop
 
     def print_params(self):
         #to implement
@@ -663,15 +675,32 @@ class MatingManager:
 
 class FabioMating(MatingManager):
     def __init__(self,MatingOperator,Xparameter): #to add: parameters for following classes
+        MatingManager.__init__(self)
         self.Xparameter = Xparameter
         self.MatingOperator = MatingOperator
 
     def MatePopulation(self,pop,Xparameter):
-        offspring = [] #to implement
-        for structure in pop[:Xparameter]: #to implement
-            partner = pop - structure     #to implement
-            Children = self.MatingOperator(structure,partner) #to implement
-            offspring += Children #to implement
+        offspring = []
+
+        #creates a list of structures suitable for mating
+        poptomate = []
+        for stru in pop:
+            poptomate.append(stru.copy())
+        poptomate =  poptomate[0:Xparameter]
+        
+        #mates every structure with a second, random structure from the whole population
+        for stru in poptomate:
+            #selects random partner
+            candidates = list(poptomate)
+            candidates.remove(stru)            
+            partnernumber = np.random.randint(0,len(candidates))
+            partner = candidates[partnernumber]
+            
+            #performs mating
+            Children = self.MatingOperator.Mate(stru,partner) #to implement
+            for struc in Children:
+                offspring.append(struc.copy())
+
         return offspring
 
     def print_params(self): 
@@ -690,7 +719,7 @@ class MatingOperator:
 
     @abstractmethod
     def Mate(self,partner1,partner2):
-        """subclasses must implement this method. Returns two 'childern' structures"""
+        """subclasses must implement this method. Returns two 'children' structures"""
         pass
 
     @abstractmethod
@@ -702,7 +731,7 @@ class MatingOperator:
 class SinusoidalCut(MatingOperator):
     def __init__(self,parameters):
         #to implement
-
+         #begin with something random and ugly
     def Mate(self,partner1,partner2):
         #to be implemented
 

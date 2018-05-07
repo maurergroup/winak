@@ -619,7 +619,7 @@ class PopulationManager:
 
 
 class FabioManager(PopulationManager):
-    def __init__(self,MatingManager,MutationManager=None,Xparameter=0): #to add: parameters for following classes  
+    def __init__(self,MatingManager,MutationManager,Xparameter): #to add: parameters for following classes  
     """Performs an evolution step on a given population. Distributes work to the Mating and (if desired) Mutation classes, according to the Xparameter."""   
        PopulationManager.__init__(self)
        self.MatingManager=MatingManager
@@ -663,7 +663,7 @@ class MatingManager:
         pass
 
     @abstractmethod
-    def MatePopulation(self,pop,Xparameter):
+    def MatePopulation(self,pop):
         """subclasses must implement this method. Return an offspring of structures"""
         pass
 
@@ -679,14 +679,14 @@ class FabioMating(MatingManager):
         self.Xparameter = Xparameter
         self.MatingOperator = MatingOperator
 
-    def MatePopulation(self,pop,Xparameter):
+    def MatePopulation(self,pop):
         offspring = []
 
         #creates a list of structures suitable for mating
         poptomate = []
         for stru in pop:
             poptomate.append(stru.copy())
-        poptomate =  poptomate[0:Xparameter]
+        poptomate =  poptomate[0:(self.Xparameter)]
         
         #mates every structure with a second, random structure from the whole population
         for stru in poptomate:
@@ -739,7 +739,46 @@ class SinusoidalCut(MatingOperator):
         #to be implemented
         return ""
 
+class TestMating(MatingOperator):
+    def __init__(self):
+        MatingOperator.__init__self()
 
+    def Mate(self,partner1,partner2):
+        Children = [] 
+        choice = np.random.rand() 
+  
+        child1 = Atoms() 
+        child2 = Atoms() 
+        if choice > 0.5: 
+            for atom in partner1: 
+                if atom.x > 7.5: 
+                    child1.append(atom) 
+                else: 
+                    child2.append(atom) 
+            for atom in partner2: 
+                if atom.x < 7.5: 
+                    child1.append(atom) 
+                else: 
+                    child2.append(atom) 
+        else: 
+            for atom in stru1: 
+                if atom.y > 7.5: 
+                    child1.append(atom) 
+                else: 
+                    child2.append(atom)
+            for atom in stru2: 
+                if atom.y < 7.5: 
+                    child1.append(atom) 
+                else: 
+                    child2.append(atom) 
+  
+        Children.append(child1) 
+        Children.append(child2) 
+   
+        return Children
+
+    def print_params(self):
+        return "TestMating print_params"
 
 class MutationManager:
     """This class performs mutations on a population.
@@ -750,7 +789,7 @@ Receives a population, performs mutations according to the xParameter, and retur
         """subclasses must call this method"""
 
     @abstractmethod
-    def MutatePopulation(self,pop,Xparameter):
+    def MutatePopulation(self,pop):
         """subclasses must implement this method. Returns a population of mutated structures"""
         pass
 
@@ -761,10 +800,13 @@ Receives a population, performs mutations according to the xParameter, and retur
 
 
 class FabioMutation(MutationManager):
-    def __init__(self,parameters):
+    def __init__(self,MutationOperator,Xparameter):
         ###########
+        MutationManager.__init__(self)
+        self.MutationOperator = MutationOperator
+        self.Xparameter = Xparameter
 
-    def MutatePopulation(self,pop,xParameter): 
+    def MutatePopulation(self,pop): 
         MutatedStructures = [] ####    
         for structure in pop[xParameter:]:
             mutated = self.MutationOperator(structure,params)

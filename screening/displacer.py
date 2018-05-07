@@ -629,8 +629,11 @@ class FabioManager(PopulationManager):
    def evolve(self,pop):
        #distribute work to MatingManager and MutationManager
        #should receive new two pop objects
-       OffspringStructures = self.MatingManager.MatePopulation(pop,Xparameter)
-       MutatedStructures = self.MutationManager.MutatePopulation(pop,Xparameter)
+       MatingManager = self.MatingManager(MatingManagerParams)
+       OffspringStructures = self.MatingManager.MatePopulation(pop)
+       
+       MutationManager = self.MutationManager(self.MutationOperator,Xparameter) #####to be fixed
+       MutatedStructures = MutationManager.MutatePopulation(self.MutationOperatorParams)
         
        #generates the evolved population merging parents, offspring and mutated 
        newpop=[]
@@ -787,6 +790,7 @@ Receives a population, performs mutations according to the xParameter, and retur
 
     def __init__(self):
         """subclasses must call this method"""
+        pass
 
     @abstractmethod
     def MutatePopulation(self,pop):
@@ -806,13 +810,30 @@ class FabioMutation(MutationManager):
         self.MutationOperator = MutationOperator
         self.Xparameter = Xparameter
 
-    def MutatePopulation(self,pop): 
-        MutatedStructures = [] ####    
+    def MutatePopulation(self,pop,MutationOperatorParams): 
+        MutatedStructures = []
+        Operator = self.MutationOperator(MutationOperatorParams)
+        
         for structure in pop[xParameter:]:
-            mutated = self.MutationOperator(structure,params)
-            MutatedStructures += mutated
+            mutated = Operator.Mutate(structure)
+            MutatedStructures.append(mutated)
         return MutatedStructures
 
     def print_params(self):
         ########
         return ""
+
+class TestMutationOperator:
+    def __init__(self,parameters):
+        for key in parameters:
+            setattr(self,key,parameters[key])
+        pass
+    
+    def Mutate(structure):
+        materials = ['Ni','Co','Zn','Cu']
+        num = np.random.randint(0,len(structure))
+        newel = np.random.choice(materials)
+        structure[num].symbol = newel
+        return structure
+
+

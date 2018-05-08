@@ -619,21 +619,26 @@ class PopulationManager:
 
 
 class FabioManager(PopulationManager):
-    def __init__(self,MatingManager,MutationManager,Xparameter): #to add: parameters for following classes  
+    def __init__(self,MatingManager,MatingParameters,MutationManager,MutationParameters,Xparameter): #to add: parameters for following classes  
     """Performs an evolution step on a given population. Distributes work to the Mating and (if desired) Mutation classes, according to the Xparameter."""   
        PopulationManager.__init__(self)
        self.MatingManager=MatingManager
+       self.MatingParameters=MatingParameters
        self.MutationManager=MutationManager
+       self.MutationParameters=MutationParameters
        self.Xparameter=np.abs(Xparameter)
+
 
    def evolve(self,pop):
        #distribute work to MatingManager and MutationManager
        #should receive new two pop objects
-       MatingManager = self.MatingManager(MatingManagerParams)
-       OffspringStructures = self.MatingManager.MatePopulation(pop)
+       Xparameter = self.Xparameter
+
+       MatingManager = self.MatingManager(MatingParameters)
+       OffspringStructures = self.MatingManager.MatePopulation(pop,Xparameter)
        
-       MutationManager = self.MutationManager(self.MutationOperator,Xparameter) #####to be fixed
-       MutatedStructures = MutationManager.MutatePopulation(self.MutationOperatorParams)
+       MutationManager = self.MutationManager(MutationParameters)
+       MutatedStructures = MutationManager.MutatePopulation(pop,Xparameter)
         
        #generates the evolved population merging parents, offspring and mutated 
        newpop=[]
@@ -677,21 +682,23 @@ class MatingManager:
 
 
 class FabioMating(MatingManager):
-    def __init__(self,MatingOperator,Xparameter): #to add: parameters for following classes
+    def __init__(self,MatingParameters): #to add: parameters for following classes
         MatingManager.__init__(self)
-        self.Xparameter = Xparameter
-        self.MatingOperator = MatingOperator
+        self.MatingOperator = MatingParameters["MatingOperator"]
+        self.MatingOperatorParameters = MatingParameters[MatingOperatorParameters]
 
-    def MatePopulation(self,pop):
+    def MatePopulation(self,pop,Xparameter):
+        MatingOperatorParameters = self.MatingOperatorParameters
+        MatingOperator = self.MatingOperator(**MatingOperatorParameters)
         offspring = []
 
         #creates a list of structures suitable for mating
         poptomate = []
         for stru in pop:
             poptomate.append(stru.copy())
-        poptomate =  poptomate[0:(self.Xparameter)]
+        poptomate =  poptomate[0:Xparameter]
         
-        #mates every structure with a second, random structure from the whole population
+        #mates every structure with a second structure,randomly selected from the whole population
         for stru in poptomate:
             #selects random partner
             candidates = list(poptomate)
@@ -700,7 +707,7 @@ class FabioMating(MatingManager):
             partner = candidates[partnernumber]
             
             #performs mating
-            Children = self.MatingOperator.Mate(stru,partner) #to implement
+            Children = MatingOperator.Mate(stru,partner) #to implement
             for struc in Children:
                 offspring.append(struc.copy())
 
@@ -743,8 +750,9 @@ class SinusoidalCut(MatingOperator):
         return ""
 
 class TestMating(MatingOperator):
-    def __init__(self):
+    def __init__(self,MatingOperatorParameters):
         MatingOperator.__init__self()
+        pass    #no actual parameter for this test mating operator
 
     def Mate(self,partner1,partner2):
         Children = [] 
@@ -804,16 +812,18 @@ Receives a population, performs mutations according to the xParameter, and retur
 
 
 class FabioMutation(MutationManager):
-    def __init__(self,MutationOperator,Xparameter):
+    def __init__(self,MutationParameters):
         ###########
         MutationManager.__init__(self)
-        self.MutationOperator = MutationOperator
-        self.Xparameter = Xparameter
+        self.MutationOperator = MutationParameters["MutationOperator"]
+        self.MutationOperatorParameters = MutationParameters["MutationOperatorParameters"]
+    
 
-    def MutatePopulation(self,pop,MutationOperatorParams): 
-        MutatedStructures = []
-        Operator = self.MutationOperator(MutationOperatorParams)
+    def MutatePopulation(self,pop,Xparameter): 
+        MutationOperatorParams = self.MutationOperatorParameters
+        Operator = self.MutationOperator(**MutationOperatorParams)
         
+        MutatedStructures= []
         for structure in pop[xParameter:]:
             mutated = Operator.Mutate(structure)
             MutatedStructures.append(mutated)
@@ -825,11 +835,9 @@ class FabioMutation(MutationManager):
 
 class TestMutationOperator:
     def __init__(self,parameters):
-        for key in parameters:
-            setattr(self,key,parameters[key])
         pass
     
-    def Mutate(structure):
+    def Mutate(self,structure):
         materials = ['Ni','Co','Zn','Cu']
         num = np.random.randint(0,len(structure))
         newel = np.random.choice(materials)

@@ -97,3 +97,37 @@ class GCMetropolis(Criterion):
     
     def print_params(self):
         return '%s: T=%f, energy=%s'%(self.__class__.__name__,self.kT/kB,self.energy)
+
+
+class PopulationSelection:
+    """This class selects the structures of a population that are accepted in the following generation."""
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        """subclasses must call this method."""
+        pass
+        
+    @abstractmethod
+    def filter(self,pop,popsize):
+        """subclasses must implement this method. Has to return a filtered population"""
+        pass
+    
+    @abstractmethod
+    def print_params(self):
+        """subclasses must implement this method. Has to return a string containing
+        all the important parameters"""
+        pass
+
+class FabioSelection(PopulationSelection):
+    """Accepts the n=popsize best structures in the population, according to the fitness parameter found in info"""
+    def __init__(self):
+        PopulationSelection.__init__(self)
+
+    def filter(self,pop,popsize):
+        SortedPopulation = sorted(pop, key=lambda x: x.info["chiave"], reverse=True)  ###higher fitness comes FIRST
+        FilteredPopulation = SortedPopulation[popsize]
+
+        return FilteredPopulation
+
+    def print_params(self):
+        return "FabioSelection print_params"   ###still to be implemented

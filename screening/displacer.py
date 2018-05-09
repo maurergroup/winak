@@ -842,6 +842,7 @@ class TestMutationOperator:
         num = np.random.randint(0,len(structure))
         newel = np.random.choice(materials)
         structure[num].symbol = newel
+        structure.info["fitness"]=None
         return structure
 
 

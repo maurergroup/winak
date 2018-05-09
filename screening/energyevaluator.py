@@ -148,3 +148,57 @@ class grandEE(potEE):
         if self.opt2 is not None and self.fmax2 is not None:
             ret+=', Optimizer2=%s, fmax2=%f '%(self.opt2.__name__,self.fmax2)
 	return ret
+
+
+
+class PopulationEvaluator:
+    """Performs local optimization on every structure in the population, and tags it with a fitness value. Returns the optimized and structure population"""
+    __metaclass__ = ABCMeta
+
+    def __init__(self,EE,EEparameters):
+        """subclasses must call this method. EEparameters must be a dictionary"""
+        self.EE=EE(**EEparameters)
+        
+    @abstractmethod
+    def EvaluatePopulation(self,pop):
+        """subclasses must implement this method. Has to return a population of optimized structures"""
+        pass
+    
+    @abstractmethod
+    def print_params(self):
+        """subclasses must implement this method. Has to return a string containing
+        all the important parameters"""
+        pass
+
+class FabioPopEvaluator(PopulationEvaluator):
+    """For every structure in the population: Calls the selected EE to perform local optimization and evaluate energy. Combines such energy value with a similarity measure to get a fitness value. Writes the fitness in info['fitness']"""
+
+    def __init__(self,EE,EEparameters):
+        PopulationEvaluator.__init__(self,EE,EEparameters)
+    
+    def EvaluatePopulation(self,pop):
+        EvaluatedPopulation = []
+        for stru in pop:
+            proceed = True
+            if hasattr(stru,"info"):
+                if "fitness" in stru.info:
+                    if stru.info["fitness"] != None:
+                        EvaluatedPopulation.append(stru.copy)
+                        proceed = False
+            if proceed:
+###could implement a parallelization: to be discussed
+                result = self.EE.get_energy(stru)
+                if result is None:
+                    print("local optimization failed")
+                else:
+                    NewStructure = result[0]
+                    fitness = result[1]
+###to implement: similarity measurement
+                    if hasattr(NewStructure,"info"):
+                        NewStructure.info["fitness"] = fitness
+                    else:
+                        info = {"fitness":fitness}
+                        NewStructure.info = info
+                    EvaluatedPopulation.append(NewStructure.copy)
+
+        return EvaluatedPopulation

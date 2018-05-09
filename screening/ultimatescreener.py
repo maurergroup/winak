@@ -1,4 +1,4 @@
-# winak.screening.ultimatescreener
+#winak.screening.ultimatescreener
 #
 #    winak - python package for structure search and more in curvilinear coordinates
 #    Copyright (C) 2016  Reinhard J. Maurer and Konstantin Krautgasser 
@@ -139,6 +139,70 @@ class UltimateScreener:
         self.endT = datetime.now()
         self.log('ENDING Screening at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))
         self.log('Time elapsed: '+str(self.endT-self.startT))
+            
+       
+    def log(self, msg):
+        if self.logfile is not None:
+            with open(self.logfile,'a') as fn:
+                fn.write(msg+'\n')
+                fn.flush()
+
+
+
+class GeneticScreener:
+    """GeneticScreener
+    built on UltimateScreener
+    by Konstantin Krautgasser, November 2015
+    """
+
+    def __init__(self, pop,
+                 EnergyEvaluator,
+                 Displacer,
+                 Criterion,
+                # trajectory='minima.traj', still to figure out
+                 logfile='tt.log',
+                # savetrials=True): still to figure out
+        self.pop = pop
+        self.logfile=logfile
+        self.eneval=EnergyEvaluator
+        self.displacer=Displacer
+        self.crit=Criterion
+        #self.traj=Trajectory(trajectory,'w')
+        ### set initial trajectory with composition
+        ###
+        self.startT = datetime.now()
+        self.log('STARTING Screening at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+' KK 2015')
+        self.log('Using the following Parameters and Classes:')
+        self.log('EnergyEvaluator - '+self.eneval.print_params())#NOTE #still to implement in displacer
+        self.log('Displacer - '+self.displacer.print_params())
+        self.log('Criterion - '+self.crit.print_params())
+       # self.savetrials=savetrials ## if True, store all trial moves in folder 'trial'
+
+    def run(self, gens):
+        """Screen for defined number of generations."""
+        #if self.savetrials:
+         #   os.system('mkdir -p trial') still to figure out
+        
+        popsize = len(self.pop)
+        for gen in range(gens):    
+            #Displacing = creation of the new candidates
+            NewCandidates = self.displacer.evolve(self.pop)
+            
+            #EE = local optimization and tagging of the new structures
+            EvaluatedPopulation = self.eneval.EvaluatePopulation(NewCandidates)
+
+            #criterion = definition of the next generation
+            newgen = self.crit.filter(EvaluatedPopulation,popsize)
+            
+            self.pop = newgen
+
+        write('GeneticScreenerResults.traj',self.pop)
+            
+           # self.log('%s - step %d done, %s accepted, Energy = %f, Stoichiometry = %s '%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),step+1,acc,tmp[1], comp.stoich))
+       # self.endT = datetime.now()
+       # self.log('ENDING Screening at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))
+       # self.log('Time elapsed: '+str(self.endT-self.startT))
+### logging still to be implemented
             
        
     def log(self, msg):

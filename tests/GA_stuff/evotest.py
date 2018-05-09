@@ -26,7 +26,7 @@ write('pop.traj',pop)
 population = Trajectory('pop.traj','r')
 
 
-############# Controls ####################
+################ Controls ################
 
 Xparameter = 4
 
@@ -39,7 +39,7 @@ MatingOperatorParameters = {}
 MutationOperator = "TestMutationOperator"
 MutationOperatorParameters = {}
 
-###########################################
+##########################################
 
 
 
@@ -57,10 +57,10 @@ Parameters = {"MatingManager":MatingManager,
              }
 
 ########## set 
-GeneticAlgorithm = FabioManager(**Parameters)
+GeneticDisplacer = FabioManager(**Parameters)
 
 for cont in range(5):
-    population = GeneticAlgorithm.evolve(population)
+    population = GeneticDisplacer.evolve(population)
     population = np.random.shuffle(population)
     population = population[:4]
     print("Generation",cont,"completed")

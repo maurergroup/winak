@@ -32,6 +32,7 @@ except:
 ###
 
 from ase.atom import Atom
+from ase.io import read,write
 import numpy as np
 from winak.curvilinear.Coordinates import DelocalizedCoordinates as DC
 from winak.curvilinear.Coordinates import PeriodicCoordinates as PC
@@ -569,34 +570,36 @@ class GC(Displacer):
         return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
 
 
-class PopulationGenerator:
-    """This class generates a population of structures, starting from a generic input"""
-    __metaclass__ = ABCMeta
-
-    def __init__(self):
-        """subclasses must call this method."""
-        pass
-
-    @abstractmethod
-    def generate(self,input,popsize):
-        """subclasses must implement this method. Has to return a population of structures."""
-        pass
-
-    @abstractmethod
-    def print_params(self):
-        """subclasses must implement this method. Has to return a string containing all the imporant parameters."""
-        pass
-
-class OurPopulationGenerator(PopulationGenerator):
-    def __init__(self):
-        #still all to figure out
-
-    def generate(self,input,popsize):
-        #still all to figure out
-
-    def print_params(self):
-        #still all to figure out
-
+# class PopulationGenerator:
+#     """This class generates a population of structures, starting from a generic input"""
+#     __metaclass__ = ABCMeta
+# 
+#     def __init__(self):
+#         """subclasses must call this method."""
+#         pass
+# 
+#     @abstractmethod
+#     def generate(self,input,popsize):
+#         """subclasses must implement this method. Has to return a population of structures."""
+#         pass
+# 
+#     @abstractmethod
+#     def print_params(self):
+#         """subclasses must implement this method. Has to return a string containing all the imporant parameters."""
+#         pass
+# 
+# class OurPopulationGenerator(PopulationGenerator):
+#     def __init__(self):
+#         #still all to figure out
+#         pass
+# 
+#     def generate(self,input,popsize):
+#         #still all to figure out
+#         pass
+# 
+#     def print_params(self):
+#         #still all to figure out
+#         pass
 
 
 class PopulationManager:
@@ -620,40 +623,42 @@ class PopulationManager:
 
 class FabioManager(PopulationManager):
     def __init__(self,MatingManager,MatingParameters,MutationManager,MutationParameters,Xparameter): #to add: parameters for following classes  
-    """Performs an evolution step on a given population. Distributes work to the Mating and (if desired) Mutation classes, according to the Xparameter."""   
-       PopulationManager.__init__(self)
-       self.MatingManager=MatingManager
-       self.MatingParameters=MatingParameters
-       self.MutationManager=MutationManager
-       self.MutationParameters=MutationParameters
-       self.Xparameter=np.abs(Xparameter)
+        """Performs an evolution step on a given population. Distributes work to the Mating and (if desired) Mutation classes, according to the Xparameter."""   
+        PopulationManager.__init__(self)
+        self.MatingManager=NAMESPACE[MatingManager]
+        self.MatingParameters=MatingParameters
+        self.MutationManager=NAMESPACE[MutationManager]
+        self.MutationParameters=MutationParameters
+        self.Xparameter=np.abs(Xparameter)
 
 
-   def evolve(self,pop):
-       #distribute work to MatingManager and MutationManager
-       #should receive new two pop objects
-       Xparameter = self.Xparameter
+    def evolve(self,pop):
+        #distribute work to MatingManager and MutationManager
+        #should receive new two pop objects
+        Xparameter = self.Xparameter
+        MatingParameters = self.MatingParameters
+        MutationParameters = self.MutationParameters
 
-       MatingManager = self.MatingManager(MatingParameters)
-       OffspringStructures = self.MatingManager.MatePopulation(pop,Xparameter)
-       
-       MutationManager = self.MutationManager(MutationParameters)
-       MutatedStructures = MutationManager.MutatePopulation(pop,Xparameter)
+        MatingManager = self.MatingManager(MatingParameters)
+        OffspringStructures = MatingManager.MatePopulation(pop,Xparameter)
         
-       #generates the evolved population merging parents, offspring and mutated 
-       newpop=[]
-       for stru in pop:
-           newpop.append(stru.copy())
+        MutationManager = self.MutationManager(MutationParameters)
+        MutatedStructures = MutationManager.MutatePopulation(pop,Xparameter)
+         
+        #generates the evolved population merging parents, offspring and mutated 
+        newpop=[]
+       
+        for stru in pop:
+            newpop.append(stru.copy()) 
 
-       for stru in OffspringStructures:
-           newpop.append(stru.copy())
-
-       for stru in MutatedStructures:
-           newpop.append(stru.copy())
-       #to be implemented: option to avoid overwriting
-       write('newpop.traj',newpop)
-       newpop = Trajectory('newpop.traj','r')
-       return newpop
+        for stru in OffspringStructures:
+            newpop.append(stru.copy())
+    
+        for stru in MutatedStructures:
+            newpop.append(stru.copy())
+            
+        #to be implemented: option to avoid overwriting
+        return newpop
 
     def print_params(self):
         #to implement
@@ -684,8 +689,8 @@ class MatingManager:
 class FabioMating(MatingManager):
     def __init__(self,MatingParameters): #to add: parameters for following classes
         MatingManager.__init__(self)
-        self.MatingOperator = MatingParameters["MatingOperator"]
-        self.MatingOperatorParameters = MatingParameters[MatingOperatorParameters]
+        self.MatingOperator = NAMESPACE[MatingParameters["MatingOperator"]]
+        self.MatingOperatorParameters = MatingParameters["MatingOperatorParameters"]
 
     def MatePopulation(self,pop,Xparameter):
         MatingOperatorParameters = self.MatingOperatorParameters
@@ -698,14 +703,20 @@ class FabioMating(MatingManager):
             poptomate.append(stru.copy())
         poptomate =  poptomate[0:Xparameter]
         
+        
         #mates every structure with a second structure,randomly selected from the whole population
         for stru in poptomate:
+           
             #selects random partner
-            candidates = list(poptomate)
-            candidates.remove(stru)            
+            candidates = list(pop)
+            candidates.remove(stru)
+           
+
             partnernumber = np.random.randint(0,len(candidates))
+          
             partner = candidates[partnernumber]
-            
+           
+
             #performs mating
             Children = MatingOperator.Mate(stru,partner) #to implement
             for struc in Children:
@@ -740,18 +751,22 @@ class MatingOperator:
 
 class SinusoidalCut(MatingOperator):
     def __init__(self,parameters):
-        #to implement
+    
+    
+        pass
+    #to implement
          #begin with something random and ugly
     def Mate(self,partner1,partner2):
         #to be implemented
+        pass
 
     def print_params(self):
         #to be implemented
         return ""
 
 class TestMating(MatingOperator):
-    def __init__(self,MatingOperatorParameters):
-        MatingOperator.__init__self()
+    def __init__(self):
+        MatingOperator.__init__(self)
         pass    #no actual parameter for this test mating operator
 
     def Mate(self,partner1,partner2):
@@ -762,23 +777,23 @@ class TestMating(MatingOperator):
         child2 = Atoms() 
         if choice > 0.5: 
             for atom in partner1: 
-                if atom.x > 7.5: 
+                if atom.x > 6.75: 
                     child1.append(atom) 
                 else: 
                     child2.append(atom) 
             for atom in partner2: 
-                if atom.x < 7.5: 
+                if atom.x < 6.75: 
                     child1.append(atom) 
                 else: 
                     child2.append(atom) 
         else: 
-            for atom in stru1: 
-                if atom.y > 7.5: 
+            for atom in partner1: 
+                if atom.y > 6.75: 
                     child1.append(atom) 
                 else: 
                     child2.append(atom)
-            for atom in stru2: 
-                if atom.y < 7.5: 
+            for atom in partner2: 
+                if atom.y < 6.75: 
                     child1.append(atom) 
                 else: 
                     child2.append(atom) 
@@ -815,18 +830,25 @@ class FabioMutation(MutationManager):
     def __init__(self,MutationParameters):
         ###########
         MutationManager.__init__(self)
-        self.MutationOperator = MutationParameters["MutationOperator"]
+        self.MutationOperator = NAMESPACE[MutationParameters["MutationOperator"]]
         self.MutationOperatorParameters = MutationParameters["MutationOperatorParameters"]
     
 
-    def MutatePopulation(self,pop,Xparameter): 
+    def MutatePopulation(self,population,Xparameter): 
         MutationOperatorParams = self.MutationOperatorParameters
         Operator = self.MutationOperator(**MutationOperatorParams)
-        
+        Xparameter = int(abs(Xparameter))   
         MutatedStructures= []
-        for structure in pop[xParameter:]:
+        pop = []
+        for structure in population:
+            pop.append(structure.copy())
+
+
+        for structure in pop[Xparameter:]:
             mutated = Operator.Mutate(structure)
+           # print("MUTATED:",mutated)
             MutatedStructures.append(mutated)
+       # print("MUTATEDPOP:",MutatedStructures)    
         return MutatedStructures
 
     def print_params(self):
@@ -834,15 +856,23 @@ class FabioMutation(MutationManager):
         return ""
 
 class TestMutationOperator:
-    def __init__(self,parameters):
+    def __init__(self):
         pass
     
     def Mutate(self,structure):
         materials = ['Ni','Co','Zn','Cu']
+       # print("MUTATIONTEST")
+       # print("STRUCTURE RECEIVED:",structure)
         num = np.random.randint(0,len(structure))
+       # print("SELECTED NUMBER:",num)
         newel = np.random.choice(materials)
+       # print("NEW ELEMENT:",newel)
+       # print("OLD ATOM:", structure[num].symbol)
         structure[num].symbol = newel
+       # print("NEW ATOM:",structure[num].symbol)
+       # print("NEW STRUCTURE:",structure)
         structure.info["fitness"]=None
+       
         return structure
 
-
+NAMESPACE = locals()

@@ -157,7 +157,7 @@ class PopulationEvaluator:
 
     def __init__(self,EE,EEparameters):
         """subclasses must call this method. EEparameters must be a dictionary"""
-        self.EE=EE(**EEparameters)
+        self.EE=NAMESPACE[EE](**EEparameters)
         
     @abstractmethod
     def EvaluatePopulation(self,pop):
@@ -183,7 +183,7 @@ class FabioPopEvaluator(PopulationEvaluator):
             if hasattr(stru,"info"):
                 if "fitness" in stru.info:
                     if stru.info["fitness"] != None:
-                        EvaluatedPopulation.append(stru.copy)
+                        EvaluatedPopulation.append(stru.copy())
                         proceed = False
             if proceed:
 ###could implement a parallelization: to be discussed
@@ -199,6 +199,11 @@ class FabioPopEvaluator(PopulationEvaluator):
                     else:
                         info = {"fitness":fitness}
                         NewStructure.info = info
-                    EvaluatedPopulation.append(NewStructure.copy)
+                    EvaluatedPopulation.append(NewStructure.copy())
 
         return EvaluatedPopulation
+
+    def print_params(self):
+        return "FabioPopEvaluator"
+
+NAMESPACE=locals()

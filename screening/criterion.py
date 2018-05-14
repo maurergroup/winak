@@ -124,9 +124,8 @@ class FabioSelection(PopulationSelection):
         PopulationSelection.__init__(self)
 
     def filter(self,pop,popsize):
-        SortedPopulation = sorted(pop, key=lambda x: x.info["chiave"], reverse=True)  ###higher fitness comes FIRST
-        FilteredPopulation = SortedPopulation[popsize]
-
+        SortedPopulation = sorted(pop, key=lambda x: x.info["fitness"], reverse=True)  ###higher fitness comes FIRST
+        FilteredPopulation = SortedPopulation[:popsize]
         return FilteredPopulation
 
     def print_params(self):

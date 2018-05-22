@@ -27,8 +27,8 @@ try:
     from ase.build.tools import sort
 except:
     from ase.utils.geometry import sort
-import os 
-
+import os
+from ase.io import write
 
 class UltimateScreener:
     """UltimateScreener
@@ -159,51 +159,75 @@ class GeneticScreener:
                  EnergyEvaluator,
                  Displacer,
                  Criterion,
-                # trajectory='minima.traj', still to figure out
-                 logfile='tt.log',
-                # savetrials=True): still to figure out
+                 logfile='GS.log',
+                 savegens=False,
+                 break_limit=None,
+                 break_limit_top=None):
         self.pop = pop
         self.logfile=logfile
         self.eneval=EnergyEvaluator
         self.displacer=Displacer
         self.crit=Criterion
-        #self.traj=Trajectory(trajectory,'w')
-        ### set initial trajectory with composition
-        ###
         self.startT = datetime.now()
-        self.log('STARTING Screening at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+' KK 2015')
+        self.log('STARTING Screening at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+' KK 2015 / FC 2018')
         self.log('Using the following Parameters and Classes:')
-        self.log('EnergyEvaluator - '+self.eneval.print_params())#NOTE #still to implement in displacer
+        self.log('EnergyEvaluator - '+self.eneval.print_params())
         self.log('Displacer - '+self.displacer.print_params())
         self.log('Criterion - '+self.crit.print_params())
-       # self.savetrials=savetrials ## if True, store all trial moves in folder 'trial'
+        self.savegens=savegens #if True, saves a .traj file for every generation
+        if break_limit == None:  #if these number of consecutive generations have no new structure, the cycle breaks
+            self.break_limit = -1
+        else:
+            self.break_limit = break_limit     
+            
+        if break_limit_top == None:   #if the best structure remains the same for this number of consecutive generations, the cycle breaks
+            self.brek_limit_top = -1
+        else:
+            self.break_limit_top = break_limit_top
 
     def run(self, gens):
-        """Screen for defined number of generations."""
-        #if self.savetrials:
-         #   os.system('mkdir -p trial') still to figure out
-        
-        popsize = len(self.pop)
-        for gen in range(gens):    
+        """Screen for defined number of generations. If break_limit is set, stops after n. break_limit consecutive unmodified generations """
+        gens = int(gens)
+        break_limit = self.break_limit
+        break_limit_top = self.break_limit_top
+        for gen in range(gens):
+            if break_limit == 0:
+                self.log("Break limit. Interrupting.")
+                break
+            if break_limit_top == 0:
+                self.log("Break limit top. Interrupting.")
+                break
+            self.log("\n"+"\n"+"Generation "+str(gen+1))
             #Displacing = creation of the new candidates
-            NewCandidates = self.displacer.evolve(self.pop)
-            
+            NewCandidates,report = self.displacer.evolve(self.pop)
+            self.log(report)
             #EE = local optimization and tagging of the new structures
-            EvaluatedPopulation = self.eneval.EvaluatePopulation(NewCandidates)
-
+            EvaluatedPopulation,report = self.eneval.EvaluatePopulation(NewCandidates)
+            self.log(report)
             #criterion = definition of the next generation
-            newgen = self.crit.filter(EvaluatedPopulation,popsize)
-            
+            newgen,report = self.crit.filter(EvaluatedPopulation)
+            self.log(report)
+            if self.pop == newgen:
+                break_limit -= 1
+            else:
+                break_limit = self.break_limit
+            if self.pop[0] == newgen[0]:
+                break_limit_top -= 1
+            else:
+                break_limit_top = self.break_limit_top
             self.pop = newgen
-
-        write('GeneticScreenerResults.traj',self.pop)
-            
-           # self.log('%s - step %d done, %s accepted, Energy = %f, Stoichiometry = %s '%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),step+1,acc,tmp[1], comp.stoich))
-       # self.endT = datetime.now()
-       # self.log('ENDING Screening at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))
-       # self.log('Time elapsed: '+str(self.endT-self.startT))
-### logging still to be implemented
-            
+            if self.savegens:
+                if not os.path.exists("Generations"):
+                    os.mkdir("Generations")
+                os.chdir("Generations")
+                write("Generation"+str(gen+1)+".traj",self.pop)
+                os.chdir("..")
+        if os.path.exists("relax.traj"):
+            os.remove("relax.traj")
+        write("Results.traj",self.pop)
+        self.endT = datetime.now()
+        self.log('ENDING Screening at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))
+        self.log('Time elapsed: '+str(self.endT-self.startT))            
        
     def log(self, msg):
         if self.logfile is not None:

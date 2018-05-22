@@ -6,6 +6,8 @@ from ase.visualize import view
 from winak.screening.displacer import FabioManager
 from winak.screening.energyevaluator import FabioPopEvaluator
 from winak.screening.criterion import FabioSelection
+from winak.screening.ultimatescreener import GeneticScreener
+
 
 from ase.optimize import BFGS
 from ase.calculators.emt import EMT
@@ -26,9 +28,9 @@ for el in materials:
 
 
 
-################ Controls ################
-################ Displacement ###############
-Xparameter = 2 
+################ Controls ####################
+################ Displacement ################
+Xparameter = 1 
 
 MatingManager = "FabioMating"
 MutationManager = "FabioMutation"
@@ -39,17 +41,21 @@ MatingOperatorParameters = {}
 MutationOperator = "TestMutationOperator"
 MutationOperatorParameters = {}
 
-#############################################
-############### Evaluation #################
+##############################################
+############### Evaluation ###################
 EE = "potEE"
-EEparameters = {"calc":EMT(),"opt":BFGS,"fmax":1.0}
+EEparameters = {"calc":EMT(),"opt":BFGS,"fmax":1.0,"optlog":None}
 
 ##############################################
 ############### Criterion ####################
 popsize = 4
 
 ##############################################
+############### Screening ####################
+break_limit = 30
+break_limit_top = 100
 
+##############################################
 
 MatingParameters = {"MatingOperator":MatingOperator,
                     "MatingOperatorParameters":MatingOperatorParameters
@@ -57,38 +63,22 @@ MatingParameters = {"MatingOperator":MatingOperator,
 MutationParameters = {"MutationOperator":MutationOperator,
                       "MutationOperatorParameters":MutationOperatorParameters
                      }
-Parameters = {"MatingManager":MatingManager,
-              "MatingParameters":MatingParameters,
-              "MutationManager":MutationManager,
-              "MutationParameters":MutationParameters,
-              "Xparameter":Xparameter
-             }
+DisplacementParameters = {"MatingManager":MatingManager,
+                          "MatingParameters":MatingParameters,
+                          "MutationManager":MutationManager,
+                          "MutationParameters":MutationParameters,
+                          "Xparameter":Xparameter
+                          }
+
 
  
-GeneticDisplacer = FabioManager(**Parameters)
+GeneticDisplacer = FabioManager(**DisplacementParameters)
 PopulationEvaluator = FabioPopEvaluator(EE,EEparameters)
-Criterion = FabioSelection()
+Criterion = FabioSelection(popsize)
 
 
-
-###TO BE IMPLEMENTED: GENETIC SCREENER
-for cont in range(10):
-    pop = GeneticDisplacer.evolve(pop)
-    print("Displacement complete. Population:",pop)
-    pop = PopulationEvaluator.EvaluatePopulation(pop)
-    print("Evaluation complete. Population:",pop)
-    pop = Criterion.filter(pop,popsize)
-    print("Selection complete. Population:",pop)
-    
-    for struc in pop:
-        print(struc.get_chemical_formula(),struc.info)
-
-    print("Generation",cont,"completed")
-
-write("GAresult.traj",pop)
-
-GAresult = Trajectory('GAresult.traj','r')
-view(GAresult)
+Screener = GeneticScreener(pop,PopulationEvaluator,GeneticDisplacer,Criterion,savegens=False, break_limit=break_limit, break_limit_top = break_limit_top)
+Screener.run(500)
 
 
 

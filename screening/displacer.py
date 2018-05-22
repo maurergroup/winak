@@ -625,44 +625,45 @@ class FabioManager(PopulationManager):
     def __init__(self,MatingManager,MatingParameters,MutationManager,MutationParameters,Xparameter): #to add: parameters for following classes  
         """Performs an evolution step on a given population. Distributes work to the Mating and (if desired) Mutation classes, according to the Xparameter."""   
         PopulationManager.__init__(self)
-        self.MatingManager=NAMESPACE[MatingManager]
+        self.MatingManager=NAMESPACE[MatingManager](MatingParameters)
         self.MatingParameters=MatingParameters
-        self.MutationManager=NAMESPACE[MutationManager]
+        self.MutationManager=NAMESPACE[MutationManager](MutationParameters)
         self.MutationParameters=MutationParameters
         self.Xparameter=np.abs(Xparameter)
 
 
     def evolve(self,pop):
         #distribute work to MatingManager and MutationManager
-        #should receive new two pop objects
+        #should receive two new pop objects
         Xparameter = self.Xparameter
-        MatingParameters = self.MatingParameters
-        MutationParameters = self.MutationParameters
-
-        MatingManager = self.MatingManager(MatingParameters)
-        OffspringStructures = MatingManager.MatePopulation(pop,Xparameter)
         
-        MutationManager = self.MutationManager(MutationParameters)
-        MutatedStructures = MutationManager.MutatePopulation(pop,Xparameter)
+        OffspringStructures = self.MatingManager.MatePopulation(pop,Xparameter)
+        
+        MutatedStructures = self.MutationManager.MutatePopulation(pop,Xparameter)
          
         #generates the evolved population merging parents, offspring and mutated 
         newpop=[]
        
         for stru in pop:
+            stru.info["New"]=False
             newpop.append(stru.copy()) 
 
         for stru in OffspringStructures:
+            stru.info["New"]=True
+            stru.info["Origin"]="Child"
             newpop.append(stru.copy())
     
         for stru in MutatedStructures:
+            stru.info["New"]=True
+            stru.info["Origin"]="Mutated"
             newpop.append(stru.copy())
             
-        #to be implemented: option to avoid overwriting
-        return newpop
+        
+        return newpop,"\n"+"Displacing."
 
     def print_params(self):
-        #to implement
-        return "" 
+        
+        return "Population Manager: FabioManager"+"\n"+"Performing matings on the "+str(self.Xparameter)+" best structures with Mating Manager: "+self.MatingManager.__class__.__name__+"."+"\n"+self.MatingManager.print_params()+"\n"+"Performing mutations on the remaining structures with Mutation Manager: "+self.MutationManager.__class__.__name__+"."+"\n"+self.MutationManager.print_params() 
 
 
 
@@ -689,44 +690,43 @@ class MatingManager:
 class FabioMating(MatingManager):
     def __init__(self,MatingParameters): #to add: parameters for following classes
         MatingManager.__init__(self)
-        self.MatingOperator = NAMESPACE[MatingParameters["MatingOperator"]]
-        self.MatingOperatorParameters = MatingParameters["MatingOperatorParameters"]
+        self.MatingOperator = NAMESPACE[MatingParameters["MatingOperator"]](**MatingParameters["MatingOperatorParameters"])
+        
 
     def MatePopulation(self,pop,Xparameter):
-        MatingOperatorParameters = self.MatingOperatorParameters
-        MatingOperator = self.MatingOperator(**MatingOperatorParameters)
+        poptowork=[]
+        for stru in pop:
+            poptowork.append(stru.copy())
         offspring = []
 
         #creates a list of structures suitable for mating
         poptomate = []
-        for stru in pop:
+        for stru in poptowork[:Xparameter]:
             poptomate.append(stru.copy())
-        poptomate =  poptomate[0:Xparameter]
+       
         
         
         #mates every structure with a second structure,randomly selected from the whole population
         for stru in poptomate:
            
             #selects random partner
-            candidates = list(pop)
+            candidates = poptowork[:]
             candidates.remove(stru)
-           
-
             partnernumber = np.random.randint(0,len(candidates))
-          
             partner = candidates[partnernumber]
            
 
             #performs mating
-            Children = MatingOperator.Mate(stru,partner) #to implement
+            Children = self.MatingOperator.Mate(stru,partner)
+            #tags children with parents indices, and attaches them to offspring list
             for struc in Children:
+                struc.info["Ascendance"] = "%s + %s" %(poptowork.index(stru)+1,poptowork.index(partner)+1)
                 offspring.append(struc.copy())
 
         return offspring
 
     def print_params(self): 
-        #to implement
-        return ""
+        return "Employed Mating Operator: "+self.MatingOperator.__class__.__name__+" working with parameters: "+self.MatingOperator.print_params()
 
 
 
@@ -773,8 +773,8 @@ class TestMating(MatingOperator):
         Children = [] 
         choice = np.random.rand() 
   
-        child1 = Atoms() 
-        child2 = Atoms() 
+        child1 = Atoms(pbc=True) 
+        child2 = Atoms(pbc=True) 
         if choice > 0.5: 
             for atom in partner1: 
                 if atom.x > 6.75: 
@@ -804,7 +804,7 @@ class TestMating(MatingOperator):
         return Children
 
     def print_params(self):
-        return "TestMating print_params"
+        return "No parameter for TestMating"
 
 class MutationManager:
     """This class performs mutations on a population.
@@ -830,49 +830,48 @@ class FabioMutation(MutationManager):
     def __init__(self,MutationParameters):
         ###########
         MutationManager.__init__(self)
-        self.MutationOperator = NAMESPACE[MutationParameters["MutationOperator"]]
-        self.MutationOperatorParameters = MutationParameters["MutationOperatorParameters"]
+        self.MutationOperator = NAMESPACE[MutationParameters["MutationOperator"]](**MutationParameters['MutationOperatorParameters'])
     
 
     def MutatePopulation(self,population,Xparameter): 
-        MutationOperatorParams = self.MutationOperatorParameters
-        Operator = self.MutationOperator(**MutationOperatorParams)
         Xparameter = int(abs(Xparameter))   
         MutatedStructures= []
-        pop = []
-        for structure in population:
-            pop.append(structure.copy())
-
-
-        for structure in pop[Xparameter:]:
-            mutated = Operator.Mutate(structure)
-           # print("MUTATED:",mutated)
+        
+        poptomutate=[]
+        for structure in population[Xparameter:]:
+            poptomutate.append(structure.copy())
+        for structure in poptomutate:
+            #performs mutation
+            mutated = self.MutationOperator.Mutate(structure)
+            #tags mutated with "parent" index, and attaches it to MutatedStructures list
+            mutated.info["Ascendance"]=str(population.index(structure)+1)
             MutatedStructures.append(mutated)
-       # print("MUTATEDPOP:",MutatedStructures)    
+         
         return MutatedStructures
 
     def print_params(self):
-        ########
-        return ""
+        return "Employed Mutation Operator: "+self.MutationOperator.__class__.__name__+" working with parameters: "+self.MutationOperator.print_params()
 
 class TestMutationOperator:
     def __init__(self):
         pass
     
     def Mutate(self,structure):
+        newstructure=structure.copy()
         materials = ['Ni','Co','Zn','Cu']
        # print("MUTATIONTEST")
        # print("STRUCTURE RECEIVED:",structure)
-        num = np.random.randint(0,len(structure))
+        num = np.random.randint(0,len(newstructure))
        # print("SELECTED NUMBER:",num)
         newel = np.random.choice(materials)
        # print("NEW ELEMENT:",newel)
        # print("OLD ATOM:", structure[num].symbol)
-        structure[num].symbol = newel
+        newstructure[num].symbol = newel
        # print("NEW ATOM:",structure[num].symbol)
        # print("NEW STRUCTURE:",structure)
-        structure.info["fitness"]=None
+        newstructure.info["fitness"]=None
        
-        return structure
-
+        return newstructure
+    def print_params(self):
+        return "No parameters for TestMutating"
 NAMESPACE = locals()

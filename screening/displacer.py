@@ -42,6 +42,7 @@ from winak.curvilinear.InternalCoordinates import ValenceCoordinateGenerator as 
 from winak.curvilinear.InternalCoordinates import icSystem
 from winak.globaloptimization.disspotter import DisSpotter
 from winak.screening.composition import *
+from ase.constraints import FixAtoms
 import os
 
 class Displacer:
@@ -750,15 +751,119 @@ class MatingOperator:
 
 
 class SinusoidalCut(MatingOperator):
-    def __init__(self,parameters):
-    
-    
-        pass
-    #to implement
-         #begin with something random and ugly
+    def __init__(self,NumberOfAttempts=10,FixedElements=[]):
+        MatingOperator.__init__(self)
+        self.NumberOfAttempts = NumberOfAttempts
+        self.FixedElements = FixedElements
+        
+
     def Mate(self,partner1,partner2):
-        #to be implemented
-        pass
+        # the method works on the mutable atoms of the parents. It is assumed that immutable atoms are identical for both parents
+        # extracts pbc and cell from partner1
+        pbc = partner1.get_pbc()
+        cell= partner1.get_cell()
+
+        # instantiates children objects, and building blocks objects
+        child1 = Atoms(pbc=pbc,cell=cell)
+        child2 = Atoms(pbc=pbc,cell=cell)
+        block1 = Atoms(pbc=pbc,cell=cell)
+        block2 = Atoms(pbc=pbc,cell=cell)
+
+        #copies mutable atoms of partner1 to block1 ; copies immutable atoms of partner1 to both children
+        FixedElements = {x:0 for x in self.FixedElements}
+        for atom in partner1:
+            if atom.tag == 1:  ###tag=1 : immutable
+                child1.append(atom)
+                child2.append(atom)
+            else: ###tag=0 : mutable
+                block1.append(atom)
+                if atom.symbol in FixedElements:
+                    FixedElements[atom.symbol] += 1
+        #copies mutable atoms of partner2 to block2 ;
+        for atom in partner2:
+            if atom.tag == 1:
+                pass
+            else:
+                block2.append(atom)
+
+        #tries NumberOfAttempts times to produce structures that:
+        #1)Present no atomic superimpositions
+        #2)Maintain the original number of atoms of the elements listed in FixedElements
+        
+        for attempts in range(self.NumberOfAttempts):
+
+            ####choose vectors and stuff
+
+            frag11,frag12 = self.__perform_cut(block1,None)  ###no parameter yet
+            frag21,frag22 = self.__perform_cut(block2,None)  ###no parameter yet
+            
+            newblock1 = Atoms(pbc=pbc,cell=cell)
+            for atom in frag11:
+                newblock1.append(atom)
+            for atom in frag22:
+                newblock1.append(atom)
+
+            newblock2 = Atoms(pbc=pbc,cell=cell)
+            for atom in frag12:
+                newblock2.append(atom)
+            for atom in frag21:
+                newblock2.append(atom)
+
+
+            confirm1 = True and self.__check_composition(newblock1,FixedElements)###__check_collision(newblock1)
+            confirm2 = True and self.__check_composition(newblock2,FixedElements) ###__check_collision(newblock2)
+
+            if confirm1 and confirm2:
+                break
+
+
+        #adds the mixed blocks to children, and fixes the immutable atoms for the relaxation
+        for atom in newblock1:
+            child1.append(atom)
+        constraint = FixAtoms(mask=[atom.tag == 1 for atom in child1])
+        child1.set_constraint(constraint)
+
+        for atom in newblock2:
+            child2.append(atom)
+        constraint = FixAtoms(mask=[atom.tag == 1 for atom in child2])
+        child2.set_constraint(constraint)
+        
+        children = []
+        children.append(child1)
+        children.append(child2)
+
+        return children
+
+    def __perform_cut(self,block,parameters):
+        ### performs a cut on a block, according to parameters
+        frag1 = Atoms(pbc=block.get_pbc(),cell=block.get_cell())
+        frag2 = Atoms(pbc=block.get_pbc(),cell=block.get_cell())
+        ###test
+        for atom in block:
+            if atom.x > 4.5:
+                frag1.append(atom)
+            else:
+                frag2.append(atom)
+        return frag1,frag2
+
+    def __check_composition(self,structure,FixedElements):
+        ### checks that a structure is maintaining the original composition, for the elements in FixedElements 
+        composition = dict()
+        for element in FixedElements:
+            composition[element] = 0
+        for atom in structure:
+            if atom.symbol in composition:
+                composition[atom.symbol] += 1
+        Response = True
+        for element in FixedElements:
+            if FixedElements[element] != composition[element]:
+                Response = False
+
+        print("confronting",FixedElements,"and",composition)
+        return Response
+
+
+            
 
     def print_params(self):
         #to be implemented
@@ -770,25 +875,28 @@ class TestMating(MatingOperator):
         pass    #no actual parameter for this test mating operator
 
     def Mate(self,partner1,partner2):
-        Children = [] 
-        choice = np.random.rand() 
-  
-        child1 = Atoms(pbc=True) 
-        child2 = Atoms(pbc=True) 
+        #extracts pbc, cell, and constraints informations from partner1
+        pbc = partner1.get_pbc()
+        cell = partner1.get_cell()
+        constraint = None
+
+        child1 = Atoms(pbc=pbc,cell=cell) 
+        child2 = Atoms(pbc=pbc,cell=cell) 
+        choice = 0.6 #np.random.rand()
         if choice > 0.5: 
             for atom in partner1: 
-                if atom.x > 6.75: 
+                if atom.x > 4.5: #6.75: 
                     child1.append(atom) 
                 else: 
                     child2.append(atom) 
             for atom in partner2: 
-                if atom.x < 6.75: 
+                if atom.x < 4.5: #6.75: 
                     child1.append(atom) 
                 else: 
                     child2.append(atom) 
         else: 
             for atom in partner1: 
-                if atom.y > 6.75: 
+                if atom.y > 6.75:
                     child1.append(atom) 
                 else: 
                     child2.append(atom)
@@ -797,7 +905,8 @@ class TestMating(MatingOperator):
                     child1.append(atom) 
                 else: 
                     child2.append(atom) 
-  
+      
+        Children = []
         Children.append(child1) 
         Children.append(child2) 
    

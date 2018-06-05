@@ -233,18 +233,15 @@ class FabioPopEvaluator(PopulationEvaluator):
         #first, check stoichiometry
         if a.get_chemical_formula() != b.get_chemical_formula():
             return False
-        else:
-            pass
+        
         #second, check energy
-        if (a.info["fitness"] - b.info["fitness"]) > 0.1:
+        if abs(a.info["fitness"] - b.info["fitness"]) > 0.1:
             return False
-        else:
-            pass
+        
+        
         #third, check structure
         if 0==1:            # metodofighissimo(a,b) < 0.99:
             return False
-        else:
-            pass
 
         return True
     

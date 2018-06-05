@@ -220,7 +220,7 @@ class GeneticScreener:
                 if not os.path.exists("Generations"):
                     os.mkdir("Generations")
                 os.chdir("Generations")
-                write("Generation"+str(gen+1)+".traj",self.pop)
+                write(str(gen+1)+"_generation.traj",self.pop)
                 os.chdir("..")
         if os.path.exists("relax.traj"):
             os.remove("relax.traj")

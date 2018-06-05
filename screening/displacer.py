@@ -43,7 +43,11 @@ from winak.curvilinear.InternalCoordinates import icSystem
 from winak.globaloptimization.disspotter import DisSpotter
 from winak.screening.composition import *
 from ase.constraints import FixAtoms
+from ase.data import covalent_radii
+from ase.data import atomic_numbers
+from ase.neighborlist import NeighborList
 import os
+import random
 
 class Displacer:
     """This class performs a step in any way you see fit. It is also 
@@ -553,7 +557,7 @@ class GC(Displacer):
                 disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain, adjust_cm=self.adjust_cm, adsorbate=(adsidx[0],adsidx[-1]+1), periodic=self.periodic, cell_scale=self.cell_scale)
                 #print 'displacing by '+str(self.stepwidth)+', ads = '+str(adsidx[0])+','+str(adsidx[-1]+1)
             else:
-                disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain, adjust_cm=self.adjust_cm, adsorbate=None)#self.adsorbate)
+                disp=DI(self.stepwidth,numdelocmodes=self.numdelmodes,constrain=self.constrain, adjust_cm=self.adjust_cm, adsorbate=None, periodic=self.periodic)#self.adsorbate)
                 #print 'displacing by '+str(self.stepwidth)
             tmp=disp.displace(tmp)
         if self.adjust_cm:
@@ -727,7 +731,7 @@ class FabioMating(MatingManager):
         return offspring
 
     def print_params(self): 
-        return "Employed Mating Operator: "+self.MatingOperator.__class__.__name__+" working with parameters: "+self.MatingOperator.print_params()
+        return "Employed Mating Operator: "+self.MatingOperator.print_params()
 
 
 
@@ -751,11 +755,11 @@ class MatingOperator:
 
 
 class SinusoidalCut(MatingOperator):
-    def __init__(self,NumberOfAttempts=10,FixedElements=[]):
+    def __init__(self,NumberOfAttempts=100,FixedElements=[],collision_threshold=0.5):
         MatingOperator.__init__(self)
         self.NumberOfAttempts = NumberOfAttempts
         self.FixedElements = FixedElements
-        
+        self.collision_threshold = collision_threshold  
 
     def Mate(self,partner1,partner2):
         # the method works on the mutable atoms of the parents. It is assumed that immutable atoms are identical for both parents
@@ -786,65 +790,134 @@ class SinusoidalCut(MatingOperator):
             else:
                 block2.append(atom)
 
-        #tries NumberOfAttempts times to produce structures that:
-        #1)Present no atomic superimpositions
-        #2)Maintain the original number of atoms of the elements listed in FixedElements
-        
+        # Tries NumberOfAttempts times to produce structures that:
+        #   1)Present no atomic superimpositions
+        #   2)Maintain the original number of atoms of the elements listed in FixedElements
+        # As soon as both the produced structures satisfy these requirements, they are returned.
+        # If only one structure is acceptable, it is stored and the procedure continues:
+        # if two acceptable structures are eventually produced, the stored structure is discarded;
+        # if the NumberOfAttempts attempts fail to produce a couple of acceptable structures,
+        # the stored structure is returned.
+        # If the NumberOfAttempts attempts fail to produce ANY acceptable structure, no structure is returned.
+       
+        children = []
+        stored = None
+        DoubleSuccess = False
         for attempts in range(self.NumberOfAttempts):
 
             ####choose vectors and stuff
 
-            frag11,frag12 = self.__perform_cut(block1,None)  ###no parameter yet
-            frag21,frag22 = self.__perform_cut(block2,None)  ###no parameter yet
-            
+            frag11,frag12,frag21,frag22 = self.__perform_cut_XY(block1,block2)
+                        
             newblock1 = Atoms(pbc=pbc,cell=cell)
             for atom in frag11:
                 newblock1.append(atom)
-            for atom in frag22:
+            for atom in frag21:
                 newblock1.append(atom)
 
             newblock2 = Atoms(pbc=pbc,cell=cell)
             for atom in frag12:
                 newblock2.append(atom)
-            for atom in frag21:
+            for atom in frag22:
                 newblock2.append(atom)
-
-
-            confirm1 = True and self.__check_composition(newblock1,FixedElements)###__check_collision(newblock1)
-            confirm2 = True and self.__check_composition(newblock2,FixedElements) ###__check_collision(newblock2)
+            
+            composition_1 = self.__check_composition(newblock1,FixedElements)
+            collision_1 = self.__check_collision(newblock1)
+            confirm1 = composition_1 and collision_1 
+            composition_2 = self.__check_composition(newblock2,FixedElements) 
+            collision_2 = self.__check_collision(newblock2)
+            confirm2 = composition_2 and collision_2
+            
 
             if confirm1 and confirm2:
-                break
+                #adds the mixed blocks to children, and fixes the immutable atoms for the relaxation
+                for atom in newblock1:
+                    child1.append(atom)
+                constraint = FixAtoms(mask=[atom.tag == 1 for atom in child1])
+                child1.set_constraint(constraint)
 
-
-        #adds the mixed blocks to children, and fixes the immutable atoms for the relaxation
-        for atom in newblock1:
-            child1.append(atom)
-        constraint = FixAtoms(mask=[atom.tag == 1 for atom in child1])
-        child1.set_constraint(constraint)
-
-        for atom in newblock2:
-            child2.append(atom)
-        constraint = FixAtoms(mask=[atom.tag == 1 for atom in child2])
-        child2.set_constraint(constraint)
+                for atom in newblock2:
+                    child2.append(atom)
+                constraint = FixAtoms(mask=[atom.tag == 1 for atom in child2])
+                child2.set_constraint(constraint)
         
-        children = []
-        children.append(child1)
-        children.append(child2)
-
+                children.append(child1)
+                children.append(child2)
+                DoubleSuccess = True
+                break
+            
+            if confirm1:
+                stored = newblock1.copy()
+            if confirm2:
+                stored = newblock2.copy()      
+        if DoubleSuccess == False and stored != None:
+            for atom in stored:
+                child1.append(atom)
+            constraint = FixAtoms(mask=[atom.tag == 1 for atom in child1])
+            child1.set_constraint(constraint)
+            children.append(child1)
+        print("returning:",children)
         return children
 
-    def __perform_cut(self,block,parameters):
-        ### performs a cut on a block, according to parameters
-        frag1 = Atoms(pbc=block.get_pbc(),cell=block.get_cell())
-        frag2 = Atoms(pbc=block.get_pbc(),cell=block.get_cell())
-        ###test
-        for atom in block:
-            if atom.x > 4.5:
-                frag1.append(atom)
+    def __perform_cut_XY(self,block1,block2):
+        ### performs a cut on a block, working on plane XY
+        ### NOTE: works only for primitive supercell
+        frag11 = Atoms(pbc=block1.get_pbc(),cell=block1.get_cell())
+        frag12 = Atoms(pbc=block1.get_pbc(),cell=block1.get_cell())
+        frag21 = Atoms(pbc=block1.get_pbc(),cell=block1.get_cell())
+        frag22 = Atoms(pbc=block1.get_pbc(),cell=block1.get_cell())
+        
+
+        ### chooses random parameters for sine function:
+        # f(x)=starting_point + amplitude*sin(x/max(x) *2pi*frequency +delta)
+
+        ### chooses random direction (x/y)
+        axis= random.choice(['x','y'])
+        print("selected direction:",axis)
+        if axis == 'x':
+            orto = 'y'
+        elif axis == 'y':
+            orto = 'x'
+        else:
+            pass
+        ### chooses random starting point
+        axis_selection = {"x":0,"y":1}        
+        max_value_starting = block1.get_cell()[axis_selection[orto]][axis_selection[orto]]
+        max_axis = block1.get_cell()[axis_selection[axis]][axis_selection[axis]]
+        while True:
+            starting_point = (np.random.randn()*(max_value_starting/3))+(max_value_starting/2)
+            if starting_point > 0 and starting_point < max_value_starting:
+                break
+            
+        ### chooses random amplitude
+        max_amplitude = min(starting_point,max_value_starting-starting_point)
+        while True:
+            amplitude = (np.random.randn()*(max_amplitude/3))+(max_amplitude/2)
+            if amplitude > 0 and amplitude < max_amplitude:
+                break
+
+        ### chooses random frequency
+        frequency = random.choice([1,1,2,3])
+
+        ### chooses random delta
+        delta = (np.random.rand()) * 2*(np.pi)
+
+        for atom in block1:
+            border = starting_point + amplitude * np.sin((((getattr(atom,axis))/max_axis) * 2*(np.pi) * frequency)+delta)
+            if getattr(atom,orto) >= border:
+                frag11.append(atom)
             else:
-                frag2.append(atom)
-        return frag1,frag2
+                frag12.append(atom)
+       
+        for atom in block2:
+            border = starting_point + amplitude * np.sin((((getattr(atom,axis))/max_axis) * 2*(np.pi) * frequency)+delta)
+            if getattr(atom,orto) >= border:
+                frag22.append(atom)
+            else:
+                frag21.append(atom)
+
+        return(frag11,frag12,frag21,frag22)
+        
 
     def __check_composition(self,structure,FixedElements):
         ### checks that a structure is maintaining the original composition, for the elements in FixedElements 
@@ -859,15 +932,22 @@ class SinusoidalCut(MatingOperator):
             if FixedElements[element] != composition[element]:
                 Response = False
 
-        print("confronting",FixedElements,"and",composition)
         return Response
 
-
-            
-
+    def __check_collision(self,structure):
+        ###checks if any couple of atoms lies at a distance inferior to the collision threshold: in such case, returns False. Otherwise, returns True
+        radii = [(self.collision_threshold)*covalent_radii[atomic_numbers[atom.symbol]] for atom in structure]
+        NeighborsMeasurer = NeighborList(cutoffs=radii,self_interaction=False)
+        NeighborsMeasurer.build(structure)
+        result = NeighborsMeasurer.nneighbors
+        if result == 0:
+            return True
+        else:
+            return False
+        return True
+     
     def print_params(self):
-        #to be implemented
-        return ""
+        return self.__class__.__name__+"  Number of attempts:"+(str(self.NumberOfAttempts))+"| Fixed Elements:"+(str(self.FixedElements))+"| Collision Threshold:"+(str(self.collision_threshold))
 
 class TestMating(MatingOperator):
     def __init__(self):
@@ -945,39 +1025,34 @@ class FabioMutation(MutationManager):
     def MutatePopulation(self,population,Xparameter): 
         Xparameter = int(abs(Xparameter))   
         MutatedStructures= []
-        
         poptomutate=[]
         for structure in population[Xparameter:]:
             poptomutate.append(structure.copy())
         for structure in poptomutate:
             #performs mutation
-            mutated = self.MutationOperator.Mutate(structure)
-            #tags mutated with "parent" index, and attaches it to MutatedStructures list
-            mutated.info["Ascendance"]=str(population.index(structure)+1)
-            MutatedStructures.append(mutated)
-         
+            try:
+                mutated = self.MutationOperator.displace(structure.copy())
+
+                #tags mutated with "parent" index, and attaches it to MutatedStructures list
+                mutated.info["Ascendance"]=str(population.index(structure)+1)
+                MutatedStructures.append(mutated)
+            except:
+                pass
         return MutatedStructures
 
     def print_params(self):
-        return "Employed Mutation Operator: "+self.MutationOperator.__class__.__name__+" working with parameters: "+self.MutationOperator.print_params()
+        return "Employed Mutation Operator: "+self.MutationOperator.print_params()
 
 class TestMutationOperator:
     def __init__(self):
         pass
     
-    def Mutate(self,structure):
+    def displace(self,structure):
         newstructure=structure.copy()
         materials = ['Ni','Co','Zn','Cu']
-       # print("MUTATIONTEST")
-       # print("STRUCTURE RECEIVED:",structure)
         num = np.random.randint(0,len(newstructure))
-       # print("SELECTED NUMBER:",num)
         newel = np.random.choice(materials)
-       # print("NEW ELEMENT:",newel)
-       # print("OLD ATOM:", structure[num].symbol)
         newstructure[num].symbol = newel
-       # print("NEW ATOM:",structure[num].symbol)
-       # print("NEW STRUCTURE:",structure)
         newstructure.info["fitness"]=None
        
         return newstructure

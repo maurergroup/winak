@@ -15,29 +15,20 @@ from ase.calculators.emt import EMT
 import numpy as np
 
 #### deletes the results of the last execution
-if os.path.exists("Results.traj"):
-    os.remove("Results.traj")
-if os.path.exists("GS.log"):
-    os.remove("GS.log")
+if os.path.exists("starting_population.traj"):
+    os.remove("starting_population.traj")
 
-
-pop = [] 
-
-materials=['Ni','Al','Au','Cu']
-
-
-for el in materials:
-    info=dict()
-    info['fitness']=np.random.rand()
-    stru = Atoms(str(4)+el,positions=[(0,0,0),(0,2.5,0),(2.5,0,0),(2.5,2.5,0)],cell=[5,5,2.5],info=info,pbc=[1,1,0])
-    stru = stru.repeat((3,3,2))
-    pop.append(stru.copy())
+info=dict()
+info['fitness']=np.random.rand()
+stru = Atoms('Au2Cu2',positions=[(0,0,0),(0,2.5,0),(2.5,0,0),(2.5,2.5,0)],cell=[5,5,2.5],info=info,pbc=[1,1,0])
+stru = stru.repeat((3,3,2))
+stru.set_cell([15,15,10])
 
 
 
 ################ Controls ####################
 ################ Displacement ################
-Xparameter = 2 
+Xparameter = 4 
 
 MatingManager = "FabioMating"
 MutationManager = "FabioMutation"
@@ -55,7 +46,7 @@ EEparameters = {"calc":EMT(),"opt":BFGS,"fmax":1.0,"optlog":None}
 
 ##############################################
 ############### Criterion ####################
-popsize = 8    
+popsize = 8
 
 ##############################################
 ############### Screening ####################
@@ -85,7 +76,12 @@ Criterion = FabioSelection(popsize)
 
 
 Screener = GeneticScreener(PopulationEvaluator,GeneticDisplacer,Criterion,savegens=True, break_limit=break_limit, break_limit_top = break_limit_top)
-Screener.run(pop,3)
+
+
+starting_population = Screener.generate(stru,8)
+write("starting_population.traj",starting_population)
+
+Screener.run(starting_population,3)
 
 
 

@@ -155,7 +155,7 @@ class GeneticScreener:
     by Konstantin Krautgasser, November 2015
     """
 
-    def __init__(self, pop,
+    def __init__(self,
                  EnergyEvaluator,
                  Displacer,
                  Criterion,
@@ -163,17 +163,10 @@ class GeneticScreener:
                  savegens=False,
                  break_limit=None,
                  break_limit_top=None):
-        self.pop = pop
         self.logfile=logfile
         self.eneval=EnergyEvaluator
         self.displacer=Displacer
         self.crit=Criterion
-        self.startT = datetime.now()
-        self.log('STARTING Screening at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+' KK 2015 / FC 2018')
-        self.log('Using the following Parameters and Classes:')
-        self.log('EnergyEvaluator - '+self.eneval.print_params())
-        self.log('Displacer - '+self.displacer.print_params())
-        self.log('Criterion - '+self.crit.print_params())
         self.savegens=savegens #if True, saves a .traj file for every generation
         if break_limit == None:  #if these number of consecutive generations have no new structure, the cycle breaks
             self.break_limit = -1
@@ -181,12 +174,20 @@ class GeneticScreener:
             self.break_limit = break_limit     
             
         if break_limit_top == None:   #if the best structure remains the same for this number of consecutive generations, the cycle breaks
-            self.brek_limit_top = -1
+            self.break_limit_top = -1
         else:
             self.break_limit_top = break_limit_top
 
-    def run(self, gens):
-        """Screen for defined number of generations. If break_limit is set, stops after n. break_limit consecutive unmodified generations """
+    def run(self, pop, gens):
+        """Screen for defined number of generations. If break_limit is set, stops after n. break_limit consecutive unmodified generations. If break_limit_top is set, stops after n. tbreak_limit_top consecutive generations in which the best structure is unmodified """
+        
+        self.startT = datetime.now()
+        self.log('STARTING Screening at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+' KK 2015 / FC 2018')
+        self.log('Using the following Parameters and Classes:')
+        self.log('EnergyEvaluator - '+self.eneval.print_params())
+        self.log('Displacer - '+self.displacer.print_params())
+        self.log('Criterion - '+self.crit.print_params())
+        
         gens = int(gens)
         break_limit = self.break_limit
         break_limit_top = self.break_limit_top
@@ -199,38 +200,70 @@ class GeneticScreener:
                 break
             self.log("\n"+"\n"+"Generation "+str(gen+1))
             #Displacing = creation of the new candidates
-            NewCandidates,report = self.displacer.evolve(self.pop)
+            NewCandidates,report = self.displacer.evolve(pop)
             self.log(report)
             #EE = local optimization and tagging of the new structures
             EvaluatedPopulation,report = self.eneval.EvaluatePopulation(NewCandidates)
             self.log(report)
             #criterion = definition of the next generation
-            newgen,report = self.crit.filter(EvaluatedPopulation)
+            newgen,report,diversity = self.crit.filter(EvaluatedPopulation)
             self.log(report)
-            if self.pop == newgen:
+            if pop == newgen:
                 break_limit -= 1
             else:
                 break_limit = self.break_limit
-            if self.pop[0] == newgen[0]:
+            if pop[0] == newgen[0]:
                 break_limit_top -= 1
             else:
                 break_limit_top = self.break_limit_top
-            self.pop = newgen
+            pop = newgen
             if self.savegens:
                 if not os.path.exists("Generations"):
                     os.mkdir("Generations")
                 os.chdir("Generations")
-                write(str(gen+1)+"_generation.traj",self.pop)
+                write(str(gen+1)+"_generation.traj",pop)
                 os.chdir("..")
         if os.path.exists("relax.traj"):
             os.remove("relax.traj")
-        write("Results.traj",self.pop)
+        write("Results.traj",pop)
         self.endT = datetime.now()
         self.log('ENDING Screening at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))
         self.log('Time elapsed: '+str(self.endT-self.startT))            
+           
+
+    def generate(self,stru,popsize,minimum_diversity=0):
+        """Generates a population of popsize structures, starting from a single input structure. If a minimum_diversity value is selected, new structures will be generated until a population is created that has such a diversity value (as expressed in the criterion method associated to the screener)"""
+        
+        self.startT = datetime.now()
+        self.log('STARTING Generating at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+' KK 2015 / FC 2018')
+        self.log('Using the following Parameters and Classes:')
+        self.log('EnergyEvaluator - '+self.eneval.print_params())
+
+        generator = self.displacer.MutationManager
+
+        self.log('Generator - '+generator.print_params())
+        self.log('Criterion - '+self.crit.print_params())
        
+        pop = []
+        pop.append(stru.copy())
+        diversity = 0
+    
+        while len(pop) < popsize or diversity < minimum_diversity:
+            pop = pop + generator.MutatePopulation(pop,0)
+            pop = self.eneval.EvaluatePopulation(pop)[0]
+            result = tuple(self.crit.filter(pop))
+            pop = result[0]
+            diversity = pop[1]
+       
+        self.endT = datetime.now()
+        self.log('Initial Population successfully generated at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))
+        self.log('Time elapsed: '+str(self.endT-self.startT))            
+        return pop
+
     def log(self, msg):
         if self.logfile is not None:
             with open(self.logfile,'a') as fn:
                 fn.write(msg+'\n')
                 fn.flush()
+
+

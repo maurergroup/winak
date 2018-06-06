@@ -575,38 +575,6 @@ class GC(Displacer):
         return '%s: probability=%f%s'%(self.__class__.__name__,self.prob,ads)
 
 
-# class PopulationGenerator:
-#     """This class generates a population of structures, starting from a generic input"""
-#     __metaclass__ = ABCMeta
-# 
-#     def __init__(self):
-#         """subclasses must call this method."""
-#         pass
-# 
-#     @abstractmethod
-#     def generate(self,input,popsize):
-#         """subclasses must implement this method. Has to return a population of structures."""
-#         pass
-# 
-#     @abstractmethod
-#     def print_params(self):
-#         """subclasses must implement this method. Has to return a string containing all the imporant parameters."""
-#         pass
-# 
-# class OurPopulationGenerator(PopulationGenerator):
-#     def __init__(self):
-#         #still all to figure out
-#         pass
-# 
-#     def generate(self,input,popsize):
-#         #still all to figure out
-#         pass
-# 
-#     def print_params(self):
-#         #still all to figure out
-#         pass
-
-
 class PopulationManager:
     """This class performs a step on a population of structures. Just like Displacer, it is also in charge of logging."""
     __metaclass__ = ABCMeta
@@ -856,7 +824,6 @@ class SinusoidalCut(MatingOperator):
             constraint = FixAtoms(mask=[atom.tag == 1 for atom in child1])
             child1.set_constraint(constraint)
             children.append(child1)
-        print("returning:",children)
         return children
 
     def __perform_cut_XY(self,block1,block2):
@@ -873,7 +840,6 @@ class SinusoidalCut(MatingOperator):
 
         ### chooses random direction (x/y)
         axis= random.choice(['x','y'])
-        print("selected direction:",axis)
         if axis == 'x':
             orto = 'y'
         elif axis == 'y':

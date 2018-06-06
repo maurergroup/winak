@@ -37,7 +37,7 @@ for el in materials:
 
 ################ Controls ####################
 ################ Displacement ################
-Xparameter = 2 
+Xparameter = 3 
 
 MatingManager = "FabioMating"
 MutationManager = "FabioMutation"
@@ -45,8 +45,8 @@ MutationManager = "FabioMutation"
 MatingOperator = "SinusoidalCut"   
 MatingOperatorParameters = {"FixedElements":["Ru"],"NumberOfAttempts":10,"collision_threshold":0.5}  ####collision_threshold should be chosen analyzing the behavior of the optimizer
 
-MutationOperator = "GC"
-MutationOperatorParameters = {"prob":0.0,"periodic":True}
+MutationOperator = "TestMutationOperator"
+MutationOperatorParameters = {}
 
 ##############################################
 ############### Evaluation ###################
@@ -55,7 +55,7 @@ EEparameters = {"calc":EMT(),"opt":BFGS,"fmax":1.0,"optlog":None}
 
 ##############################################
 ############### Criterion ####################
-popsize = 8    
+popsize = 6    
 
 ##############################################
 ############### Screening ####################
@@ -84,8 +84,8 @@ PopulationEvaluator = FabioPopEvaluator(EE,EEparameters)
 Criterion = FabioSelection(popsize)
 
 
-Screener = GeneticScreener(PopulationEvaluator,GeneticDisplacer,Criterion,savegens=True, break_limit=break_limit, break_limit_top = break_limit_top)
-Screener.run(pop,3)
+Screener = GeneticScreener(PopulationEvaluator,GeneticDisplacer,Criterion,savegens=False, break_limit=break_limit, break_limit_top = break_limit_top)
+Screener.run(pop,500)
 
 
 

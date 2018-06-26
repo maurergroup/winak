@@ -29,6 +29,7 @@ except:
     from ase.utils.geometry import sort
 import os
 from ase.io import write
+from ase.constraints import FixAtoms
 
 class UltimateScreener:
     """UltimateScreener
@@ -198,14 +199,18 @@ class GeneticScreener:
             if break_limit_top == 0:
                 self.log("Break limit top. Interrupting.")
                 break
-            self.log("\n"+"\n"+"Generation "+str(gen+1))
+            gentime = datetime.now()
+            self.log("\n"+"______________________________________________________"+"\n"+"______________________________________________________"+"\n"+"\n"+"Generation "+str(gen+1)+"                       "+str(gentime.strftime('%Y-%m-%d %H:%M:%S'))+"\n"+"______________________________________________________"+"\n"+"______________________________________________________")
             #Displacing = creation of the new candidates
+            self.log("\n"+"____________DISPLACING____________")
             NewCandidates,report = self.displacer.evolve(pop)
             self.log(report)
             #EE = local optimization and tagging of the new structures
+            self.log("\n"+"____________EVALUATING____________")
             EvaluatedPopulation,report = self.eneval.EvaluatePopulation(NewCandidates)
             self.log(report)
-            #criterion = definition of the next generation
+            #criterion = definition of the next generation          
+            self.log("\n"+"____________SELECTING_____________")
             newgen,report,diversity = self.crit.filter(EvaluatedPopulation)
             self.log(report)
             if pop == newgen:
@@ -231,33 +236,64 @@ class GeneticScreener:
         self.log('Time elapsed: '+str(self.endT-self.startT))            
            
 
-    def generate(self,stru,popsize,minimum_diversity=0):
-        """Generates a population of popsize structures, starting from a single input structure. If a minimum_diversity value is selected, new structures will be generated until a population is created that has such a diversity value (as expressed in the criterion method associated to the screener)"""
+    def generate(self,strus,popsize,minimum_diversity=0):
+        """Generates a population of popsize structures, starting from a single input structure or from a smaller population. If a minimum_diversity value is selected, new structures will be generated until a population is created that has such a diversity value (as expressed in the criterion method associated to the screener)"""
         
         self.startT = datetime.now()
         self.log('STARTING Generating at '+self.startT.strftime('%Y-%m-%d %H:%M:%S')+' KK 2015 / FC 2018')
         self.log('Using the following Parameters and Classes:')
         self.log('EnergyEvaluator - '+self.eneval.print_params())
 
-        generator = self.displacer.MutationManager
+        generator = self.displacer
 
-        self.log('Generator - '+generator.print_params())
+        self.log('Generator - '+generator.MutationManager.print_params())
         self.log('Criterion - '+self.crit.print_params())
        
         pop = []
-        pop.append(stru.copy())
+        if type(strus)==list:
+            for stru in strus:
+                pop.append(stru.copy())
+
+        else:
+            pop.append(strus.copy())
+
+        for structure in pop:
+            constraint = FixAtoms(mask=[atom.tag == 2 for atom in structure])
+            structure.set_constraint(constraint)
         diversity = 0
-    
-        while len(pop) < popsize or diversity < minimum_diversity:
-            pop = pop + generator.MutatePopulation(pop,0)
-            pop = self.eneval.EvaluatePopulation(pop)[0]
-            result = tuple(self.crit.filter(pop))
-            pop = result[0]
-            diversity = pop[1]
-       
+        cycle_count = 1
+
+        self.log("\n"+"_________INITIAL EVALUATION__________")
+        pop, report = self.eneval.EvaluatePopulation(pop)
+        
+        while len(pop) < popsize or diversity < minimum_diversity:    
+            if len(pop)==0:
+                break
+            self.log("\n"+"_____________________________________________________________"+"\n")
+            self.log("\n"+"Producing initial population: cycle n."+str(cycle_count))
+            self.log("\n"+"_____________________________________________________________"+"\n")
+            self.log("\n"+"____________DISPLACING____________")
+            pop, report = generator.evolve(pop,Xpar=0)
+            self.log(report) 
+            self.log("\n"+"____________EVALUATING____________")
+            pop, report = self.eneval.EvaluatePopulation(pop)
+            self.log(report) 
+            self.log("\n"+"____________SELECTING_____________")
+            pop, report, diversity = self.crit.filter(pop)
+            self.log(report)
+            self.log("\n"+"Population size: "+str(len(pop))+" / "+str(popsize))
+            self.log("Diversity: "+str(diversity)+" / "+str(minimum_diversity))
+            cycle_count += 1
+        for stru in pop:
+            stru.info.pop("Ascendance",None)
+            stru.info.pop("Origin",None)
+            stru.info.pop("New",None)
+        if os.path.exists("relax.traj"):
+            os.remove("relax.traj")
         self.endT = datetime.now()
+        self.log("\n")
         self.log('Initial Population successfully generated at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))
-        self.log('Time elapsed: '+str(self.endT-self.startT))            
+        self.log('Time elapsed: '+str(self.endT-self.startT)+"\n"+"\n")            
         return pop
 
     def log(self, msg):

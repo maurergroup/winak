@@ -5,7 +5,7 @@
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
-BUILDDIR      = ../../winak-docs/build
+BUILDDIR      = ../../winak-docs
 PDFBUILDDIR   = /tmp
 PDF           = ../manual.pdf
 

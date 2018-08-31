@@ -1,9 +1,0 @@
-#
-# MANIFEST.in
-#
-include *.txt INSTALL README COPYING LICENSES site.cfg.example
-recursive-include tests *
-recursive-include doc *
-recursive-include include *.h
-prune dist
-prune test

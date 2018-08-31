@@ -1,6 +1,0 @@
-*.traj
-*.log
-build
-*.swp
-*.pyc
-curvilinear/cICTools.c

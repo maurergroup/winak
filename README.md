@@ -39,5 +39,5 @@ and from other sources, all listed under LICENSES
 
 ### Who do I talk to? ###
 
-reinhard.maurer@yale.edu
+r.maurer@warwick.ac.uk
 konstantin.krautgasser@tum.de

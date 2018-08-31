@@ -47,6 +47,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   includeme
    Installation.rst
    BetterHopping.rst
    Tutorial.rst 

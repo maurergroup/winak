@@ -211,7 +211,7 @@ class GeneticScreener:
             self.log(report)
             #criterion = definition of the next generation          
             self.log("\n"+"____________SELECTING_____________")
-            newgen,report,diversity = self.crit.filter(EvaluatedPopulation)
+            newgen,report,diversity,fitness = self.crit.filter(EvaluatedPopulation,mode="best_compromise_elite")
             self.log(report)
             if pop == newgen:
                 break_limit -= 1
@@ -248,7 +248,6 @@ class GeneticScreener:
 
         self.log('Generator - '+generator.MutationManager.print_params())
         self.log('Criterion - '+self.crit.print_params())
-       
         pop = []
         if type(strus)==list:
             for stru in strus:
@@ -265,10 +264,9 @@ class GeneticScreener:
 
         self.log("\n"+"_________INITIAL EVALUATION__________")
         pop, report = self.eneval.EvaluatePopulation(pop)
-        
+        if len(pop) == 0:
+            self.log('\n'+"EXECUTION TERMINATED - Initial evaluation has failed, or an invalid input was selected"+'\n')
         while len(pop) < popsize or diversity < minimum_diversity:    
-            if len(pop)==0:
-                break
             self.log("\n"+"_____________________________________________________________"+"\n")
             self.log("\n"+"Producing initial population: cycle n."+str(cycle_count))
             self.log("\n"+"_____________________________________________________________"+"\n")
@@ -279,9 +277,10 @@ class GeneticScreener:
             pop, report = self.eneval.EvaluatePopulation(pop)
             self.log(report) 
             self.log("\n"+"____________SELECTING_____________")
-            pop, report, diversity = self.crit.filter(pop)
+            pop, report, diversity, fitness = self.crit.filter(pop,mode="best_diversity")
             self.log(report)
             self.log("\n"+"Population size: "+str(len(pop))+" / "+str(popsize))
+            self.log("\n"+"Average fitness: "+str(fitness))
             self.log("Diversity: "+str(diversity)+" / "+str(minimum_diversity))
             cycle_count += 1
         for stru in pop:
@@ -295,6 +294,7 @@ class GeneticScreener:
         self.log('Initial Population successfully generated at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))
         self.log('Time elapsed: '+str(self.endT-self.startT)+"\n"+"\n")            
         return pop
+
 
     def log(self, msg):
         if self.logfile is not None:

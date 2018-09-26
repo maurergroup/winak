@@ -30,6 +30,7 @@ except:
 
 from ase.atoms import Atoms
 from datetime import datetime
+from winak.SOAP_interface import compare
 
 class EE:
     """This class relaxes an ase.atoms object in any way you see fit. The only
@@ -174,9 +175,9 @@ class PopulationEvaluator:
 class FabioPopEvaluator(PopulationEvaluator):
     """For every structure in the population: Calls the selected EE to perform local optimization and evaluate energy. Eliminates identical structures. Writes the fitness in info['fitness']"""
 
-    def __init__(self,EE,EEparameters):
+    def __init__(self,EE,EEparameters,sim_threshold=0.999):
         PopulationEvaluator.__init__(self,EE,EEparameters)
-    
+        self.similarity_threshold=sim_threshold
     def EvaluatePopulation(self,popreceived):
         pop = popreceived[:]
         EvaluatedPopulation = []
@@ -217,7 +218,8 @@ class FabioPopEvaluator(PopulationEvaluator):
         counter = 1
         for structure in failed_optimizations:
             description ="\n"+ "%s:  = %s" %(str(counter),structure.get_chemical_formula())
-            description += " %s, from previous generation [%s]"%(structure.info["Origin"],structure.info["Ascendance"])
+            if "Origin" in structure.info:
+                description += " %s, from previous generation [%s]"%(structure.info["Origin"],structure.info["Ascendance"])
             detailed_report += description
             counter += 1
 
@@ -267,20 +269,22 @@ class FabioPopEvaluator(PopulationEvaluator):
         if a.get_chemical_formula() != b.get_chemical_formula():
             return False,"Different Chemical Formula"
         
-        report="Energies: a = "+str(a.info["fitness"])+" b = "+str(b.info["fitness"])
+        report="\n"+"Energies: a = "+str(a.info["fitness"])+" b = "+str(b.info["fitness"])
         #second, check energy
-        if abs(a.info["fitness"] - b.info["fitness"]) > 0.01:
+        if abs(a.info["fitness"] - b.info["fitness"]) > 2:
             return False,"Different Energy"
         
         #third, check structure
-        if 0==1:            # metodofighissimo(a,b) < 0.99:
-            return False,None
-
-        report += "\n"+"Structure found equivalent to: "
+        compare_result = compare(a,b)
+        if compare_result < self.similarity_threshold:
+            return False,"SOAP similarity value = "+str(compare_result)
+                     
+        report +="\n"+"Structure found equivalent to: "
         report += "\n"+ "%s - Fitness = %s" %(b.get_chemical_formula(),b.info["fitness"])
         if "Origin" in b.info:    
             report += " %s, from previous generation [%s]"%(b.info["Origin"],b.info["Ascendance"])
-
+       
+        report += "\n"+ "SOAP similarity value = "+str(compare_result)+"\n"
         return True,report
     
     def __eliminate_duplicates(self,NewPop,OldPop):
@@ -296,14 +300,14 @@ class FabioPopEvaluator(PopulationEvaluator):
                 all_the_others = NewPop[:]
                 all_the_others.remove(stru)
                 for stru2 in all_the_others:
-                    result,identity_report = self.__check_identity(stru,stru2)
+                    result,identity_report = self.__check_identity(stru2,stru)
                     if result:
                         to_remove.append(stru2)
                         reports.append(identity_report)
-        report += "\n"+str(len(to_remove))+" structures identified as redundant and eliminated."
+        report += "\n"+str(len(to_remove))+" structures identified as redundant and eliminated."+"\n"
         index_number = 0
         for structure in to_remove:
-            description ="\n"+"\n"+ "%s - Fitness = %s" %(structure.get_chemical_formula(),structure.info["fitness"])
+            description ="\n"+ "%s - Fitness = %s" %(structure.get_chemical_formula(),structure.info["fitness"])
             description += " %s, from previous generation [%s]"%(structure.info["Origin"],structure.info["Ascendance"])
             report += description
             report += reports[index_number]+"\n"
@@ -324,12 +328,12 @@ class FabioPopEvaluator(PopulationEvaluator):
                     to_remove.append(stru)
                     reports.append(identity_report)
                     break
-        report += "\n"+str(len(to_remove))+" structures identified as equivalent to old structures and eliminated."
+        report += "\n"+str(len(to_remove))+" structures identified as equivalent to old structures and eliminated."+"\n"
         
         index_number = 0
         for structure in to_remove:
             description ="\n"+ "%s - " %(structure.get_chemical_formula())
-            description += " %s, from previous generation [%s]"%(structure.info["Origin"],structure.info["Ascendance"])+"\n"
+            description += " %s, from previous generation [%s]"%(structure.info["Origin"],structure.info["Ascendance"])
             report += description
             report += reports[index_number]
             index_number += 1

@@ -1084,8 +1084,8 @@ class FabioMutation(MutationManager):
                 if structure.info["New"]:
                     report += " %s, from previous generation [%s]"%(structure.info["Origin"],structure.info["Ascendance"])
             
-            constraint = FixAtoms(mask=[(atom.tag == 2 or atom.tag == 1) for atom in structure])
-            structure.set_constraint(constraint)
+            #constraint = FixAtoms(mask=[(atom.tag == 2 or atom.tag == 1) for atom in structure])
+            #structure.set_constraint(constraint)
        
 
             ##fixes the composition of the structure, forelements in self.FixedElements     
@@ -1094,7 +1094,8 @@ class FabioMutation(MutationManager):
                 if atom.symbol in FixedElements:
                     FixedElements[atom.symbol] += 1
             success_index=False
-            for lim in range(10):
+            time0=datetime.now()
+            for lim in range(5):
                 try:
                     mutated = self.MutationOperator.displace(structure.copy())
                     confirm = self.__check_composition(mutated,FixedElements)
@@ -1111,7 +1112,8 @@ class FabioMutation(MutationManager):
                     pass
             if not success_index: 
                 report += " >>> FAILED"
-                
+            time1=datetime.now()
+            report += "\n"+"Single mutation time: "+str(time1-time0)
         for structure in MutatedStructures:
             del(structure.constraints)
             constraint = FixAtoms(mask=[atom.tag == 2 for atom in structure])

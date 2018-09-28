@@ -1,0 +1,94 @@
+================================================================================
+==
+==   DFTB+ (Density Functional Tight Binding and much more)
+==
+==                          Unofficial release (r4465)
+==
+==                            (ParserVersion = 4)
+==
+================================================================================
+
+********************************************************************************
+** Parsing and initializing
+********************************************************************************
+
+Interpreting input file 'dftb_in.hsd'
+--------------------------------------------------------------------------------
+Reading SK-files:
+  /user/panosetti/data/progs/DFTB/parameters/pbc/pbc-0-3/H-H.skf
+  /user/panosetti/data/progs/DFTB/parameters/pbc/pbc-0-3/H-Si.skf
+  /user/panosetti/data/progs/DFTB/parameters/pbc/pbc-0-3/Si-H.skf
+  /user/panosetti/data/progs/DFTB/parameters/pbc/pbc-0-3/Si-Si.skf
+Done.
+
+
+Processed input in HSD format written to 'dftb_pin.hsd'
+
+Starting initialization...
+--------------------------------------------------------------------------------
+PGRID:ORBITAL: 1 x 2 x 4
+PGRID:ALLPROC: 2 x 4
+PGRID:ATOM: 2 x 4
+RECLATPOINTS: 48
+ 
+WARNING!
+-> Automatic Ewald parameter quite small, possibly resulting in
+-> very long neighbor lists! You should consider to set the
+-> Ewald parameter by hand.
+ 
+Mode:                        Conjugate gradient relaxation
+Self consistent charges:     Yes
+SCC-tolerance:                 0.100000E-04
+Max. scc iterations:                    300
+Ewald alpha parameter:         0.445645E-01
+Spin polarisation:           No
+Nr. of up electrons:           620.500000
+Nr. of down electrons:         620.500000
+Periodic boundaries:         Yes
+Diagonalizer:                Divide and Conquer
+Maximal SCC-cycles:                     300
+Nr. of moved atoms:                     347
+Max. nr. of geometry steps:               0
+Force tolerance:               0.100000E-03
+Electronic temperature:        0.360000E-02
+Initial charges:             Set automatically (system chrg:   0.000E+00)
+Included shells:              H:  s
+                             Si:  s, p
+K-points and weights:           1:  0.000000  0.000000  0.000000     1.000000
+Extra options:
+
+********************************************************************************
+** Geometry step: 0
+********************************************************************************
+
+MAXNEIGHBORS: 6145
+  iSCC Total electronic   Diff electronic      SCC error    
+    1   -0.40016193E+03    0.00000000E+00    0.69716653E+00
+    2   -0.40044970E+03   -0.28776941E+00    0.30013696E+00
+    3   -0.40042915E+03    0.20550226E-01    0.19027189E+00
+    4   -0.40030030E+03    0.12885261E+00    0.16414778E+00
+    5   -0.40040326E+03   -0.10296679E+00    0.11165019E+00
+    6   -0.40054306E+03   -0.13979562E+00    0.98628127E-01
+    7   -0.40055628E+03   -0.13222631E-01    0.42558958E-01
+    8   -0.40055134E+03    0.49439541E-02    0.76858086E-01
+    9   -0.40055874E+03   -0.74004265E-02    0.72522683E-02
+   10   -0.40055893E+03   -0.19418565E-03    0.33047702E-02
+   11   -0.40055892E+03    0.11581530E-04    0.13634934E-02
+   12   -0.40055891E+03    0.82145044E-05    0.13699854E-02
+   13   -0.40055890E+03    0.10981021E-04    0.34537634E-03
+   14   -0.40055890E+03    0.43571271E-06    0.32186131E-03
+   15   -0.40055890E+03   -0.14138817E-05    0.14985532E-03
+   16   -0.40055890E+03   -0.87656468E-06    0.83401610E-04
+   17   -0.40055890E+03   -0.22445977E-06    0.52065148E-04
+   18   -0.40055890E+03    0.24164024E-06    0.76399350E-05
+scc total               CPU:    14.39       Wall:    18.33
+ 
+ Total Energy:                    -400.3261016889 H
+ Total Mermin free energy:        -400.3774291431 H
+force total             CPU:     0.70       Wall:     0.93
+ Volume:                             0.161441E+06 au^3
+ Pressure:                          -0.235279E-04 au    -0.692214E+09 Pa
+ Maximal force component:            0.172287E-01
+ 
+Geometry converged
+program total           CPU:    15.54       Wall:    19.78

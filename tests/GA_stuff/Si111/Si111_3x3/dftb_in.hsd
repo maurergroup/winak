@@ -1,0 +1,56 @@
+Geometry = GenFormat { 
+    <<< "geo_end.gen" 
+} 
+ 
+Driver = ConjugateGradient{ 
+   MaxForceComponent = 1E-4 
+   MaxSteps = 0 
+   } 
+Hamiltonian = DFTB{ 
+   Charge = 0 
+   EwaldParameter = 0.05 
+   Filling = Fermi{ 
+      Temperature = 0.0001 
+   } 
+   KPointsAndWeights = { 
+      -0.4 -0.4  0.  1.0 
+      -0.4 -0.2  0.  1.0 
+       0.  -0.4  0.  1.0 
+       0.  -0.2  0.  1.0 
+       0.  0.  0. 1.0 
+       0.   0.2  0.  1.0 
+       0.   0.4  0.  1.0 
+       0.2 -0.4  0.  1.0 
+       0.2 -0.2  0.  1.0 
+       0.2  0.   0.  1.0 
+       0.2  0.2  0.  1.0 
+       0.2  0.4  0.  1.0 
+      -0.4  0.   0.  1.0 
+       0.4 -0.4  0.  1.0 
+       0.4 -0.2  0.  1.0 
+       0.4  0.   0.  1.0 
+       0.4  0.2  0.  1.0 
+       0.4  0.4  0.  1.0 
+      -0.4  0.2  0.  1.0 
+      -0.4  0.4  0.  1.0 
+      -0.2 -0.4  0.  1.0 
+      -0.2 -0.2  0.  1.0 
+      -0.2  0.   0.  1.0 
+      -0.2  0.2  0.  1.0 
+      -0.2  0.4  0.  1.0 
+   } 
+   MaxAngularMomentum = { 
+      H = "s" 
+      Si = "p" 
+   } 
+   MaxSCCIterations = 100 
+   SCC = YES 
+   SlaterKosterFiles = Type2FileNames{ 
+      Prefix = /user/panosetti/data/progs/DFTB/parameters/pbc/pbc-0-3/ 
+      Separator = "-" 
+      Suffix = ".skf" 
+   } 
+} 
+Options { 
+   WriteResultsTag = Yes  
+} 

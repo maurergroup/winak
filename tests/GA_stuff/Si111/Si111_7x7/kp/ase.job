@@ -1,0 +1,79 @@
+#!/bin/bash
+#PBS -N Si1117x7 
+#PBS -S /bin/sh
+#PBS -j oe
+#PBS -m e
+#PBS -M chiara.panosetti@ch.tum.de
+#PBS -l walltime=00:30:00,nodes=1:ppn=8,pmem=512mb
+
+##################################################################
+#####INPUT ohne /data/panosetti
+job=surfaces/silicon/Si111/Si111_7x7
+#${PWD##'/data/maurer/'}
+scriptname=locopt.py
+##########
+#####OUTPUT
+results=$job
+###########
+####INPUT OUTPUT
+input="*.*"
+output="stdout.log"
+##################################################################
+
+# environment variable setup
+ulimit -s unlimited
+export NUM_MAX_THREADS=1
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export MKL_DYNAMICS=FALSE
+### ASE and all
+source /afs/theo.chemie.tu-muenchen.de/user/panosetti/data/.venvs/dev/bin/activate
+source /afs/theo.chemie.tu-muenchen.de/user/panosetti/data/.venvs/dev/bin/postactivate
+# DFTB+ path
+export DFTB_PREFIX=/data/panosetti/progs/DFTB/parameters/pbc/pbc-0-3/
+export DFTB_COMMAND='mpirun.openmpi --hostfile $PBS_NODEFILE /data/panosetti/progs/DFTB/dftb.cluster2.mpi.x'
+#ARCH=$(uname -m)
+
+FROM=/data/$USER/$job            # directory holding all neccessary input
+DEST=/data/$USER/$results        # destination directory for the results
+                                # don't use a directory under $HOME for these!
+                                # It won't work with AFS
+TMPDIR=$TMPDIR/$PBS_JOBID       # local work directory on the execution host
+export FROM DEST TMPDIR
+
+LANG=C                          # some programs just don't like
+LC_ALL=C                        # internationalized environments!
+export LANG LC_ALL
+
+#printenv                       # uncomment to see all environment variables
+#set -x                         # uncomment to get all commands echo'ed
+
+cat $PBS_NODEFILE               # this file contains the nodes that were
+                                # allocated for your job if you use MPI or PVM
+
+# Here the real job starts
+#
+echo "#--- Job started at `date`"
+
+# create the temporary directory and make sure the input directory is
+# accessible
+mkdir -p $TMPDIR || exit 1
+cd $FROM || exit 2
+
+# copy all necessary files (input, source, programs etc.) to the execution
+# host
+cp $input $TMPDIR
+
+# run the job locally on the execution host
+cd $TMPDIR
+printenv > envs
+python $scriptname > $output
+
+# copy all output files from the execution host back to $DEST
+cp -r * $DEST || exit 3
+
+# remove the temporary directory if $DEST is accessible
+cd $DEST && rm -rf $TMPDIR     # uncomment this for automatic cleanup
+
+echo "#--- Job ended at `date`"
+

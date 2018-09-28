@@ -1,0 +1,108 @@
+================================================================================
+==
+==   DFTB+ (Density Functional Tight Binding and much more)
+==
+==                          Unofficial release (r4465)
+==
+==                            (ParserVersion = 4)
+==
+================================================================================
+
+********************************************************************************
+** Parsing and initializing
+********************************************************************************
+
+Interpreting input file 'dftb_in.hsd'
+--------------------------------------------------------------------------------
+Reading SK-files:
+  /user/panosetti/data/progs/DFTB/parameters/pbc/pbc-0-3/H-H.skf
+  /user/panosetti/data/progs/DFTB/parameters/pbc/pbc-0-3/H-Si.skf
+  /user/panosetti/data/progs/DFTB/parameters/pbc/pbc-0-3/Si-H.skf
+  /user/panosetti/data/progs/DFTB/parameters/pbc/pbc-0-3/Si-Si.skf
+Done.
+
+
+Processed input in HSD format written to 'dftb_pin.hsd'
+
+Starting initialization...
+--------------------------------------------------------------------------------
+PGRID:ORBITAL: 1 x 2 x 4
+PGRID:ALLPROC: 2 x 4
+PGRID:ATOM: 2 x 4
+RECLATPOINTS: 48
+ 
+WARNING!
+-> Automatic Ewald parameter quite small, possibly resulting in
+-> very long neighbor lists! You should consider to set the
+-> Ewald parameter by hand.
+ 
+Mode:                        Conjugate gradient relaxation
+Self consistent charges:     Yes
+SCC-tolerance:                 0.100000E-04
+Max. scc iterations:                    100
+Ewald alpha parameter:         0.445645E-01
+Spin polarisation:           No
+Nr. of up electrons:           620.500000
+Nr. of down electrons:         620.500000
+Periodic boundaries:         Yes
+Diagonalizer:                Divide and Conquer
+Maximal SCC-cycles:                     100
+Nr. of moved atoms:                     347
+Max. nr. of geometry steps:               0
+Force tolerance:               0.100000E-03
+Electronic temperature:        0.100000E-04
+Initial charges:             Set automatically (system chrg:   0.000E+00)
+Included shells:              H:  s
+                             Si:  s, p
+K-points and weights:           1:  0.000000  0.000000  0.000000     1.000000
+Extra options:
+
+********************************************************************************
+** Geometry step: 0
+********************************************************************************
+
+MAXNEIGHBORS: 6145
+  iSCC Total electronic   Diff electronic      SCC error    
+    1   -0.40029544E+03    0.00000000E+00    0.68210015E+00
+    2   -0.40022321E+03    0.72231329E-01    0.34715151E+00
+    3   -0.40023114E+03   -0.79309343E-02    0.28372208E+00
+    4   -0.40059904E+03   -0.36790401E+00    0.16910791E+00
+    5   -0.40047094E+03    0.12809989E+00    0.25016645E+00
+    6   -0.40057048E+03   -0.99532406E-01    0.14934382E+00
+    7   -0.40058321E+03   -0.12728598E-01    0.18529692E+00
+    8   -0.40064536E+03   -0.62159381E-01    0.12707641E+00
+    9   -0.40065257E+03   -0.72066405E-02    0.84825373E-01
+   10   -0.40064757E+03    0.50044324E-02    0.81519148E-01
+   11   -0.40066064E+03   -0.13070185E-01    0.87410884E-01
+   12   -0.40066401E+03   -0.33752186E-02    0.59295560E-01
+   13   -0.40066814E+03   -0.41280239E-02    0.53253556E-01
+   14   -0.40067611E+03   -0.79713025E-02    0.29375513E-01
+   15   -0.40067763E+03   -0.15179376E-02    0.26129767E-01
+   16   -0.40066990E+03    0.77274277E-02    0.50695429E-01
+   17   -0.40067760E+03   -0.77011567E-02    0.22689958E-01
+   18   -0.40067798E+03   -0.37711360E-03    0.26370471E-01
+   19   -0.40067858E+03   -0.60275990E-03    0.19841290E-01
+   20   -0.40067859E+03   -0.42897793E-05    0.23213796E-01
+   21   -0.40067915E+03   -0.56085303E-03    0.13912207E-01
+   22   -0.40067907E+03    0.80381564E-04    0.16461228E-01
+   23   -0.40067952E+03   -0.44772437E-03    0.27354013E-02
+   24   -0.40067953E+03   -0.14051451E-04    0.24090551E-02
+   25   -0.40067953E+03   -0.34342839E-05    0.17301383E-02
+   26   -0.40067954E+03   -0.10383110E-04    0.55961435E-03
+   27   -0.40067954E+03   -0.60337987E-06    0.33940111E-03
+   28   -0.40067954E+03   -0.19566693E-06    0.20705809E-03
+   29   -0.40067954E+03   -0.11588844E-06    0.55713627E-04
+   30   -0.40067954E+03    0.18929995E-08    0.66605280E-04
+   31   -0.40067954E+03   -0.78966309E-08    0.17272944E-04
+   32   -0.40067954E+03   -0.10041958E-08    0.75575837E-05
+scc total               CPU:    19.72       Wall:    20.49
+ 
+ Total Energy:                    -400.3960440227 H
+ Total Mermin free energy:        -400.3960665161 H
+force total             CPU:     0.68       Wall:     0.69
+ Volume:                             0.161441E+06 au^3
+ Pressure:                          -0.186594E-04 au    -0.548979E+09 Pa
+ Maximal force component:            0.176763E-01
+ 
+Geometry converged
+program total           CPU:    20.87       Wall:    21.74

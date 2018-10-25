@@ -27,6 +27,8 @@ import operator
 from datetime import datetime
 from winak.SOAP_interface import quantify_dissimilarity
 from winak.SOAP_interface import sim_matrix
+import pandas as pd
+
 
 class Criterion:
     """This class accepts or declines a step in any way you see fit."""
@@ -125,11 +127,12 @@ class PopulationSelection:
 
 class FabioSelection(PopulationSelection):
     """Accepts the n=popsize best structures in the population, according to the fitness parameter found in info"""
-    def __init__(self,popsize):
+    def __init__(self,popsize,fitness_preponderance=1):
         PopulationSelection.__init__(self)
         self.popsize = popsize
         self.oldE = 0
         self.oldd = 0
+        self.fitness_preponderance = fitness_preponderance
 
     def filter(self,pop,mode="best_compromise_elite"):
         time0 = datetime.now()
@@ -137,7 +140,7 @@ class FabioSelection(PopulationSelection):
         newmut = 0
         newmat = 0
         SortedPopulation = sorted(pop, key=lambda x: x.info["fitness"], reverse=True)  ###higher fitness comes FIRST
-        FilteredPopulation,diversity,fitness = self._select_best_subset(SortedPopulation,mode)
+        FilteredPopulation,diversity,fitness,first_fitness = self._select_best_subset(SortedPopulation,mode)
          
         for structure in FilteredPopulation:
             if hasattr(structure,"info"):
@@ -163,7 +166,9 @@ class FabioSelection(PopulationSelection):
 
         self.oldE = fitness
         self.oldd = diversity
-        return FilteredPopulation,report,diversity,fitness
+
+        num_report = pd.DataFrame({'Selection Time':(time2-time0),'Accepted new structures':(newmat+newmut),'Average F':fitness,'Best F':first_fitness,'Diversity':diversity},index=[3])
+        return FilteredPopulation,report,diversity,fitness,first_fitness,num_report
 
     def _select_best_subset(self,pop,mode):
         ### Selects the best subset according to mode.
@@ -183,9 +188,10 @@ class FabioSelection(PopulationSelection):
             subset,diversity,energy = self._find_maximum_distance_subset(pop,self.popsize)
 
         elif mode=="best_compromise_elite":
-            subset,diversity,energy = self._find_best_compromise_elite_subset(pop,self.popsize)     
-   
-        return subset,diversity,energy
+            subset,diversity,energy = self._find_best_compromise_elite_subset(pop,self.popsize,self.fitness_preponderance)     
+  
+        first_fitness = subset[0].info['fitness']
+        return subset,diversity,energy,first_fitness
     
     def _find_maximum_distance_subset(self,pop,popsize):
 
@@ -199,12 +205,8 @@ class FabioSelection(PopulationSelection):
             combins = itertools.combinations(indexes,popsize)
             subsets_distances = dict()
             for subset in combins:
-                print("similarity matrix:",similarity_matrix)
-                print("subset:",subset)
                 subset_list = list(subset)
-                print("Subset_list:",subset_list)
                 submatrix = similarity_matrix[np.ix_(subset_list,subset_list)]
-                print("submatrix:",submatrix)
                 length = len(submatrix)
                 higher_tri = submatrix[np.triu_indices(length,k=1)]
                 vector_length = len(higher_tri)
@@ -217,58 +219,62 @@ class FabioSelection(PopulationSelection):
             energy = np.average(np.array([x.info["fitness"] for x in subset])) 
         return subset,dissimilarity,energy
 
-    def _find_best_compromise_elite_subset(self,pop,popsize):
+    def _find_best_compromise_elite_subset(self,pop,popsize,fitness_preponderance):
        
         if len(pop)<=popsize:
-            subset=[first]+pop
+            subset=pop
             dissimilarity = quantify_dissimilarity(subset)
             energy = np.average(np.array([x.info["fitness"] for x in subset])) 
         else:  
             ### elitism
+
+            similarity_matrix = sim_matrix(pop)
+            fitness_vector = np.array([x.info["fitness"] for x in pop])
             first = pop[0]
             pop = pop[1:]
             popsize=popsize-1
-
-            similarity_matrix = sim_matrix(pop)
-            print("Similarity matrix: ",similarity_matrix)
-            fitness_vector = np.array([x.info["fitness"] for x in pop])
-            print("Fitness vector: ",fitness_vector)
+            
             indexes = [n for n in range(1,len(pop))]
-            print("Indexes: ",indexes)
             combins = itertools.combinations(indexes,popsize)
             subsets_data = dict()
             for subset in combins:
                 subset_list = [0]+list(subset)
-                print("Subset: ",subset_list)
                 submatrix = similarity_matrix[np.ix_(subset)]
-                print("Submatrix: ",submatrix)
                 length = len(submatrix)
                 higher_tri = submatrix[np.triu_indices(length,k=1)]
                 vector_length = len(higher_tri)
                 summation = sum(higher_tri)
                 dissimilarity = (vector_length - summation)/vector_length
                 energy = np.average(fitness_vector[np.ix_(subset_list)])
-                Erel = energy/self.oldE
-                drel = dissimilarity/self.oldd
+                bypass = False
+                if self.oldE != 0 and self.oldd != 0:
+                    Erel = energy/self.oldE
+                    drel = dissimilarity/self.oldd
+                else:
+                    Erel = abs(energy)
+                    drel = dissimilarity
+               #     bypass = True
                 if Erel >=1:
-                    Erelperceived = Erel**(fitness_preponderacy)
+                    Erelperceived = Erel**(fitness_preponderance)
                 else:
                     Erelperceived = Erel
                 product_rel = Erelperceived*drel
-                worsening_index = False
-                if Erel < 0.95 or drel < 0.95:
-                    worsening_index = True
-                if not worsening_index:
-                    subsets_data[subset] = (product_rel,energy,dissimilarity)
-            print("Dictionary: ",subsets_data)
+              #  worsening_index = False
+               # if Erel < 0.9 or drel < 0.9:
+                #    if not bypass:
+                 #       worsening_index = True
+              #  if not worsening_index:
+                subsets_data[subset] = (product_rel,energy,dissimilarity)
+                print(subset_list,energy,dissimilarity,Erel,drel,product_rel)
             if len(subsets_data) == 0:
                 print("GRANDE ERRORE")
             subset_numbers = max(subsets_data.items(),key=operator.itemgetter(1))[0]
-            subset = [indexes[i] for i in subset_numbers]
+            #subset = [indexes[i-1] for i in subset_numbers]
             energy = subsets_data[subset_numbers][1]
             dissimilarity = subsets_data[subset_numbers][2]
-            print("results: energy: ",energy," diversity: ",dissimilarity)
-            return subset_dissimilarity,energy
+            pop = [first]+pop
+            subset = [pop[0]]+[pop[i] for i in subset_numbers]
+            return subset,dissimilarity,energy
 
     def print_params(self):
          return "Criterion class"

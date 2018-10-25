@@ -31,6 +31,7 @@ except:
 from ase.atoms import Atoms
 from datetime import datetime
 from winak.SOAP_interface import compare
+import pandas as pd
 
 class EE:
     """This class relaxes an ase.atoms object in any way you see fit. The only
@@ -88,6 +89,8 @@ class potEE(EE):
         if self.opt2 is not None and self.fmax2 is not None:
             ret+=', Optimizer2=%s, fmax2=%f '%(self.opt2.__name__,self.fmax2)
         return ret
+
+
 
 class grandEE(potEE):
     """grandcanonical potential energy optimization. evaluates the free energy of formation for gas-phase molecules or the surface free energy per unit area 
@@ -260,7 +263,8 @@ class FabioPopEvaluator(PopulationEvaluator):
         report += "\n"+"Structure comparison time: "+str(time2-time1)+"\n"
         report += detailed_report
 
-        return EvaluatedPopulation,report
+        num_report=pd.DataFrame({'Successfully optimized new structures':(successfulmut+successfulmat),'Evaluation Time':(time1-time0),'Comparison Time':(time2-time1)},index=[2])
+        return EvaluatedPopulation,report,num_report
     
 
     def __check_identity(self,a,b):
@@ -322,18 +326,18 @@ class FabioPopEvaluator(PopulationEvaluator):
         to_remove=[]
         reports = []
         for stru in popcopy:
-            for stru2 in OldPop:
-                result,identity_report = self.__check_identity(stru,stru2)
-                if result:
-                    to_remove.append(stru)
-                    reports.append(identity_report)
-                    break
+            to_remove.append(stru)
+            reports.append(identity_report)
+            break
         report += "\n"+str(len(to_remove))+" structures identified as equivalent to old structures and eliminated."+"\n"
         
         index_number = 0
         for structure in to_remove:
             description ="\n"+ "%s - " %(structure.get_chemical_formula())
-            description += " %s, from previous generation [%s]"%(structure.info["Origin"],structure.info["Ascendance"])
+            
+            if hasattr(stru,"info"):
+                if "Origin" in stru.info:
+                    description += " %s, from previous generation [%s]"%(structure.info["Origin"],structure.info["Ascendance"])
             report += description
             report += reports[index_number]
             index_number += 1

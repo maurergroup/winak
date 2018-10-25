@@ -49,6 +49,7 @@ from ase.neighborlist import NeighborList
 from datetime import datetime
 import os
 import random
+import pandas as pd
 
 class Displacer:
     """This class performs a step in any way you see fit. It is also 
@@ -680,7 +681,9 @@ class FabioManager(PopulationManager):
         report += "\n"+"\n"+"Mutation Details:"
         report += "\n"+"\n"+"Mutation time: "+str(time2-time1)
         report += MutationReport
-        return newpop,report
+       
+        num_report = pd.DataFrame({'Mutation Time':(time2-time1),'Mating Time':(time1-time0)},index=[1])
+        return newpop,report,num_report
 
     def print_params(self):
         

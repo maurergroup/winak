@@ -19,6 +19,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>#
 
 import numpy as np
+import pandas as pd
 from datetime import datetime
 from ase.io.trajectory import Trajectory
 from collections import Counter
@@ -161,10 +162,12 @@ class GeneticScreener:
                  Displacer,
                  Criterion,
                  logfile='GS.log',
+                 num_logfile = 'numerical_log.xlsx',
                  savegens=False,
                  break_limit=None,
                  break_limit_top=None):
         self.logfile=logfile
+        self.num_logfile = num_logfile
         self.eneval=EnergyEvaluator
         self.displacer=Displacer
         self.crit=Criterion
@@ -178,6 +181,13 @@ class GeneticScreener:
             self.break_limit_top = -1
         else:
             self.break_limit_top = break_limit_top
+        
+        parameters = {'Displacement Stepwidth':self.displacer.MutationManager.MutationOperator.stepwidth,
+                      'Population size':self.crit.popsize,
+                      'Fitness preponderance':self.crit.fitness_preponderance,
+                      'xParameter':self.displacer.Xparameter}
+        parameters = pd.DataFrame(parameters,index=['Parameters'])
+        self.num_log(parameters)
 
     def run(self, pop, gens):
         """Screen for defined number of generations. If break_limit is set, stops after n. break_limit consecutive unmodified generations. If break_limit_top is set, stops after n. tbreak_limit_top consecutive generations in which the best structure is unmodified """
@@ -192,7 +202,9 @@ class GeneticScreener:
         gens = int(gens)
         break_limit = self.break_limit
         break_limit_top = self.break_limit_top
+
         for gen in range(gens):
+            self.gen_startT = datetime.now()
             if break_limit == 0:
                 self.log("Break limit. Interrupting.")
                 break
@@ -201,18 +213,29 @@ class GeneticScreener:
                 break
             gentime = datetime.now()
             self.log("\n"+"______________________________________________________"+"\n"+"______________________________________________________"+"\n"+"\n"+"Generation "+str(gen+1)+"                       "+str(gentime.strftime('%Y-%m-%d %H:%M:%S'))+"\n"+"______________________________________________________"+"\n"+"______________________________________________________")
+            num_log=pd.DataFrame(index=[gen+1])
             #Displacing = creation of the new candidates
             self.log("\n"+"____________DISPLACING____________")
-            NewCandidates,report = self.displacer.evolve(pop)
+            NewCandidates,report,num_report = self.displacer.evolve(pop)
             self.log(report)
+            num_report.index=[(gen+1)]
+            num_log = pd.concat([num_log,num_report],axis=1)
             #EE = local optimization and tagging of the new structures
             self.log("\n"+"____________EVALUATING____________")
-            EvaluatedPopulation,report = self.eneval.EvaluatePopulation(NewCandidates)
+            EvaluatedPopulation,report,num_report = self.eneval.EvaluatePopulation(NewCandidates)
             self.log(report)
+            num_report.index=[(gen+1)]
+            num_log = pd.concat([num_log,num_report],axis=1)
             #criterion = definition of the next generation          
             self.log("\n"+"____________SELECTING_____________")
-            newgen,report,diversity,fitness = self.crit.filter(EvaluatedPopulation,mode="best_compromise_elite")
+            newgen,report,diversity,fitness,first_fitness,num_report = self.crit.filter(EvaluatedPopulation,mode="best_compromise_elite")
             self.log(report)
+
+            num_report.index=[(gen+1)]
+            num_log = pd.concat([num_log,num_report],axis=1)
+          
+            self.log("\n"+"Average fitness: "+str(fitness))
+            self.log("Diversity: "+str(diversity))
             if pop == newgen:
                 break_limit -= 1
             else:
@@ -228,13 +251,21 @@ class GeneticScreener:
                 os.chdir("Generations")
                 write(str(gen+1)+"_generation.traj",pop)
                 os.chdir("..")
+            self.gen_endT = datetime.now()
+            self.gen_time = self.gen_startT - self.gen_endT
+            spurious_time = (self.gen_time - (num_log.loc[(gen+1),'Mating Time'] + num_log.loc[(gen+1),'Mutation Time'] + num_log.loc[(gen+1),'Comparison Time'] +num_log.loc[(gen+1),'Evaluation Time'] +num_log.loc[(gen+1),'Selection Time']))
+            displacement_time = (num_log.loc[(gen+1),'Mating Time'] + num_log.loc[(gen+1),'Mutation Time'])
+            soap_time = (num_log.loc[(gen+1),'Comparison Time'] + num_log.loc[(gen+1),'Selection Time'])
+            last_data = pd.DataFrame({'Displacement Time':displacement_time,'SOAP Time':soap_time,'Spurious Time':spurious_time},index=[gen+1])
+            num_log = pd.concat([num_log,last_data],axis=1)
+            self.num_log(num_log)
         if os.path.exists("relax.traj"):
             os.remove("relax.traj")
         write("Results.traj",pop)
         self.endT = datetime.now()
         self.log('ENDING Screening at '+self.endT.strftime('%Y-%m-%d %H:%M:%S'))
         self.log('Time elapsed: '+str(self.endT-self.startT))            
-           
+        
 
     def generate(self,strus,popsize,minimum_diversity=0):
         """Generates a population of popsize structures, starting from a single input structure or from a smaller population. If a minimum_diversity value is selected, new structures will be generated until a population is created that has such a diversity value (as expressed in the criterion method associated to the screener)"""
@@ -263,25 +294,46 @@ class GeneticScreener:
         cycle_count = 1
 
         self.log("\n"+"_________INITIAL EVALUATION__________")
-        pop, report = self.eneval.EvaluatePopulation(pop)
+        pop, report, num_log = self.eneval.EvaluatePopulation(pop)
+        
+        #numerical logging
+        num_log.index=['gen 0']
+        self.num_log(num_log)
+
         if len(pop) == 0:
             self.log('\n'+"EXECUTION TERMINATED - Initial evaluation has failed, or an invalid input was selected"+'\n')
         while len(pop) < popsize or diversity < minimum_diversity:    
+            self.gen_startT = datetime.now()
+            num_log = pd.DataFrame(index=[str('gen'+str(cycle_count))])
             self.log("\n"+"_____________________________________________________________"+"\n")
             self.log("\n"+"Producing initial population: cycle n."+str(cycle_count))
             self.log("\n"+"_____________________________________________________________"+"\n")
             self.log("\n"+"____________DISPLACING____________")
-            pop, report = generator.evolve(pop,Xpar=0)
+            pop, report, num_report = generator.evolve(pop,Xpar=0)
             self.log(report) 
+            num_report.index=[str('gen'+str(cycle_count))]
+            num_log = pd.concat([num_log,num_report],axis=1)
             self.log("\n"+"____________EVALUATING____________")
-            pop, report = self.eneval.EvaluatePopulation(pop)
+            pop, report,num_report = self.eneval.EvaluatePopulation(pop)
+            num_report.index=[str('gen'+str(cycle_count))]
+            num_log = pd.concat([num_log,num_report],axis=1)
             self.log(report) 
             self.log("\n"+"____________SELECTING_____________")
-            pop, report, diversity, fitness = self.crit.filter(pop,mode="best_diversity")
+            pop, report, diversity, fitness, first_fitness, num_report = self.crit.filter(pop,mode="best_diversity")
             self.log(report)
+            num_report.index=[str('gen'+str(cycle_count))]
+            num_log = pd.concat([num_log,num_report],axis=1)
             self.log("\n"+"Population size: "+str(len(pop))+" / "+str(popsize))
             self.log("\n"+"Average fitness: "+str(fitness))
             self.log("Diversity: "+str(diversity)+" / "+str(minimum_diversity))
+            self.gen_endT = datetime.now()
+            self.gen_time = self.gen_startT - self.gen_endT
+            spurious_time = (self.gen_time - (num_log.loc[str('gen'+str(cycle_count)),'Mating Time'] + num_log.loc[str('gen'+str(cycle_count)),'Mutation Time'] + num_log.loc[str('gen'+str(cycle_count)),'Comparison Time'] +num_log.loc[str('gen'+str(cycle_count)),'Evaluation Time'] +num_log.loc[str('gen'+str(cycle_count)),'Selection Time']))
+            displacement_time = (num_log.loc[str('gen'+str(cycle_count)),'Mating Time'] + num_log.loc[str('gen'+str(cycle_count)),'Mutation Time'])
+            soap_time = (num_log.loc[str('gen'+str(cycle_count)),'Comparison Time'] + num_log.loc[str('gen'+str(cycle_count)),'Selection Time'])
+            last_data = pd.DataFrame({'Displacement Time':displacement_time,'SOAP Time':soap_time,'Spurious Time':spurious_time},index=[str('gen'+str(cycle_count))])
+            num_log = pd.concat([num_log,last_data],axis=1)
+            self.num_log(num_log)
             cycle_count += 1
         for stru in pop:
             stru.info.pop("Ascendance",None)
@@ -301,5 +353,14 @@ class GeneticScreener:
             with open(self.logfile,'a') as fn:
                 fn.write(msg+'\n')
                 fn.flush()
-
+    def num_log(self,dfr):
+        if self.num_logfile is not None:
+            try:
+                previous = pd.read_excel(self.num_logfile)
+            except:
+                previous = pd.DataFrame()
+            new = pd.concat([previous,dfr],sort=False)
+            writer = pd.ExcelWriter(self.num_logfile)
+            new.to_excel(writer,'Sheet1')
+            writer.save()
 

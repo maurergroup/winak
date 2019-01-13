@@ -118,7 +118,7 @@ DisplacementParameters = {"MatingManager":MatingManager,
 
 GeneticDisplacer = FabioManager(**DisplacementParameters)
 PopulationEvaluator = FabioPopEvaluator(EE,EEparameters,similarity_threshold)
-Criterion = FabioSelection(popsize,fitness_preponderane)
+Criterion = FabioSelection(popsize,fitness_preponderance)
 
 
 Screener = GeneticScreener(PopulationEvaluator,GeneticDisplacer,Criterion,savegens=savegens, break_limit=break_limit, break_limit_top = break_limit_top)

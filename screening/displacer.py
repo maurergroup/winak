@@ -602,8 +602,8 @@ class PopulationManager:
         pass
 
 
-class FabioManager(PopulationManager):
-    def __init__(self,MatingManager,MatingParameters,MutationManager,MutationParameters,Xparameter): #to add: parameters for following classes  
+class MainManager(PopulationManager):
+    def __init__(self,MatingManager,MatingParameters,MutationManager,MutationParameters,Xparameter):   
         """Performs an evolution step on a given population. Distributes work to the Mating and (if desired) Mutation classes, according to the Xparameter."""   
         PopulationManager.__init__(self)
         self.MatingManager=NAMESPACE[MatingManager](MatingParameters)
@@ -614,9 +614,8 @@ class FabioManager(PopulationManager):
 
 
     def evolve(self,pop,Xpar=None):
-        #distribute work to MatingManager and MutationManager
-        #should receive two new pop objects
-        
+        """Distributes work to MatingManager and MutationManager. Collects the new structures, repacks them in newpop, and returns it together with report and numerical report"""   
+        # checks for and update to Xparameter
         if Xpar == None:
             Xparameter = self.Xparameter
         else:
@@ -686,8 +685,7 @@ class FabioManager(PopulationManager):
         return newpop,report,num_report
 
     def print_params(self):
-        
-        return "Population Manager: FabioManager"+"\n"+"Performing matings on the "+str(self.Xparameter)+" best structures with Mating Manager: "+self.MatingManager.__class__.__name__+"."+"\n"+self.MatingManager.print_params()+"\n"+"Performing mutations on the remaining structures with Mutation Manager: "+self.MutationManager.__class__.__name__+"."+"\n"+self.MutationManager.print_params() 
+        return "Population Manager: MainManager"+"\n"+"Performing matings on the "+str(self.Xparameter)+" best structures with Mating Manager: "+self.MatingManager.__class__.__name__+"."+"\n"+self.MatingManager.print_params()+"\n"+"Performing mutations on the remaining structures with Mutation Manager: "+self.MutationManager.__class__.__name__+"."+"\n"+self.MutationManager.print_params() 
 
 
 
@@ -711,20 +709,23 @@ class MatingManager:
         pass
 
 
-class FabioMating(MatingManager):
-    def __init__(self,MatingParameters): #to add: parameters for following classes
+class SemiRandomMating(MatingManager):
+    def __init__(self,MatingParameters):
+        """ Manages the matings for the current generation.
+        In semi-random mating, a subset of current population, composed of the best structures, is selected to mate.
+        Each of these structures is assigned a partner, taken from the whole population. """
         MatingManager.__init__(self)
         self.MatingOperator = NAMESPACE[MatingParameters["MatingOperator"]](**MatingParameters["MatingOperatorParameters"])
         
-
     def MatePopulation(self,pop,Xparameter):
+        """Assigns the pairs of structures to mate, calls the selected mating class on each, collects the resulting structures in 'offspring' and returns it together with the report"""
         report=""
         poptowork=[]
         for stru in pop:
             poptowork.append(stru.copy())
         offspring = []
 
-        #creates a list of structures suitable for mating
+        #select the subset of structures that has to mate
         poptomate = []
         for stru in poptowork[:Xparameter]:
             poptomate.append(stru.copy())
@@ -737,8 +738,6 @@ class FabioMating(MatingManager):
             partnernumber = np.random.randint(0,len(candidates))
             partner = candidates[partnernumber]
             report += "\n"+"\n"+"Structure n."+str(poptowork.index(stru)+1)+" is mating with structure n."+str(poptowork.index(partner)+1)
-        
-
             #performs mating
             Children,MatingReportSingle = self.MatingOperator.Mate(stru,partner)
             report += MatingReportSingle
@@ -746,7 +745,7 @@ class FabioMating(MatingManager):
             for struc in Children:
                 struc.info["Ascendance"] = "%s + %s" %(poptowork.index(stru)+1,poptowork.index(partner)+1)
                 offspring.append(struc.copy())
-        
+        #applies constraint on the atoms of layer 2 of every structure
         for structure in offspring:
             constraint = FixAtoms(mask=[atom.tag == 2 for atom in structure])
             structure.set_constraint(constraint)
@@ -779,15 +778,16 @@ class MatingOperator:
 
 class SinusoidalCut(MatingOperator):
     def __init__(self,NumberOfAttempts=100,FixedElements=[],collision_threshold=0.5):
+        """ Performs a sinusoidal cut mating on the pair of structures provided, and returns the two resulting structures together with a report """
         MatingOperator.__init__(self)
         self.NumberOfAttempts = NumberOfAttempts
         self.FixedElements = FixedElements
         self.collision_threshold = collision_threshold  
 
     def Mate(self,partner1,partner2):
-        report = ""
-        # the method works on the mutable atoms of the parents. It is assumed that immutable atoms are identical for both parents
+        """ Performs the mating. The method works on the mutable atoms of the parents. It is assumed that immutable atoms are identical for both parents """
         # extracts pbc and cell from partner1
+        report = ""
         pbc = partner1.get_pbc()
         cell= partner1.get_cell()
 
@@ -832,9 +832,8 @@ class SinusoidalCut(MatingOperator):
         composition_failures = 0
         double_failures = 0
         for attempts in range(self.NumberOfAttempts):
-
-            ####choose vectors and stuff
-
+            # Generates building-blocks fragments by calling the cut function.
+            # The cut function is called again, producing different cut parameters, for max. NumberOfAttempts times
             frag11,frag12,frag21,frag22,cut_report = self.__perform_cut_XY(block1,block2)
             newblock1 = Atoms(pbc=pbc,cell=cell)
             for atom in frag11:
@@ -847,7 +846,7 @@ class SinusoidalCut(MatingOperator):
                 newblock2.append(atom)
             for atom in frag22:
                 newblock2.append(atom)
-            
+            #controls over the candidate new structures
             composition_1 = self.__check_composition(newblock1,FixedElements)
             collision_1 = self.__check_collision(newblock1)
             confirm1 = composition_1 and collision_1 
@@ -969,7 +968,7 @@ class SinusoidalCut(MatingOperator):
         
 
     def __check_composition(self,structure,FixedElements):
-        ### checks that a structure is maintaining the original composition, for the elements in FixedElements 
+        """ checks if a structure is maintaining the original composition, for the elements in FixedElements """ 
         composition = dict()
         for element in FixedElements:
             composition[element] = 0
@@ -984,7 +983,7 @@ class SinusoidalCut(MatingOperator):
         return Response
 
     def __check_collision(self,structure):
-        ###checks if any couple of atoms lies at a distance inferior to the collision threshold: in such case, returns False. Otherwise, returns True
+        """ checks if any couple of atoms lies at a distance inferior to the collision threshold """
         radii = [(self.collision_threshold)*covalent_radii[atomic_numbers[atom.symbol]] for atom in structure]
         NeighborsMeasurer = NeighborList(cutoffs=radii,self_interaction=False)
         NeighborsMeasurer.build(structure)
@@ -1000,6 +999,7 @@ class SinusoidalCut(MatingOperator):
 
 class TestMating(MatingOperator):
     def __init__(self):
+        """ test mating operator, for quick checks on the rest of the algorithm """
         MatingOperator.__init__(self)
         pass    #no actual parameter for this test mating operator
 
@@ -1064,13 +1064,15 @@ Receives a population, performs mutations according to the xParameter, and retur
         pass
 
 
-class FabioMutation(MutationManager):
+class ComplementaryMutation(MutationManager):
     def __init__(self,MutationParameters):
+        """ This class produces a mutated version of all the structures in the population that are not selected for the mating """
         MutationManager.__init__(self)
         self.MutationOperator = NAMESPACE[MutationParameters["MutationOperator"]](**MutationParameters['MutationOperatorParameters'])
         self.FixedElements = MutationParameters["FixedElements_GC"]    
 
     def MutatePopulation(self,population,Xparameter): 
+        """ Assigns the structures that are to undergo a mutation, calls the mutation function and returns the new structures and a report """
         Xparameter = int(abs(Xparameter))   
         MutatedStructures= []
         poptomutate=[]
@@ -1080,30 +1082,25 @@ class FabioMutation(MutationManager):
         report += "\n"+"Performing mutations on "+str(len(population[Xparameter:]))+" structures out of "+str(len(population))+"\n"
        
         for structure in poptomutate:
-
             report += "\n"+"%s: Fitness = %s" %(int(population.index(structure))+1,structure.info["fitness"])
 
             if "New" in structure.info:
                 if structure.info["New"]:
                     report += " %s, from previous generation [%s]"%(structure.info["Origin"],structure.info["Ascendance"])
-            
-            #constraint = FixAtoms(mask=[(atom.tag == 2 or atom.tag == 1) for atom in structure])
-            #structure.set_constraint(constraint)
-       
-
-            ##fixes the composition of the structure, forelements in self.FixedElements     
+            # fixes the composition of the structure, for the elements in self.FixedElements     
             FixedElements = {x:0 for x in self.FixedElements}
             for atom in structure:
                 if atom.symbol in FixedElements:
                     FixedElements[atom.symbol] += 1
             success_index=False
             time0=datetime.now()
+            # makes 5 attempts to perform the mutation
             for lim in range(5):
                 try:
                     mutated = self.MutationOperator.displace(structure.copy())
                     confirm = self.__check_composition(mutated,FixedElements)
                     if confirm:
-                        #tags mutated with "parent" index, and attaches it to MutatedStructures list
+                        #tags mutated structures with "parent" index, and attaches it to MutatedStructures list
                         mutated.info["Ascendance"]=str(population.index(structure)+1)
                         MutatedStructures.append(mutated)
                         report += "  "+str(lim+1)+" attempts >>> SUCCESSFUL"
@@ -1117,6 +1114,7 @@ class FabioMutation(MutationManager):
                 report += " >>> FAILED"
             time1=datetime.now()
             report += "\n"+"Single mutation time: "+str(time1-time0)
+        #applies constraint on the atoms of layer 2 of every structure
         for structure in MutatedStructures:
             del(structure.constraints)
             constraint = FixAtoms(mask=[atom.tag == 2 for atom in structure])
@@ -1125,7 +1123,7 @@ class FabioMutation(MutationManager):
         return MutatedStructures,report
     
     def __check_composition(self,structure,FixedElements):
-        ### checks that a structure is maintaining the original composition, for the elements in FixedElements 
+        """ checks that a structure is maintaining the original composition, for the elements in FixedElements """
         composition = dict()
         for element in FixedElements:
             composition[element] = 0
@@ -1144,6 +1142,7 @@ class FabioMutation(MutationManager):
 
 class TestMutationOperator:
     def __init__(self):
+        """ test mating operator, for quick checks on the rest of the algorithm """
         pass
     
     def displace(self,structure):

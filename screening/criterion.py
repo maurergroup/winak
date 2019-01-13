@@ -125,9 +125,9 @@ class PopulationSelection:
         all the important parameters"""
         pass
 
-class FabioSelection(PopulationSelection):
-    """Accepts the n=popsize best structures in the population, according to the fitness parameter found in info"""
+class FlexibleSelection(PopulationSelection):
     def __init__(self,popsize,fitness_preponderance=1):
+    """ This class returns a subset of the provided population, of size=popsize. The subset is selected according to the criterion provided in the execution of the filter function: best_fitness, best_diversity or best_compromise_elite """
         PopulationSelection.__init__(self)
         self.popsize = popsize
         self.oldE = 0
@@ -135,13 +135,16 @@ class FabioSelection(PopulationSelection):
         self.fitness_preponderance = fitness_preponderance
 
     def filter(self,pop,mode="best_compromise_elite"):
+        """ Sorts the structures according to their fitness, calls the best_subset_selection function with a given 'mode' parameter, records the value of average fitness and diversity for the resulting subset, and returns the subset, the values of diversity, average fitness, and fitness of the best structures, together with a report and a numerical report """
         time0 = datetime.now()
         mode=mode
         newmut = 0
         newmat = 0
+        # sorting
         SortedPopulation = sorted(pop, key=lambda x: x.info["fitness"], reverse=True)  ###higher fitness comes FIRST
+        # subset selection
         FilteredPopulation,diversity,fitness,first_fitness = self._select_best_subset(SortedPopulation,mode)
-         
+        #reporting
         for structure in FilteredPopulation:
             if hasattr(structure,"info"):
                 if "New" in structure.info:
@@ -194,13 +197,16 @@ class FabioSelection(PopulationSelection):
         return subset,diversity,energy,first_fitness
     
     def _find_maximum_distance_subset(self,pop,popsize):
-
+        """ Selects the subset of size popsize with the maximum average difference among structures, measured through SOAP indexes """
+        # generates similarity matrix for the whole population
         similarity_matrix = sim_matrix(pop)
+        # if the population size is smaller than popsize, directly returns the whole population
         if len(pop)<=popsize:
             subset=pop
             dissimilarity = quantify_dissimilarity(subset)
             energy = np.average(np.array([x.info["fitness"] for x in subset])) 
         else:
+            # iterates through all possible subsets
             indexes = [n for n in range (len(pop))] 
             combins = itertools.combinations(indexes,popsize)
             subsets_distances = dict()
@@ -220,14 +226,14 @@ class FabioSelection(PopulationSelection):
         return subset,dissimilarity,energy
 
     def _find_best_compromise_elite_subset(self,pop,popsize,fitness_preponderance):
-       
+        """ Selects the subset of size popsize with the maximum value of Q, which expresses a balancement between average fitness and diversity. Only subsets including the best structure in the population are taken into consideration """
+        # if the population size is smaller than popsize, directly returns the whole population
         if len(pop)<=popsize:
             subset=pop
             dissimilarity = quantify_dissimilarity(subset)
             energy = np.average(np.array([x.info["fitness"] for x in subset])) 
         else:  
-            ### elitism
-
+            # Applies elitism: only the subset including the first structure are considered
             similarity_matrix = sim_matrix(pop)
             fitness_vector = np.array([x.info["fitness"] for x in pop])
             first = pop[0]
@@ -238,6 +244,7 @@ class FabioSelection(PopulationSelection):
             combins = itertools.combinations(indexes,popsize)
             subsets_data = dict()
             for subset in combins:
+                # iterates through all subsets
                 subset_list = [0]+list(subset)
                 submatrix = similarity_matrix[np.ix_(subset)]
                 length = len(submatrix)
@@ -258,6 +265,7 @@ class FabioSelection(PopulationSelection):
                     Erelperceived = Erel**(fitness_preponderance)
                 else:
                     Erelperceived = Erel
+                # calculates the Q value
                 product_rel = Erelperceived*drel
               #  worsening_index = False
                # if Erel < 0.9 or drel < 0.9:
@@ -267,7 +275,8 @@ class FabioSelection(PopulationSelection):
                 subsets_data[subset] = (product_rel,energy,dissimilarity)
                 print(subset_list,energy,dissimilarity,Erel,drel,product_rel)
             if len(subsets_data) == 0:
-                print("GRANDE ERRORE")
+                print("ERROR")
+            # selects the best subset
             subset_numbers = max(subsets_data.items(),key=operator.itemgetter(1))[0]
             #subset = [indexes[i-1] for i in subset_numbers]
             energy = subsets_data[subset_numbers][1]

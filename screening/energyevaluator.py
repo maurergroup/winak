@@ -175,19 +175,19 @@ class PopulationEvaluator:
         alli the important parameters"""
         pass
 
-class FabioPopEvaluator(PopulationEvaluator):
-    """For every structure in the population: Calls the selected EE to perform local optimization and evaluate energy. Eliminates identical structures. Writes the fitness in info['fitness']"""
-
+class BasicPopEvaluator(PopulationEvaluator):
     def __init__(self,EE,EEparameters,sim_threshold=0.999):
+        """ This class evaluates every structure according to its energy, eliminates identical structures employing SOAP similarity indexes, and returns the new evaluated population, a report and a numerical report """
         PopulationEvaluator.__init__(self,EE,EEparameters)
         self.similarity_threshold=sim_threshold
     def EvaluatePopulation(self,popreceived):
+        """Evaluates every structure in the population: Calls the selected EE to perform local optimization and evaluate energy. Eliminates identical structures. Writes the fitness in info['fitness']"""
         pop = popreceived[:]
         EvaluatedPopulation = []
         successfulmat = 0
         successfulmut = 0
         report = ""
-        #Isolates the new structures ,putting the old ones directly in EvaluatedPopulation
+        #Isolates the new structures, putting the old ones directly in EvaluatedPopulation
         popofnews=pop[:]
         for stru in pop:
             oldone = False
@@ -201,8 +201,7 @@ class FabioPopEvaluator(PopulationEvaluator):
         pop = popofnews[:]
         detailed_report = "Splitting population in "+str(len(EvaluatedPopulation))+" old structures and "+str(len(pop))+" new structures."
 
-        #optimizes all the new structures
-        ###could implement a parallelization: to be discussed
+        # optimizes all the new structures
         time0 = datetime.now()
         OptimizedPopulation = []
         failed_optimizations = []
@@ -227,13 +226,13 @@ class FabioPopEvaluator(PopulationEvaluator):
             counter += 1
 
         time1=datetime.now()
-        ### checks the optimized structures for duplicates
+        # checks the optimized structures for duplicates
         detailed_report += "\n"+"\n"+"Eliminating duplicates:"
         OptimizedPopulation,elimination_report = self.__eliminate_duplicates(OptimizedPopulation,EvaluatedPopulation)
         detailed_report += elimination_report
 
         time2=datetime.now()
-        ####records the successfull optimization, and returns the final evaluated population
+        # records the successfull optimization, and returns the final evaluated population
         for stru in OptimizedPopulation:
             if hasattr(stru,"info"):
                 if "Origin" in stru.info:
@@ -293,10 +292,8 @@ class FabioPopEvaluator(PopulationEvaluator):
     
     def __eliminate_duplicates(self,NewPop,OldPop):
         """eliminates all duplicates within NewPop. Then, eliminates all the elements of NewPop that are already in OldPop. Returns the 'clean' NewPop."""
-        
         report = ""
-
-        #Eliminates all duplicates within NewPop
+        # Eliminates all duplicates within NewPop
         to_remove=[]
         reports=[]
         for stru in NewPop:
@@ -321,7 +318,7 @@ class FabioPopEvaluator(PopulationEvaluator):
             except:
                 report +=  "FAILED REMOVAL"
 
-        #Eliminates all structures already in OldPop
+        # Eliminates all the structures in NewPop that already appear in OldPop
         popcopy = NewPop[:]
         to_remove=[]
         reports = []
@@ -346,6 +343,6 @@ class FabioPopEvaluator(PopulationEvaluator):
         return NewPop,report
 
     def print_params(self):
-        return "FabioPopEvaluator, employing evaluator "+self.EE.print_params()
+        return "BasicPopEvaluator, employing evaluator "+self.EE.print_params()
 
 NAMESPACE=locals()

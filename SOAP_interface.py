@@ -17,6 +17,7 @@
 #     
 #    You should have received a copy of the GNU General Public License 
 #    along with this program.  If not, see <http://www.gnu.org/licenses/># 
+
 import os
 import numpy as np
 from ase.io import read
@@ -24,24 +25,21 @@ from ase.io import write
 import subprocess 
 from datetime import datetime
 
-def compare(a,b):
-    """ Compares structures and returns their similarity as a float 0.0 <--> 1.0, with 1.0 = identical structures """
-    pair = [a,b]
-    #random= np.random.randint(99999)
-    #name = "pair"+str(random)+".traj"
-    #write(name,pair)
+### A set of functions to call glosim.py ###
+### >>> https://github.com/cosmo-epfl/glosim ###
 
+def compare(a,b):
+""" Compares structures and returns their similarity as a float 0.0 <--> 1.0, with 1.0 = identical structures """
+    pair = [a,b]
     write("pair.xyz",pair)
     with open('compare.log','w') as out:
         subprocess.call("/data/panosetti/shared/.venvs/stretch/glosim/glosim.py pair.xyz -n 9 -l 9 -g 0.3 -c 3 --zeta 2 --kernel match",stdout=out,shell=True)
-        
     matrix = np.genfromtxt("pair-n9-l9-c3.0-g0.3_match.k",skip_header=1)
     result = matrix[0,1]
-    
     return result
 
 def quantify_dissimilarity(pop):
-    """Receives a population of structures and returns the average DISsimilarity between the structures as a float 0.0 <--> 1.0 """
+    """Receives a population of structures and returns the average DISsimilarity among the structures as a float 0.0 <--> 1.0 """
     write("population.xyz",pop)
     with open('quantify_dissimilarity.log','w') as out:
        subprocess.call("/data/panosetti/shared/.venvs/stretch/glosim/glosim.py population.xyz -n 9 -l 9 -g 0.3 -c 6  --zeta 2 --kernel match",stdout=out,shell=True)
@@ -55,6 +53,7 @@ def quantify_dissimilarity(pop):
 
 def sim_matrix(pop):
     """Receives a population of structures and returns the relative kernel matrix"""
+    # Generates a random name for the temporary .xyz file
     time = datetime.now()
     name = str(time.microsecond)
     write(name+".xyz",pop)
